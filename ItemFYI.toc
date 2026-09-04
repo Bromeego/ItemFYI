@@ -6,6 +6,7 @@
 ## SavedVariables: ItemFYIDB
 ## IconTexture: Interface\Icons\INV_Misc_Bag_08
 ## Category-enUS: Bags & Inventory
+## OptionalDeps: ElvUI, EllesmereUI
 
 LibStub\LibStub.lua
 EditModeExpanded-1.0\EditModeExpanded-1.0.xml
@@ -14,5 +15,6 @@ Core.lua
 Rules.lua
 Detection.lua
 UI.lua
+Skinning.lua
 EditMode.lua
 Settings.lua

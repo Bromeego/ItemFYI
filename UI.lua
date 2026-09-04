@@ -75,6 +75,7 @@ function addon:CreateUI()
     button.background:SetColorTexture(0.025, 0.035, 0.045, 0.96)
 
     button.icon = button:CreateTexture(nil, "ARTWORK")
+    button.Icon = button.icon
     button.icon:SetPoint("TOPLEFT", 3, -3)
     button.icon:SetPoint("BOTTOMRIGHT", -3, 3)
     button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -86,6 +87,7 @@ function addon:CreateUI()
     button.highlight:SetBlendMode("ADD")
 
     button.count = CreateText(button, "NumberFontNormal", "BOTTOMRIGHT", -2, 2)
+    button.Count = button.count
     button.more = CreateText(button, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
     button.more:SetTextColor(0.35, 0.85, 1)
 

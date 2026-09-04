@@ -18,6 +18,7 @@ never opens or learns anything automatically.
 - Ctrl-right-click permanently ignores an item.
 - Alt-drag moves the button.
 - Registers the button with Blizzard Edit Mode, including per-layout positions.
+- Adopts EllesmereUI or ElvUI button styling when either UI suite is installed.
 - Provides a native Blizzard AddOns settings panel for category and button controls.
 
 ## Installation
@@ -93,3 +94,10 @@ validation remains the responsibility of the maintainer.
 ItemFYI embeds LibStub and EditModeExpanded-1.0. EditModeExpanded is maintained
 by teelolws and provides the compatibility layer for registering addon frames
 with Blizzard Edit Mode.
+
+## UI skinning
+
+ItemFYI declares ElvUI and EllesmereUI as optional dependencies. EllesmereUI's
+published third-party skin callback is preferred and follows live theme
+changes. When EllesmereUI is absent, ItemFYI uses ElvUI's item-button skin
+handler. The built-in dark padded style remains the fallback.

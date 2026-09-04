@@ -192,6 +192,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:HandleSlash(text)
         end
     elseif event == "PLAYER_LOGIN" then
+        addon:RegisterSkinning()
         addon:RegisterEditMode()
         addon:ScheduleScan("login", 0.4)
     elseif event == "PLAYER_REGEN_ENABLED" then

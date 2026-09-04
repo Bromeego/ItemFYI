@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added optional EllesmereUI and ElvUI skin adapters while preserving ItemFYI's
+  built-in dark style as the fallback.
 - Stopped non-usable housing dyes and tooltip-marked locked lockboxes from
   appearing as actionable items.
 - Removed the button title and Blizzard quick-slot border while retaining the

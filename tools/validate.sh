@@ -12,17 +12,19 @@ for candidate in lua5.1 lua luajit; do
 done
 
 if [[ -n "$lua_bin" ]]; then
-    for file in Core.lua Rules.lua Detection.lua UI.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_load.lua; do
+    for file in Core.lua Rules.lua Detection.lua UI.lua Skinning.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_skinning.lua tests/test_load.lua; do
         "$lua_bin" -e "assert(loadfile('$file'))"
     done
 
     "$lua_bin" tests/test_rules.lua
     "$lua_bin" tests/test_detection.lua
+    "$lua_bin" tests/test_skinning.lua
     "$lua_bin" tests/test_load.lua
 else
-    python3 tools/run_lua.py --syntax Core.lua Rules.lua Detection.lua UI.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_load.lua
+    python3 tools/run_lua.py --syntax Core.lua Rules.lua Detection.lua UI.lua Skinning.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_skinning.lua tests/test_load.lua
     python3 tools/run_lua.py tests/test_rules.lua
     python3 tools/run_lua.py tests/test_detection.lua
+    python3 tools/run_lua.py tests/test_skinning.lua
     python3 tools/run_lua.py tests/test_load.lua
 fi
 

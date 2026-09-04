@@ -144,6 +144,7 @@ assert(loadfile("Core.lua"))("ItemFYI", addon)
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
 assert(loadfile("Detection.lua"))("ItemFYI", addon)
 assert(loadfile("UI.lua"))("ItemFYI", addon)
+assert(loadfile("Skinning.lua"))("ItemFYI", addon)
 assert(loadfile("EditMode.lua"))("ItemFYI", addon)
 assert(loadfile("Settings.lua"))("ItemFYI", addon)
 
