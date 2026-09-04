@@ -4,8 +4,8 @@
 
 - Stopped non-usable housing dyes and tooltip-marked locked lockboxes from
   appearing as actionable items.
-- Removed the button title, dark background, and quick-slot border so only the
-  item icon and useful status overlays remain.
+- Removed the button title and Blizzard quick-slot border while retaining the
+  dark padded background around the item icon.
 - Added Blizzard Edit Mode support with per-layout button positions.
 - Added an Edit Mode placeholder so the button remains selectable when no
   actionable item is waiting.

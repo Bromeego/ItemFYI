@@ -70,8 +70,13 @@ function addon:CreateUI()
     button:RegisterForDrag("LeftButton")
     button:Hide()
 
+    button.background = button:CreateTexture(nil, "BACKGROUND")
+    button.background:SetAllPoints()
+    button.background:SetColorTexture(0.025, 0.035, 0.045, 0.96)
+
     button.icon = button:CreateTexture(nil, "ARTWORK")
-    button.icon:SetAllPoints()
+    button.icon:SetPoint("TOPLEFT", 3, -3)
+    button.icon:SetPoint("BOTTOMRIGHT", -3, 3)
     button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
