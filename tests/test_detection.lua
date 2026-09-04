@@ -37,8 +37,18 @@ C_ToyBox = {
 }
 
 C_PetJournal = {
-    GetNumCollectedInfo = function() return 0, 3 end,
-    GetPetInfoByItemID = function() return nil end,
+    GetNumCollectedInfo = function(speciesID)
+        if speciesID == 555 then
+            return 0, 1
+        end
+        return 0, 3
+    end,
+    GetPetInfoByItemID = function(itemID)
+        if itemID == 271185 then
+            return "Emberlyn", 1, 1, 262985, nil, nil, nil, nil, nil, nil, nil, 1, 555
+        end
+        return nil
+    end,
 }
 
 PlayerHasToy = function() return false end
@@ -73,6 +83,14 @@ assert(category == "toy", "toy detection failed")
 
 category = addon:ClassifyItem(Context(103, { link = "|Hbattlepet:77:1:1:1:1:1:0:0|h[Test Pet]|h" }))
 assert(category == "pet", "battle-pet detection failed")
+
+tooltipText = "Use: Teaches you how to summon and dismiss this companion."
+category = addon:ClassifyItem(Context(271185))
+assert(category == "pet", "non-battle companion species lookup failed")
+
+C_PetJournal.GetPetInfoByItemID = function() return nil end
+category = addon:ClassifyItem(Context(271186))
+assert(category == "pet", "companion tooltip fallback failed")
 
 tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))

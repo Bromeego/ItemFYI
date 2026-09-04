@@ -27,6 +27,10 @@ local recipeText = {
     "use: permanently teaches you",
 }
 
+local companionText = {
+    "use: teaches you how to summon and dismiss this companion",
+}
+
 local openText = {
     "use: open",
 }
@@ -104,8 +108,9 @@ local function GetPetSpecies(context)
     end
 
     if C_PetJournal and C_PetJournal.GetPetInfoByItemID then
-        local fallback = C_PetJournal.GetPetInfoByItemID(context.itemID)
-        return tonumber(fallback)
+        -- This legacy API returns the pet name first and speciesID thirteenth.
+        local speciesID = select(13, C_PetJournal.GetPetInfoByItemID(context.itemID))
+        return tonumber(speciesID)
     end
 end
 
@@ -177,6 +182,12 @@ function addon:ClassifyItem(context)
     if isPet then
         context.uniqueKey = "pet:" .. speciesID
         return "pet", "Collectible battle pet — click to learn"
+    end
+
+    -- Some cosmetic companions do not expose battle-pet metadata consistently.
+    -- Their standard use text is still an explicit learn action.
+    if not speciesID and ContainsAny(tooltipText, companionText) then
+        return "pet", "Uncollected companion — click to learn"
     end
 
     local itemType = string.lower(context.itemType or "")

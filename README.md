@@ -11,7 +11,8 @@ never opens or learns anything automatically.
 - Prioritises uncollected mounts, pets, toys, housing decor, transmog tokens,
   and recipes before ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
-  learnable tokens, and a small exception list for known crest packs.
+  learnable tokens and non-battle companions, and a small exception list for
+  known crest packs.
 - Uses a secure `/use item:<id>` action, including for equippable appearance
   tokens that should be learned instead of equipped. Resolving by item ID also
   avoids stale bag-slot targets while purchasing caches from a vendor.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed Pet Journal species lookup and added detection for non-battle companion
+  items such as Emberlyn.
 - Stopped background bag scans from hiding tooltips owned by bags, vendors, or
   other UI elements.
 - Stopped completed appearance caches, including Cache of Void-Touched
