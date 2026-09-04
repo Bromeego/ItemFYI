@@ -17,13 +17,25 @@ function addon:SavePosition()
     self.db.position.y = y or 0
 end
 
-function addon:RestorePosition()
-    if not self.button or not self.db or self:IsInCombat() then
+function addon:ApplyButtonLayout()
+    if not self.button or not self.db then
+        return
+    end
+    if self:IsInCombat() then
+        self.layoutPending = true
         return
     end
     local position = self.db.position
+    local size = math.max(32, math.min(64, tonumber(self.db.size) or 42))
+    self.db.size = size
+    self.button:SetSize(size, size)
     self.button:ClearAllPoints()
     self.button:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
+    self.layoutPending = false
+end
+
+function addon:RestorePosition()
+    self:ApplyButtonLayout()
 end
 
 function addon:CreateUI()
@@ -33,7 +45,7 @@ function addon:CreateUI()
 
     local button = CreateFrame("Button", "ItemFYIActionButton", UIParent, "SecureActionButtonTemplate")
     self.button = button
-    button:SetSize(self.db.size, self.db.size)
+    button:SetSize(42, 42)
     button:SetClampedToScreen(true)
     button:SetMovable(true)
     button:EnableMouse(true)
@@ -109,7 +121,7 @@ function addon:CreateUI()
         end
     end)
 
-    self:RestorePosition()
+    self:ApplyButtonLayout()
 end
 
 function addon:SetCandidate(candidate, total)

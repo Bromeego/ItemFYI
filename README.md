@@ -17,6 +17,7 @@ never opens or learns anything automatically.
 - Right-click skips an item for the session.
 - Ctrl-right-click permanently ignores an item.
 - Alt-drag moves the button.
+- Provides a native Blizzard AddOns settings panel for category and button controls.
 
 ## Installation
 
@@ -26,7 +27,8 @@ never opens or learns anything automatically.
 
 ## Commands
 
-- `/ifyi` or `/ifyi help` — show command help.
+- `/ifyi` — open the ItemFYI settings panel.
+- `/ifyi help` — show command help.
 - `/ifyi scan` — clear session skips and scan again.
 - `/ifyi list` — list all currently detected actions.
 - `/ifyi skip` — skip the current item for this session.
@@ -35,6 +37,15 @@ never opens or learns anything automatically.
 - `/ifyi clearignored` — clear the permanent ignore list.
 - `/ifyi clearskips` — clear session skips.
 - `/ifyi reset` — reset the button position.
+
+## Settings
+
+Open **Options → AddOns → ItemFYI** or type `/ifyi`. The panel can enable or
+disable ItemFYI, toggle individual item categories, change the button size,
+reset its position, clear skipped or ignored items, and rescan the bags.
+
+Settings changed during combat are saved immediately. Any protected button
+layout or item update is applied after combat ends.
 
 ## Version 0.1 limitations
 

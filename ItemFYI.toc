@@ -11,3 +11,4 @@ Core.lua
 Rules.lua
 Detection.lua
 UI.lua
+Settings.lua

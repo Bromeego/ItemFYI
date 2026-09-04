@@ -254,7 +254,8 @@ function addon:ScanBags(reason)
                 if context then
                     local category, itemReason = self:ClassifyItem(context)
                     local key = context.uniqueKey or tostring(context.itemID)
-                    if category and not seen[key] and not self.db.ignored[key] and not self.sessionSkipped[key] then
+                    if category and self:IsCategoryEnabled(category) and not seen[key]
+                        and not self.db.ignored[key] and not self.sessionSkipped[key] then
                         seen[key] = true
                         candidates[#candidates + 1] = {
                             key = key,

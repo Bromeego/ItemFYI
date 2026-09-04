@@ -9,6 +9,7 @@ addon.current = nil
 addon.candidates = {}
 addon.scanPending = false
 addon.scanGeneration = 0
+addon.layoutPending = false
 
 local defaults = {
     enabled = true,
@@ -20,6 +21,15 @@ local defaults = {
         y = -120,
     },
     size = 42,
+    categories = {
+        container = true,
+        transmog = true,
+        decor = true,
+        mount = true,
+        toy = true,
+        pet = true,
+        recipe = true,
+    },
 }
 
 local function ApplyDefaults(target, source)
@@ -41,6 +51,10 @@ end
 
 function addon:IsInCombat()
     return InCombatLockdown and InCombatLockdown()
+end
+
+function addon:IsCategoryEnabled(category)
+    return not self.db or not self.db.categories or self.db.categories[category] ~= false
 end
 
 function addon:ScheduleScan(reason, delay)
@@ -74,6 +88,7 @@ function addon:SkipCurrent(permanent)
     if permanent then
         self.db.ignored[candidate.key] = true
         self:Print(("Ignoring %s. Use /ifyi unignore %s to restore it."):format(candidate.name, candidate.key))
+        self:RefreshSettingsPanel()
     else
         self.sessionSkipped[candidate.key] = true
         self:Print(("Skipped %s for this session."):format(candidate.name))
@@ -99,9 +114,7 @@ function addon:ResetPosition()
     self.db.position.relativePoint = defaults.position.relativePoint
     self.db.position.x = defaults.position.x
     self.db.position.y = defaults.position.y
-    if self.button then
-        self:RestorePosition()
-    end
+    self:ApplyButtonLayout()
     self:Print("Button position reset.")
 end
 
@@ -109,7 +122,9 @@ function addon:HandleSlash(input)
     local command, argument = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     command = string.lower(command or "")
 
-    if command == "" or command == "help" then
+    if command == "" then
+        self:OpenSettings()
+    elseif command == "help" then
         self:Print("/ifyi scan, list, skip, ignore, unignore <key>, clearignored, clearskips, reset")
     elseif command == "scan" then
         self.sessionSkipped = {}
@@ -127,10 +142,12 @@ function addon:HandleSlash(input)
             self.db.ignored[numericKey] = nil
         end
         self:Print(("Restored %s."):format(argument))
+        self:RefreshSettingsPanel()
         self:ScheduleScan("unignored", 0)
     elseif command == "clearignored" then
         wipe(self.db.ignored)
         self:Print("Permanent ignore list cleared.")
+        self:RefreshSettingsPanel()
         self:ScheduleScan("ignore list cleared", 0)
     elseif command == "clearskips" then
         wipe(self.sessionSkipped)
@@ -166,6 +183,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon.db = _G.ItemFYIDB
         ApplyDefaults(addon.db, defaults)
         addon:CreateUI()
+        addon:RegisterSettings()
 
         SLASH_ITEMFYI1 = "/ifyi"
         SlashCmdList.ITEMFYI = function(text)
@@ -174,6 +192,9 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "PLAYER_LOGIN" then
         addon:ScheduleScan("login", 0.4)
     elseif event == "PLAYER_REGEN_ENABLED" then
+        if addon.layoutPending then
+            addon:ApplyButtonLayout()
+        end
         if addon.scanPending then
             addon:ScheduleScan("combat ended", 0)
         end
@@ -181,4 +202,3 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:ScheduleScan(event, 0.15)
     end
 end)
-

@@ -12,6 +12,7 @@ local function NewRegion()
         SetTexCoord = Noop,
         SetTextColor = Noop,
         SetText = function(self, value) self.text = value end,
+        GetText = function(self) return self.text end,
     }
 end
 
@@ -26,6 +27,7 @@ local function NewFrame(name)
     function frame:RegisterEvent() end
     function frame:SetScript(script, callback) self.scripts[script] = callback end
     function frame:SetSize() end
+    function frame:SetWidth() end
     function frame:SetClampedToScreen() end
     function frame:SetMovable() end
     function frame:EnableMouse() end
@@ -36,6 +38,19 @@ local function NewFrame(name)
     function frame:CreateTexture() return NewRegion() end
     function frame:CreateFontString() return NewRegion() end
     function frame:SetAttribute(key, value) self.attributes[key] = value end
+    function frame:SetText(value) self.text = value end
+    function frame:SetChecked(value) self.checked = value end
+    function frame:GetChecked() return self.checked end
+    function frame:SetEnabled(value) self.enabled = value end
+    function frame:SetMinMaxValues(low, high) self.low, self.high = low, high end
+    function frame:SetValueStep(step) self.step = step end
+    function frame:SetObeyStepOnDrag() end
+    function frame:SetValue(value)
+        self.value = value
+        if self.scripts.OnValueChanged then
+            self.scripts.OnValueChanged(self, value)
+        end
+    end
     function frame:ClearAllPoints() end
     function frame:SetPoint(point, _, relativePoint, x, y)
         self.point = { point, relativePoint, x, y }
@@ -51,7 +66,15 @@ local function NewFrame(name)
 end
 
 UIParent = {}
-CreateFrame = function(_, name) return NewFrame(name) end
+CreateFrame = function(_, name)
+    local frame = NewFrame(name)
+    if name == "ItemFYIButtonSizeSlider" then
+        _G.ItemFYIButtonSizeSliderLow = NewRegion()
+        _G.ItemFYIButtonSizeSliderHigh = NewRegion()
+        _G.ItemFYIButtonSizeSliderText = NewRegion()
+    end
+    return frame
+end
 InCombatLockdown = function() return false end
 IsAltKeyDown = function() return false end
 IsControlKeyDown = function() return false end
@@ -81,18 +104,34 @@ GameTooltip = {
     Hide = Noop,
 }
 SlashCmdList = {}
+local openedCategory
+Settings = {
+    RegisterCanvasLayoutCategory = function(_, name)
+        return { ID = name, GetID = function(self) return self.ID end }
+    end,
+    RegisterAddOnCategory = Noop,
+    OpenToCategory = function(categoryID) openedCategory = categoryID end,
+}
 
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
 assert(loadfile("Detection.lua"))("ItemFYI", addon)
 assert(loadfile("UI.lua"))("ItemFYI", addon)
+assert(loadfile("Settings.lua"))("ItemFYI", addon)
 
 local eventFrame = addon.eventFrame
 assert(eventFrame and eventFrame.scripts.OnEvent, "event frame was not initialized")
 eventFrame.scripts.OnEvent(eventFrame, "ADDON_LOADED", "ItemFYI")
 assert(addon.button, "secure action button was not created")
 assert(SlashCmdList.ITEMFYI, "slash command was not registered")
+assert(addon.settingsCategory, "settings category was not registered")
+SlashCmdList.ITEMFYI("")
+assert(openedCategory == "ItemFYI", "bare /ifyi should open the settings category")
+
+addon.settingsPanel.categoryChecks.container.checked = false
+addon.settingsPanel.categoryChecks.container.scripts.OnClick(addon.settingsPanel.categoryChecks.container)
+assert(addon.db.categories.container == false, "category checkbox should persist its value")
 
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOGIN")
 assert(addon.current == nil, "empty bags should not select a candidate")
@@ -115,4 +154,3 @@ assert(addon.button.attributes.macrotext1 == "/use 0 4", "secure macro must targ
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
 
 print("load and secure-button smoke test passed")
-
