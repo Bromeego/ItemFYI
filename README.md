@@ -1,0 +1,71 @@
+# ItemFYI: Openables & Learnables
+
+ItemFYI is a lightweight World of Warcraft Retail addon that points out useful,
+actionable items already sitting in your bags. It shows one secure button and
+never opens or learns anything automatically.
+
+## MVP behaviour
+
+- Scans all equipped bags at login and after bag changes.
+- Shows one item at a time, with a small `+N` count when more are waiting.
+- Prioritises uncollected mounts, pets, toys, housing decor, transmog tokens,
+  and recipes before ordinary containers.
+- Uses Blizzard collection APIs where available, tooltip signals for explicit
+  learnable tokens, and a small exception list for known crest packs.
+- Uses the exact bag and slot for its secure click action.
+- Defers every protected-frame update until combat ends.
+- Right-click skips an item for the session.
+- Ctrl-right-click permanently ignores an item.
+- Alt-drag moves the button.
+
+## Installation
+
+1. Extract the `ItemFYI` folder into:
+   `World of Warcraft/_retail_/Interface/AddOns/`
+2. Restart WoW or type `/reload`.
+
+## Commands
+
+- `/ifyi` or `/ifyi help` — show command help.
+- `/ifyi scan` — clear session skips and scan again.
+- `/ifyi list` — list all currently detected actions.
+- `/ifyi skip` — skip the current item for this session.
+- `/ifyi ignore` — permanently ignore the current item.
+- `/ifyi unignore <key>` — restore an ignored item.
+- `/ifyi clearignored` — clear the permanent ignore list.
+- `/ifyi clearskips` — clear session skips.
+- `/ifyi reset` — reset the button position.
+
+## Version 0.1 limitations
+
+- Retail only; English tooltip fallbacks are used where Blizzard provides no
+  direct collection API.
+- Equippable armour and weapons are deliberately excluded. Version 0.1 only
+  surfaces transmog items with an explicit learn/use instruction.
+- Housing decor is treated as repeatable and is shown whenever present.
+- No bank scanning, lockpicking, disenchanting, quest automation, auto-opening,
+  analytics, or external dependencies.
+- The secure button requires in-game testing. Static tests cannot reproduce
+  Blizzard's combat-lockdown and taint behaviour.
+
+## Initial in-game checks
+
+1. Confirm an ordinary loot container appears and opens with one click.
+2. Confirm Warbound Pack of Hero Mistcrests (`280732`) appears.
+3. Confirm an unlearned transmog token appears even on another armour class.
+4. Confirm known collectibles do not appear.
+5. Confirm right-click skips without consuming the item.
+6. Enter and leave combat with the button visible; verify no blocked-action or
+   Lua errors and that the button refreshes afterward.
+
+## Design boundary
+
+ItemFYI is a quiet heads-up, not an inventory manager. Features should earn
+their place by improving detection, confidence, or click safety without turning
+the addon into a permanent dashboard.
+
+## Development note
+
+The initial MVP was created with assistance from OpenAI Codex. AI assistance
+covered architecture, implementation, static tests, and documentation. In-game
+validation remains the responsibility of the maintainer.
