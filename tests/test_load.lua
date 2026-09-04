@@ -193,12 +193,13 @@ addon:SetCandidate({
     bag = 0,
     slot = 4,
     reason = "Openable container — click to open",
-    secureMacro = "/use 0 4",
+    secureMacro = "/use item:123",
 }, 3)
 
 assert(addon.button.shown, "candidate should show the button")
 assert(addon.button.attributes.type1 == "macro", "left click must use a secure macro action")
-assert(addon.button.attributes.macrotext1 == "/use 0 4", "secure macro must target the exact bag slot")
+assert(addon.button.attributes.macrotext1 == "/use item:123",
+    "secure macro must resolve the item by ID at click time")
 assert(addon.button.attributes.item1 == nil, "left click should not use the equip-aware item action")
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
 

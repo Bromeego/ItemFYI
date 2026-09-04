@@ -278,7 +278,9 @@ function addon:ScanBags(reason)
                             category = category,
                             reason = itemReason,
                             priority = self.CategoryPriority[category] or 100,
-                            secureMacro = ("/use %d %d"):format(bag, slot),
+                            -- Resolve the item at click time. Vendor purchases
+                            -- can move bag slots between the scan and the click.
+                            secureMacro = ("/use item:%d"):format(context.itemID),
                         }
                     end
                 end

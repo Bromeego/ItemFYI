@@ -6,8 +6,8 @@
   Legwear, from appearing when their tooltip says every contained look is
   already collected.
 - Fixed left-click actions for both click-on-press and click-on-release settings.
-- Uses a secure bag-slot `/use` action so equippable appearance tokens are used
-  rather than routed through the secure item's equip behaviour.
+- Uses a secure item-ID `/use` action so equippable appearance tokens are used
+  rather than equipped, and vendor bag-slot changes cannot stale the target.
 - Added optional EllesmereUI and ElvUI skin adapters while preserving ItemFYI's
   built-in dark style as the fallback.
 - Stopped non-usable housing dyes and tooltip-marked locked lockboxes from
