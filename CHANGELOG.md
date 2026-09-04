@@ -5,8 +5,9 @@
 - Stopped completed appearance caches, including Cache of Void-Touched
   Legwear, from appearing when their tooltip says every contained look is
   already collected.
-- Replaced generated `/use` macro text with Blizzard's native secure item action
-  targeting the exact bag and slot.
+- Fixed left-click actions for both click-on-press and click-on-release settings.
+- Uses a secure bag-slot `/use` action so equippable appearance tokens are used
+  rather than routed through the secure item's equip behaviour.
 - Added optional EllesmereUI and ElvUI skin adapters while preserving ItemFYI's
   built-in dark style as the fallback.
 - Stopped non-usable housing dyes and tooltip-marked locked lockboxes from

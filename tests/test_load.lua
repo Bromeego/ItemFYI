@@ -35,7 +35,7 @@ local function NewFrame(name)
     function frame:SetClampedToScreen() end
     function frame:SetMovable() end
     function frame:EnableMouse() end
-    function frame:RegisterForClicks() end
+    function frame:RegisterForClicks(...) self.registeredClicks = { ... } end
     function frame:RegisterForDrag() end
     function frame:Hide() self.shown = false end
     function frame:Show() self.shown = true end
@@ -152,6 +152,8 @@ local eventFrame = addon.eventFrame
 assert(eventFrame and eventFrame.scripts.OnEvent, "event frame was not initialized")
 eventFrame.scripts.OnEvent(eventFrame, "ADDON_LOADED", "ItemFYI")
 assert(addon.button, "secure action button was not created")
+assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredClicks[2] == "AnyDown",
+    "secure button must register both click phases")
 assert(SlashCmdList.ITEMFYI, "slash command was not registered")
 assert(addon.settingsCategory, "settings category was not registered")
 SlashCmdList.ITEMFYI("")
@@ -191,13 +193,17 @@ addon:SetCandidate({
     bag = 0,
     slot = 4,
     reason = "Openable container — click to open",
-    secureItem = "0 4",
+    secureMacro = "/use 0 4",
 }, 3)
 
 assert(addon.button.shown, "candidate should show the button")
-assert(addon.button.attributes.type1 == "item", "left click must use a secure item action")
-assert(addon.button.attributes.item1 == "0 4", "secure item action must target the exact bag slot")
-assert(addon.button.attributes.macrotext1 == nil, "left click should not depend on macro text")
+assert(addon.button.attributes.type1 == "macro", "left click must use a secure macro action")
+assert(addon.button.attributes.macrotext1 == "/use 0 4", "secure macro must target the exact bag slot")
+assert(addon.button.attributes.item1 == nil, "left click should not use the equip-aware item action")
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
+
+addon.button.scripts.PostClick(addon.button, "LeftButton", true)
+assert(addon.current and addon.current.itemID == 123,
+    "mouse-down follow-up must wait for the release phase")
 
 print("load and secure-button smoke test passed")

@@ -66,7 +66,9 @@ function addon:CreateUI()
     button:SetClampedToScreen(true)
     button:SetMovable(true)
     button:EnableMouse(true)
-    button:RegisterForClicks("AnyUp")
+    -- Secure actions may fire on press or release depending on the player's
+    -- ActionButtonUseKeyDown setting, so register both phases.
+    button:RegisterForClicks("AnyUp", "AnyDown")
     button:RegisterForDrag("LeftButton")
     button:Hide()
 
@@ -123,7 +125,12 @@ function addon:CreateUI()
         addon:SavePosition()
     end)
 
-    button:SetScript("PostClick", function(_, mouseButton)
+    button:SetScript("PostClick", function(_, mouseButton, down)
+        -- With both click phases registered, perform our insecure follow-up
+        -- only once after the mouse button is released.
+        if down then
+            return
+        end
         if mouseButton == "RightButton" then
             addon:SkipCurrent(IsControlKeyDown())
         else
@@ -171,8 +178,8 @@ function addon:SetCandidate(candidate, total)
     self.button.icon:SetTexture(candidate.icon or 134400)
     self.button.count:SetText(candidate.count and candidate.count > 1 and candidate.count or "")
     self.button.more:SetText(total > 1 and ("+%d"):format(total - 1) or "")
-    self.button:SetAttribute("type1", "item")
-    self.button:SetAttribute("item1", candidate.secureItem)
+    self.button:SetAttribute("type1", "macro")
+    self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()
 
     if ActionButton_ShowOverlayGlow then

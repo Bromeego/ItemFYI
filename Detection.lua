@@ -278,7 +278,7 @@ function addon:ScanBags(reason)
                             category = category,
                             reason = itemReason,
                             priority = self.CategoryPriority[category] or 100,
-                            secureItem = ("%d %d"):format(bag, slot),
+                            secureMacro = ("/use %d %d"):format(bag, slot),
                         }
                     end
                 end
