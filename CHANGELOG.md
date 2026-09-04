@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stopped background bag scans from hiding tooltips owned by bags, vendors, or
+  other UI elements.
 - Stopped completed appearance caches, including Cache of Void-Touched
   Legwear, from appearing when their tooltip says every contained look is
   already collected.

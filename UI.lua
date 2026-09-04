@@ -6,6 +6,12 @@ local function CreateText(parent, template, point, x, y)
     return text
 end
 
+local function HideButtonTooltip(button)
+    if GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button then
+        GameTooltip:Hide()
+    end
+end
+
 function addon:SavePosition(skipEditMode)
     if not self.button or not self.db then
         return
@@ -109,8 +115,8 @@ function addon:CreateUI()
         GameTooltip:Show()
     end)
 
-    button:SetScript("OnLeave", function()
-        GameTooltip:Hide()
+    button:SetScript("OnLeave", function(frame)
+        HideButtonTooltip(frame)
     end)
 
     button:SetScript("OnDragStart", function(frame)
@@ -170,7 +176,7 @@ function addon:SetCandidate(candidate, total)
             self.button:SetAlpha(1)
             self.button:Hide()
         end
-        GameTooltip:Hide()
+        HideButtonTooltip(self.button)
         return
     end
 

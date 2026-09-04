@@ -107,11 +107,15 @@ C_PetJournal = {}
 Enum = { ItemClass = { Recipe = 9 } }
 NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
 GameTooltip = {
-    SetOwner = Noop,
+    SetOwner = function(self, owner) self.owner = owner end,
+    GetOwner = function(self) return self.owner end,
     SetBagItem = Noop,
     AddLine = Noop,
     Show = Noop,
-    Hide = Noop,
+    Hide = function(self)
+        self.hideCount = (self.hideCount or 0) + 1
+        self.owner = nil
+    end,
 }
 SlashCmdList = {}
 local editModeLib = { framesDB = {} }
@@ -181,8 +185,18 @@ addon:SetCandidate(nil, 0)
 assert(addon.button.shown, "button placeholder should be visible in Edit Mode")
 assert(addon.button.alpha == 0.65, "Edit Mode placeholder should be visually muted")
 EditModeManagerFrame.editModeActive = false
+local externalTooltipOwner = {}
+GameTooltip.owner = externalTooltipOwner
+local priorHideCount = GameTooltip.hideCount or 0
 addon:SetCandidate(nil, 0)
 assert(not addon.button.shown, "empty button should hide after leaving Edit Mode")
+assert(GameTooltip.owner == externalTooltipOwner and (GameTooltip.hideCount or 0) == priorHideCount,
+    "empty scans must not hide tooltips owned by other UI elements")
+
+GameTooltip.owner = addon.button
+addon:SetCandidate(nil, 0)
+assert(GameTooltip.owner == nil and GameTooltip.hideCount == priorHideCount + 1,
+    "empty scans should hide ItemFYI's own tooltip")
 
 addon:SetCandidate({
     key = "123",
