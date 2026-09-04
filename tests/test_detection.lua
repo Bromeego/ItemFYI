@@ -78,6 +78,10 @@ tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))
 assert(category == "decor", "housing decor detection failed")
 
+tooltipText = "Housing Dye\nUsed to recolour housing decor."
+category = addon:ClassifyItem(Context(108, { itemType = "Housing", itemSubType = "Dye" }))
+assert(category == nil, "non-usable housing dye should not be actionable")
+
 tooltipText = "Use: Collect the appearances of the Test Ensemble."
 category = addon:ClassifyItem(Context(105))
 assert(category == "transmog", "transmog token detection failed")
@@ -90,5 +94,12 @@ tooltipText = "Use: Teaches you how to craft a test item."
 category = addon:ClassifyItem(Context(107, { itemType = "Recipe", classID = 9 }))
 assert(category == "recipe", "unknown recipe detection failed")
 
-print("detection tests passed")
+tooltipText = "Locked\nRequires Lockpicking"
+category = addon:ClassifyItem(Context(109, { hasLoot = true }))
+assert(category == nil, "locked lockbox should not be actionable")
 
+tooltipText = "Unlocked strongbox"
+category = addon:ClassifyItem(Context(110, { hasLoot = true }))
+assert(category == "container", "unlocked container should remain actionable")
+
+print("detection tests passed")

@@ -16,7 +16,6 @@ local transmogText = {
 }
 
 local decorText = {
-    "housing decor",
     "use: add this decor",
     "use: adds this decor",
     "decor to your collection",
@@ -38,6 +37,11 @@ local function ContainsAny(text, needles)
         end
     end
     return false
+end
+
+local function IsLocked(text)
+    return string.find(text, "requires lockpicking", 1, true) ~= nil
+        or string.find(text, "%f[%a]locked%f[%A]") ~= nil
 end
 
 local function AppendTooltipValue(parts, value)
@@ -173,12 +177,12 @@ function addon:ClassifyItem(context)
     local itemType = string.lower(context.itemType or "")
     local itemSubType = string.lower(context.itemSubType or "")
 
-    local isDecor = itemType == "housing"
+    local isDecorType = itemType == "housing"
         or itemType == "decor"
         or itemSubType == "housing decor"
         or itemSubType == "decoration"
-        or ContainsAny(tooltipText, decorText)
-    if isDecor then
+    local hasDecorUse = ContainsAny(tooltipText, decorText)
+    if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true)) then
         return "decor", "Housing decor — click to add"
     end
 
@@ -192,7 +196,7 @@ function addon:ClassifyItem(context)
         return "recipe", "Unlearned recipe — click to learn"
     end
 
-    if context.hasLoot or ContainsAny(tooltipText, openText) then
+    if not IsLocked(tooltipText) and (context.hasLoot or ContainsAny(tooltipText, openText)) then
         return "container", "Openable container — click to open"
     end
 end

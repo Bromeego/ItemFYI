@@ -70,18 +70,9 @@ function addon:CreateUI()
     button:RegisterForDrag("LeftButton")
     button:Hide()
 
-    button.background = button:CreateTexture(nil, "BACKGROUND")
-    button.background:SetAllPoints()
-    button.background:SetColorTexture(0.025, 0.035, 0.045, 0.96)
-
     button.icon = button:CreateTexture(nil, "ARTWORK")
-    button.icon:SetPoint("TOPLEFT", 3, -3)
-    button.icon:SetPoint("BOTTOMRIGHT", -3, 3)
+    button.icon:SetAllPoints()
     button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-
-    button.border = button:CreateTexture(nil, "OVERLAY")
-    button.border:SetAllPoints()
-    button.border:SetTexture("Interface\\Buttons\\UI-Quickslot2")
 
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
     button.highlight:SetPoint("TOPLEFT", 2, -2)
@@ -92,11 +83,6 @@ function addon:CreateUI()
     button.count = CreateText(button, "NumberFontNormal", "BOTTOMRIGHT", -2, 2)
     button.more = CreateText(button, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
     button.more:SetTextColor(0.35, 0.85, 1)
-
-    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    button.label:SetPoint("BOTTOM", button, "TOP", 0, 3)
-    button.label:SetText("ITEM FYI")
-    button.label:SetTextColor(0.35, 0.85, 1)
 
     button:SetScript("OnEnter", function(frame)
         local candidate = addon.current

@@ -58,7 +58,10 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   direct collection API.
 - Equippable armour and weapons are deliberately excluded. Version 0.1 only
   surfaces transmog items with an explicit learn/use instruction.
-- Housing decor is treated as repeatable and is shown whenever present.
+- Housing items require an explicit tooltip action; non-usable housing dyes are
+  excluded.
+- Locked lockboxes are excluded until their tooltip no longer reports them as
+  locked or requiring lockpicking.
 - No bank scanning, lockpicking, disenchanting, quest automation, auto-opening,
   analytics, or external dependencies.
 - The secure button requires in-game testing. Static tests cannot reproduce
@@ -70,8 +73,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 2. Confirm Warbound Pack of Hero Mistcrests (`280732`) appears.
 3. Confirm an unlearned transmog token appears even on another armour class.
 4. Confirm known collectibles do not appear.
-5. Confirm right-click skips without consuming the item.
-6. Enter and leave combat with the button visible; verify no blocked-action or
+5. Confirm housing dye and locked lockboxes do not appear.
+6. Confirm right-click skips without consuming the item.
+7. Enter and leave combat with the button visible; verify no blocked-action or
    Lua errors and that the button refreshes afterward.
 
 ## Design boundary
