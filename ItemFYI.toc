@@ -1,0 +1,13 @@
+## Interface: 120100
+## Title: ItemFYI: Openables & Learnables
+## Notes: A lightweight heads-up for actionable items already sitting in your bags.
+## Author: Bromeego
+## Version: 0.1.0
+## SavedVariables: ItemFYIDB
+## IconTexture: Interface\Icons\INV_Misc_Bag_08
+## Category-enUS: Bags & Inventory
+
+Core.lua
+Rules.lua
+Detection.lua
+UI.lua
