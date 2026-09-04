@@ -21,13 +21,17 @@ local function NewFrame(name)
     local frame = {
         name = name,
         scripts = {},
+        hooks = {},
         attributes = {},
         shown = false,
+        width = 42,
+        height = 42,
     }
     function frame:RegisterEvent() end
     function frame:SetScript(script, callback) self.scripts[script] = callback end
-    function frame:SetSize() end
-    function frame:SetWidth() end
+    function frame:HookScript(script, callback) self.hooks[script] = callback end
+    function frame:SetSize(width, height) self.width, self.height = width, height end
+    function frame:SetWidth(width) self.width = width end
     function frame:SetClampedToScreen() end
     function frame:SetMovable() end
     function frame:EnableMouse() end
@@ -35,6 +39,9 @@ local function NewFrame(name)
     function frame:RegisterForDrag() end
     function frame:Hide() self.shown = false end
     function frame:Show() self.shown = true end
+    function frame:IsShown() return self.shown end
+    function frame:IsVisible() return self.shown end
+    function frame:SetAlpha(value) self.alpha = value end
     function frame:CreateTexture() return NewRegion() end
     function frame:CreateFontString() return NewRegion() end
     function frame:SetAttribute(key, value) self.attributes[key] = value end
@@ -59,13 +66,15 @@ local function NewFrame(name)
         local point = self.point or { "CENTER", "CENTER", 0, -120 }
         return point[1], UIParent, point[2], point[3], point[4]
     end
+    function frame:GetRect() return 100, 200, self.width, self.height end
+    function frame:GetName() return self.name end
     function frame:StartMoving() end
     function frame:StopMovingOrSizing() end
     createdFrames[#createdFrames + 1] = frame
     return frame
 end
 
-UIParent = {}
+UIParent = { GetRect = function() return 0, 0, 1920, 1080 end }
 CreateFrame = function(_, name)
     local frame = NewFrame(name)
     if name == "ItemFYIButtonSizeSlider" then
@@ -75,7 +84,8 @@ CreateFrame = function(_, name)
     end
     return frame
 end
-InCombatLockdown = function() return false end
+local inCombat = false
+InCombatLockdown = function() return inCombat end
 IsAltKeyDown = function() return false end
 IsControlKeyDown = function() return false end
 wipe = function(target) for key in pairs(target) do target[key] = nil end end
@@ -104,6 +114,22 @@ GameTooltip = {
     Hide = Noop,
 }
 SlashCmdList = {}
+local editModeLib = { framesDB = {} }
+function editModeLib:RegisterFrame(frame, _, db)
+    frame.system = 20
+    frame.Selection = NewFrame("ItemFYIEditModeSelection")
+    self.framesDB[frame.system] = db
+end
+function editModeLib:SetDontResize() end
+function editModeLib:RegisterCoordinates() end
+function editModeLib:RepositionFrame() end
+LibStub = function(name)
+    if name == "EditModeExpanded-1.0" then
+        return editModeLib
+    end
+end
+EditModeManagerFrame = NewFrame("EditModeManagerFrame")
+EditModeManagerFrame.editModeActive = false
 local openedCategory
 Settings = {
     RegisterCanvasLayoutCategory = function(_, name)
@@ -118,6 +144,7 @@ assert(loadfile("Core.lua"))("ItemFYI", addon)
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
 assert(loadfile("Detection.lua"))("ItemFYI", addon)
 assert(loadfile("UI.lua"))("ItemFYI", addon)
+assert(loadfile("EditMode.lua"))("ItemFYI", addon)
 assert(loadfile("Settings.lua"))("ItemFYI", addon)
 
 local eventFrame = addon.eventFrame
@@ -134,7 +161,25 @@ addon.settingsPanel.categoryChecks.container.scripts.OnClick(addon.settingsPanel
 assert(addon.db.categories.container == false, "category checkbox should persist its value")
 
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOGIN")
+assert(addon.editModeRegistered, "button was not registered with Edit Mode")
+assert(addon.db.editModeMigration == 1, "legacy position was not migrated")
 assert(addon.current == nil, "empty bags should not select a candidate")
+
+inCombat = true
+addon:ResetPosition()
+assert(addon.layoutPending and addon.layoutUseSavedPosition,
+    "position reset in combat should be deferred without losing reset intent")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(not addon.layoutPending, "deferred position reset should apply after combat")
+
+EditModeManagerFrame.editModeActive = true
+addon:SetCandidate(nil, 0)
+assert(addon.button.shown, "button placeholder should be visible in Edit Mode")
+assert(addon.button.alpha == 0.65, "Edit Mode placeholder should be visually muted")
+EditModeManagerFrame.editModeActive = false
+addon:SetCandidate(nil, 0)
+assert(not addon.button.shown, "empty button should hide after leaving Edit Mode")
 
 addon:SetCandidate({
     key = "123",

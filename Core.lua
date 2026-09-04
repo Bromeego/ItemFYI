@@ -21,6 +21,8 @@ local defaults = {
         y = -120,
     },
     size = 42,
+    editMode = {},
+    editModeMigration = 0,
     categories = {
         container = true,
         transmog = true,
@@ -114,7 +116,7 @@ function addon:ResetPosition()
     self.db.position.relativePoint = defaults.position.relativePoint
     self.db.position.x = defaults.position.x
     self.db.position.y = defaults.position.y
-    self:ApplyButtonLayout()
+    self:ApplyButtonLayout(true)
     self:Print("Button position reset.")
 end
 
@@ -190,10 +192,13 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:HandleSlash(text)
         end
     elseif event == "PLAYER_LOGIN" then
+        addon:RegisterEditMode()
         addon:ScheduleScan("login", 0.4)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if addon.layoutPending then
-            addon:ApplyButtonLayout()
+            local useSavedPosition = addon.layoutUseSavedPosition
+            addon.layoutUseSavedPosition = nil
+            addon:ApplyButtonLayout(useSavedPosition)
         end
         if addon.scanPending then
             addon:ScheduleScan("combat ended", 0)

@@ -17,6 +17,7 @@ never opens or learns anything automatically.
 - Right-click skips an item for the session.
 - Ctrl-right-click permanently ignores an item.
 - Alt-drag moves the button.
+- Registers the button with Blizzard Edit Mode, including per-layout positions.
 - Provides a native Blizzard AddOns settings panel for category and button controls.
 
 ## Installation
@@ -46,6 +47,10 @@ reset its position, clear skipped or ignored items, and rescan the bags.
 
 Settings changed during combat are saved immediately. Any protected button
 layout or item update is applied after combat ends.
+
+The ItemFYI button also appears as a movable element in Blizzard Edit Mode,
+even when there is no actionable item waiting. Edit Mode positions are stored
+per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 
 ## Version 0.1 limitations
 
@@ -80,3 +85,7 @@ the addon into a permanent dashboard.
 The initial MVP was created with assistance from OpenAI Codex. AI assistance
 covered architecture, implementation, static tests, and documentation. In-game
 validation remains the responsibility of the maintainer.
+
+ItemFYI embeds LibStub and EditModeExpanded-1.0. EditModeExpanded is maintained
+by teelolws and provides the compatibility layer for registering addon frames
+with Blizzard Edit Mode.

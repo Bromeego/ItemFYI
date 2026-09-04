@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added Blizzard Edit Mode support with per-layout button positions.
+- Added an Edit Mode placeholder so the button remains selectable when no
+  actionable item is waiting.
+- Preserved Alt-drag positioning and migrated the existing saved position.
 - Added a native Blizzard AddOns settings panel.
 - Changed bare `/ifyi` to open settings while keeping `/ifyi help` and all
   existing commands.

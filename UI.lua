@@ -6,7 +6,7 @@ local function CreateText(parent, template, point, x, y)
     return text
 end
 
-function addon:SavePosition()
+function addon:SavePosition(skipEditMode)
     if not self.button or not self.db then
         return
     end
@@ -15,22 +15,39 @@ function addon:SavePosition()
     self.db.position.relativePoint = relativePoint or "CENTER"
     self.db.position.x = x or 0
     self.db.position.y = y or 0
+    if not skipEditMode then
+        self:SaveEditModePosition()
+    end
 end
 
-function addon:ApplyButtonLayout()
+function addon:ApplyButtonLayout(useSavedPosition)
     if not self.button or not self.db then
         return
     end
     if self:IsInCombat() then
         self.layoutPending = true
+        if useSavedPosition then
+            self.layoutUseSavedPosition = true
+        end
         return
     end
     local position = self.db.position
     local size = math.max(32, math.min(64, tonumber(self.db.size) or 42))
     self.db.size = size
     self.button:SetSize(size, size)
+
+    if self.editModeRegistered and not useSavedPosition then
+        self.editModeLib:RepositionFrame(self.button)
+        self:SavePosition(true)
+        self.layoutPending = false
+        return
+    end
+
     self.button:ClearAllPoints()
     self.button:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
+    if useSavedPosition then
+        self:SaveEditModePosition()
+    end
     self.layoutPending = false
 end
 
@@ -142,11 +159,21 @@ function addon:SetCandidate(candidate, total)
         if ActionButton_HideOverlayGlow then
             ActionButton_HideOverlayGlow(self.button)
         end
-        self.button:Hide()
+        if self:EditModeIsActive() then
+            self.button.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
+            self.button.count:SetText("")
+            self.button.more:SetText("")
+            self.button:SetAlpha(0.65)
+            self.button:Show()
+        else
+            self.button:SetAlpha(1)
+            self.button:Hide()
+        end
         GameTooltip:Hide()
         return
     end
 
+    self.button:SetAlpha(1)
     self.button.icon:SetTexture(candidate.icon or 134400)
     self.button.count:SetText(candidate.count and candidate.count > 1 and candidate.count or "")
     self.button.more:SetText(total > 1 and ("+%d"):format(total - 1) or "")
