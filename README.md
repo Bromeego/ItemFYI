@@ -12,7 +12,8 @@ never opens or learns anything automatically.
   and recipes before ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens, and a small exception list for known crest packs.
-- Uses the exact bag and slot for its secure click action.
+- Uses Blizzard's native secure item action with the exact bag and slot; it does
+  not depend on generated macro text.
 - Defers every protected-frame update until combat ends.
 - Right-click skips an item for the session.
 - Ctrl-right-click permanently ignores an item.

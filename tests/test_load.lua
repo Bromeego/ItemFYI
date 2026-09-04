@@ -191,12 +191,13 @@ addon:SetCandidate({
     bag = 0,
     slot = 4,
     reason = "Openable container — click to open",
-    macro = "/use 0 4",
+    secureItem = "0 4",
 }, 3)
 
 assert(addon.button.shown, "candidate should show the button")
-assert(addon.button.attributes.type1 == "macro", "left click must use a secure macro")
-assert(addon.button.attributes.macrotext1 == "/use 0 4", "secure macro must target the exact bag slot")
+assert(addon.button.attributes.type1 == "item", "left click must use a secure item action")
+assert(addon.button.attributes.item1 == "0 4", "secure item action must target the exact bag slot")
+assert(addon.button.attributes.macrotext1 == nil, "left click should not depend on macro text")
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
 
 print("load and secure-button smoke test passed")

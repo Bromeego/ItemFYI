@@ -146,6 +146,7 @@ function addon:SetCandidate(candidate, total)
     self.current = candidate
     self.button:SetAttribute("type1", nil)
     self.button:SetAttribute("macrotext1", nil)
+    self.button:SetAttribute("item1", nil)
     self.button:SetAttribute("type2", nil)
 
     if not candidate then
@@ -170,8 +171,8 @@ function addon:SetCandidate(candidate, total)
     self.button.icon:SetTexture(candidate.icon or 134400)
     self.button.count:SetText(candidate.count and candidate.count > 1 and candidate.count or "")
     self.button.more:SetText(total > 1 and ("+%d"):format(total - 1) or "")
-    self.button:SetAttribute("type1", "macro")
-    self.button:SetAttribute("macrotext1", candidate.macro)
+    self.button:SetAttribute("type1", "item")
+    self.button:SetAttribute("item1", candidate.secureItem)
     self.button:Show()
 
     if ActionButton_ShowOverlayGlow then
