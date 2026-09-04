@@ -102,4 +102,8 @@ tooltipText = "Unlocked strongbox"
 category = addon:ClassifyItem(Context(110, { hasLoot = true }))
 assert(category == "container", "unlocked container should remain actionable")
 
+tooltipText = "You have collected all of the transmog looks contained in this cache.\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(264321, { hasLoot = true }))
+assert(category == nil, "completed appearance cache should not be actionable")
+
 print("detection tests passed")

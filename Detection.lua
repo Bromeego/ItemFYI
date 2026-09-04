@@ -6,6 +6,7 @@ local knownText = {
     "already known",
     "already collected",
     "you have collected this appearance",
+    "you have collected all of the transmog looks",
 }
 
 local transmogText = {
@@ -152,6 +153,12 @@ local function IsUncollectedToy(itemID)
 end
 
 function addon:ClassifyItem(context)
+    local tooltipText = self:GetTooltipText(context)
+    local alreadyKnown = ContainsAny(tooltipText, knownText)
+    if alreadyKnown or IsLocked(tooltipText) then
+        return nil
+    end
+
     local explicit = self.Rules[context.itemID]
     if explicit then
         return explicit.category, explicit.reason
@@ -172,8 +179,6 @@ function addon:ClassifyItem(context)
         return "pet", "Collectible battle pet — click to learn"
     end
 
-    local tooltipText = self:GetTooltipText(context)
-    local alreadyKnown = ContainsAny(tooltipText, knownText)
     local itemType = string.lower(context.itemType or "")
     local itemSubType = string.lower(context.itemSubType or "")
 
@@ -186,17 +191,17 @@ function addon:ClassifyItem(context)
         return "decor", "Housing decor — click to add"
     end
 
-    if not alreadyKnown and ContainsAny(tooltipText, transmogText) then
+    if ContainsAny(tooltipText, transmogText) then
         return "transmog", "Uncollected appearance — click to learn"
     end
 
     local recipeClassID = Enum and Enum.ItemClass and Enum.ItemClass.Recipe or 9
     local isRecipe = context.classID == recipeClassID or itemType == "recipe"
-    if isRecipe and not alreadyKnown and ContainsAny(tooltipText, recipeText) then
+    if isRecipe and ContainsAny(tooltipText, recipeText) then
         return "recipe", "Unlearned recipe — click to learn"
     end
 
-    if not IsLocked(tooltipText) and (context.hasLoot or ContainsAny(tooltipText, openText)) then
+    if context.hasLoot or ContainsAny(tooltipText, openText) then
         return "container", "Openable container — click to open"
     end
 end

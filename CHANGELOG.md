@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Stopped completed appearance caches, including Cache of Void-Touched
+  Legwear, from appearing when their tooltip says every contained look is
+  already collected.
 - Replaced generated `/use` macro text with Blizzard's native secure item action
   targeting the exact bag and slot.
 - Added optional EllesmereUI and ElvUI skin adapters while preserving ItemFYI's
