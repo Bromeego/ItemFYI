@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Stopped recipes with unmet profession, specialization, or skill requirements
+  from appearing on characters that cannot learn them.
+- Added threshold-aware support for Ascendant Voidshards at five and Void
+  Vestiges at four.
+- Counts threshold items across all equipped bags, including split stacks.
 - Added threshold-aware support for Venom-Cursed Fragments, shown only when at
   least two are available to combine.
 - Fixed Pet Journal species lookup and added detection for non-battle companion

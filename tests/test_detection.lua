@@ -10,6 +10,7 @@ C_Item = {
             1, "", data.icon or 1, 0, data.classID, data.subclassID
     end,
     GetItemInfoInstant = function() end,
+    IsUsableItem = function(itemID) return itemID ~= 111 end,
     RequestLoadItemDataByID = function() end,
 }
 
@@ -78,6 +79,18 @@ assert(category == nil, "single Venom-Cursed Fragment should not be actionable")
 category = addon:ClassifyItem(Context(279382, { stackCount = 2 }))
 assert(category == "container", "two Venom-Cursed Fragments should be actionable")
 
+category = addon:ClassifyItem(Context(279382, { stackCount = 1, totalCount = 2 }))
+assert(category == "container", "split Venom-Cursed Fragment stacks should use their bag total")
+
+category = addon:ClassifyItem(Context(268650, { stackCount = 4 }))
+assert(category == nil, "four Ascendant Voidshards should not be actionable")
+
+category = addon:ClassifyItem(Context(268650, { stackCount = 5 }))
+assert(category == "container", "five Ascendant Voidshards should be actionable")
+
+category = addon:ClassifyItem(Context(279576, { stackCount = 4 }))
+assert(category == "container", "four Void Vestiges should be actionable")
+
 category = addon:ClassifyItem(Context(100, { hasLoot = true }))
 assert(category == "container", "generic hasLoot container detection failed")
 
@@ -117,6 +130,10 @@ assert(category == nil, "known recipe should not be actionable")
 tooltipText = "Use: Teaches you how to craft a test item."
 category = addon:ClassifyItem(Context(107, { itemType = "Recipe", classID = 9 }))
 assert(category == "recipe", "unknown recipe detection failed")
+
+tooltipText = "Use: Teaches you how to craft a test item.\nRequires Northrend Leatherworking (75)"
+category = addon:ClassifyItem(Context(111, { itemType = "Recipe", classID = 9 }))
+assert(category == nil, "a recipe unusable by this character should not be actionable")
 
 tooltipText = "Locked\nRequires Lockpicking"
 category = addon:ClassifyItem(Context(109, { hasLoot = true }))

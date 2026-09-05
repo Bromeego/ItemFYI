@@ -49,6 +49,22 @@ local function IsLocked(text)
         or string.find(text, "%f[%a]locked%f[%A]") ~= nil
 end
 
+local function IsItemUsable(itemID)
+    local usabilityCheck = C_Item and C_Item.IsUsableItem or _G.IsUsableItem
+    if not usabilityCheck then
+        return true
+    end
+
+    local ok, usable = pcall(usabilityCheck, itemID)
+    if not ok then
+        return true
+    end
+
+    -- Only an explicit false should hide an item. A nil result can be
+    -- temporary while Blizzard finishes loading item data.
+    return usable ~= false
+end
+
 local function AppendTooltipValue(parts, value)
     if type(value) == "string" and value ~= "" then
         parts[#parts + 1] = value
@@ -166,7 +182,8 @@ function addon:ClassifyItem(context)
 
     local explicit = self.Rules[context.itemID]
     if explicit then
-        if explicit.minCount and (tonumber(context.stackCount) or 0) < explicit.minCount then
+        local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
+        if explicit.minCount and availableCount < explicit.minCount then
             return nil
         end
         return explicit.category, explicit.reason
@@ -211,7 +228,7 @@ function addon:ClassifyItem(context)
 
     local recipeClassID = Enum and Enum.ItemClass and Enum.ItemClass.Recipe or 9
     local isRecipe = context.classID == recipeClassID or itemType == "recipe"
-    if isRecipe and ContainsAny(tooltipText, recipeText) then
+    if isRecipe and IsItemUsable(context.itemID) and ContainsAny(tooltipText, recipeText) then
         return "recipe", "Unlearned recipe — click to learn"
     end
 
@@ -265,6 +282,8 @@ function addon:ScanBags(reason)
     end
 
     local candidates = {}
+    local contexts = {}
+    local totalCounts = {}
     local seen = {}
     local lastBag = NUM_TOTAL_EQUIPPED_BAG_SLOTS or 5
 
@@ -275,30 +294,37 @@ function addon:ScanBags(reason)
             if info and not info.isLocked then
                 local context = self:BuildContext(bag, slot, info)
                 if context then
-                    local category, itemReason = self:ClassifyItem(context)
-                    local key = context.uniqueKey or tostring(context.itemID)
-                    if category and self:IsCategoryEnabled(category) and not seen[key]
-                        and not self.db.ignored[key] and not self.sessionSkipped[key] then
-                        seen[key] = true
-                        candidates[#candidates + 1] = {
-                            key = key,
-                            itemID = context.itemID,
-                            name = context.name,
-                            link = context.link,
-                            icon = context.icon,
-                            count = context.stackCount,
-                            bag = bag,
-                            slot = slot,
-                            category = category,
-                            reason = itemReason,
-                            priority = self.CategoryPriority[category] or 100,
-                            -- Resolve the item at click time. Vendor purchases
-                            -- can move bag slots between the scan and the click.
-                            secureMacro = ("/use item:%d"):format(context.itemID),
-                        }
-                    end
+                    contexts[#contexts + 1] = context
+                    totalCounts[context.itemID] = (totalCounts[context.itemID] or 0)
+                        + (tonumber(context.stackCount) or 0)
                 end
             end
+        end
+    end
+
+    for _, context in ipairs(contexts) do
+        context.totalCount = totalCounts[context.itemID]
+        local category, itemReason = self:ClassifyItem(context)
+        local key = context.uniqueKey or tostring(context.itemID)
+        if category and self:IsCategoryEnabled(category) and not seen[key]
+            and not self.db.ignored[key] and not self.sessionSkipped[key] then
+            seen[key] = true
+            candidates[#candidates + 1] = {
+                key = key,
+                itemID = context.itemID,
+                name = context.name,
+                link = context.link,
+                icon = context.icon,
+                count = context.totalCount,
+                bag = context.bag,
+                slot = context.slot,
+                category = category,
+                reason = itemReason,
+                priority = self.CategoryPriority[category] or 100,
+                -- Resolve the item at click time. Vendor purchases
+                -- can move bag slots between the scan and the click.
+                secureMacro = ("/use item:%d"):format(context.itemID),
+            }
         end
     end
 

@@ -31,6 +31,16 @@ addon.Rules = {
         minCount = 2,
         reason = "Two Venom-Cursed Fragments ready — click to combine",
     },
+    [268650] = {
+        category = "container",
+        minCount = 5,
+        reason = "Five Ascendant Voidshards ready — click to combine",
+    },
+    [279576] = {
+        category = "container",
+        minCount = 4,
+        reason = "Four Void Vestiges ready — click to combine",
+    },
 }
 
 addon.CategoryPriority = {

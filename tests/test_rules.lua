@@ -7,6 +7,10 @@ assert(addon.Rules[280732].category == "container", "Mistcrest rule has the wron
 assert(addon.Rules[246752], "Hero Dawncrest pack is missing")
 assert(addon.Rules[279382] and addon.Rules[279382].minCount == 2,
     "Venom-Cursed Fragment must require a stack of two")
+assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5,
+    "Ascendant Voidshard must require a stack of five")
+assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
+    "Void Vestige must require a stack of four")
 assert(addon.CategoryPriority.mount < addon.CategoryPriority.container, "collectibles must precede containers")
 
 local count = 0
@@ -19,5 +23,5 @@ for itemID, rule in pairs(addon.Rules) do
     count = count + 1
 end
 
-assert(count == 19, ("expected 19 explicit rules, found %d"):format(count))
+assert(count == 21, ("expected 21 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))

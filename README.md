@@ -13,7 +13,11 @@ never opens or learns anything automatically.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
-- Supports minimum-stack rules for items that only become usable in multiples.
+- Supports whole-bag minimum-stack rules for items that only become usable in
+  multiples, including Venom-Cursed Fragments, Ascendant Voidshards, and Void
+  Vestiges.
+- Only suggests recipes that Blizzard reports as usable by the current
+  character, excluding recipes with unmet profession or skill requirements.
 - Uses a secure `/use item:<id>` action, including for equippable appearance
   tokens that should be learned instead of equipped. Resolving by item ID also
   avoids stale bag-slot targets while purchasing caches from a vendor.
@@ -67,6 +71,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   excluded.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
+- Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can
+  verify every distinct required item; they are not treated as stack thresholds.
 - No bank scanning, lockpicking, disenchanting, quest automation, auto-opening,
   analytics, or external dependencies.
 - The secure button requires in-game testing. Static tests cannot reproduce
