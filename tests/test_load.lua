@@ -221,4 +221,20 @@ addon.button.scripts.PostClick(addon.button, "LeftButton", true)
 assert(addon.current and addon.current.itemID == 123,
     "mouse-down follow-up must wait for the release phase")
 
+addon:SetCandidate({
+    key = "456",
+    itemID = 456,
+    name = "Test Appearance",
+    icon = 1,
+    count = 1,
+    bag = 2,
+    slot = 7,
+    reason = "Uncollected appearance — click to learn",
+    secureMacro = "/stopmacro [combat]\n/use 2 7",
+    secureBySlot = true,
+}, 1)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+assert(addon.current == nil and not addon.button.shown,
+    "a changed bag must invalidate a slot-targeted appearance action")
+
 print("load and secure-button smoke test passed")

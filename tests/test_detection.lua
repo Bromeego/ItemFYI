@@ -62,8 +62,8 @@ assert(loadfile("Detection.lua"))("ItemFYI", addon)
 local function Context(itemID, fields)
     fields = fields or {}
     fields.itemID = itemID
-    fields.bag = 0
-    fields.slot = 1
+    fields.bag = fields.bag or 0
+    fields.slot = fields.slot or 1
     fields.link = fields.link or ("item:" .. itemID)
     fields.itemType = fields.itemType or "Miscellaneous"
     fields.itemSubType = fields.itemSubType or "Other"
@@ -72,6 +72,18 @@ end
 
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
+
+local macro, secureBySlot = addon:BuildSecureUse(Context(201, {
+    bag = 2,
+    slot = 7,
+    equipLocation = "INVTYPE_WEAPON",
+}), "transmog")
+assert(macro == "/stopmacro [combat]\n/use 2 7" and secureBySlot,
+    "equippable appearance tokens must use their current bag slot")
+
+macro, secureBySlot = addon:BuildSecureUse(Context(202, { bag = 3, slot = 5 }), "container")
+assert(macro == "/use item:202" and not secureBySlot,
+    "containers must continue resolving by item ID")
 
 category = addon:ClassifyItem(Context(279382, { stackCount = 1 }))
 assert(category == nil, "single Venom-Cursed Fragment should not be actionable")

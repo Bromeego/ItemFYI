@@ -167,6 +167,7 @@ addon.eventFrame = events
 
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
@@ -204,6 +205,16 @@ events:SetScript("OnEvent", function(_, event, ...)
         if addon.scanPending then
             addon:ScheduleScan("combat ended", 0)
         end
+    elseif event == "BAG_UPDATE" then
+        local changedBag = ...
+        local current = addon.current
+        if current and current.secureBySlot and current.bag == changedBag and not addon:IsInCombat() then
+            -- Do not leave a slot-targeted appearance action clickable while
+            -- the slot may contain a different item. BAG_UPDATE_DELAYED will
+            -- rebuild it after Blizzard finishes the bag change.
+            addon:SetCandidate(nil, 0)
+        end
+        addon:ScheduleScan(event, 0.05)
     else
         addon:ScheduleScan(event, 0.15)
     end

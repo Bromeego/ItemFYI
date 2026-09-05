@@ -270,6 +270,20 @@ function addon:BuildContext(bag, slot, info)
     }
 end
 
+function addon:BuildSecureUse(context, category)
+    if category == "transmog" and context.equipLocation and context.equipLocation ~= "" then
+        -- Item-ID macros prefer equipping equippable gear. Target the current
+        -- bag slot so WoW follows the same use path as right-clicking the item.
+        -- Appearance collection is not useful in combat, and blocking it there
+        -- removes the only period where this slot cannot be refreshed safely.
+        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true
+    end
+
+    -- IDs remain safest for containers and other non-equippable actions because
+    -- vendor purchases and bag sorting can move their original slots.
+    return ("/use item:%d"):format(context.itemID), false
+end
+
 function addon:ScanBags(reason)
     if not self.db or not self.db.enabled then
         self.candidates = {}
@@ -308,6 +322,7 @@ function addon:ScanBags(reason)
         local key = context.uniqueKey or tostring(context.itemID)
         if category and self:IsCategoryEnabled(category) and not seen[key]
             and not self.db.ignored[key] and not self.sessionSkipped[key] then
+            local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
             seen[key] = true
             candidates[#candidates + 1] = {
                 key = key,
@@ -321,9 +336,8 @@ function addon:ScanBags(reason)
                 category = category,
                 reason = itemReason,
                 priority = self.CategoryPriority[category] or 100,
-                -- Resolve the item at click time. Vendor purchases
-                -- can move bag slots between the scan and the click.
-                secureMacro = ("/use item:%d"):format(context.itemID),
+                secureMacro = secureMacro,
+                secureBySlot = secureBySlot,
             }
         end
     end

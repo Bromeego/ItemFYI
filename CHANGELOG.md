@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed equippable appearance items such as unsupported weapon types trying to
+  equip instead of invoking their Warband collection action.
+- Uses exact bag-slot actions only for equippable appearance tokens, while
+  retaining item-ID actions for vendor containers and other items.
+- Invalidates slot-targeted actions as soon as their bag changes and blocks
+  those actions in combat to prevent stale slots from using another item.
 - Stopped recipes with unmet profession, specialization, or skill requirements
   from appearing on characters that cannot learn them.
 - Added threshold-aware support for Ascendant Voidshards at five and Void

@@ -18,9 +18,12 @@ never opens or learns anything automatically.
   Vestiges.
 - Only suggests recipes that Blizzard reports as usable by the current
   character, excluding recipes with unmet profession or skill requirements.
-- Uses a secure `/use item:<id>` action, including for equippable appearance
-  tokens that should be learned instead of equipped. Resolving by item ID also
-  avoids stale bag-slot targets while purchasing caches from a vendor.
+- Uses secure item-ID actions for containers and other non-equippable items so
+  vendor bag-slot changes cannot stale their targets. Equippable appearance
+  tokens use their exact bag slot so WoW learns them instead of trying to equip
+  an unsupported armour or weapon type.
+- Invalidates slot-targeted appearance actions immediately when their bag
+  changes and blocks those actions in combat.
 - Defers every protected-frame update until combat ends.
 - Right-click skips an item for the session.
 - Ctrl-right-click permanently ignores an item.
