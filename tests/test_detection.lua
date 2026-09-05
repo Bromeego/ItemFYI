@@ -72,6 +72,12 @@ end
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
 
+category = addon:ClassifyItem(Context(279382, { stackCount = 1 }))
+assert(category == nil, "single Venom-Cursed Fragment should not be actionable")
+
+category = addon:ClassifyItem(Context(279382, { stackCount = 2 }))
+assert(category == "container", "two Venom-Cursed Fragments should be actionable")
+
 category = addon:ClassifyItem(Context(100, { hasLoot = true }))
 assert(category == "container", "generic hasLoot container detection failed")
 

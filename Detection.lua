@@ -166,6 +166,9 @@ function addon:ClassifyItem(context)
 
     local explicit = self.Rules[context.itemID]
     if explicit then
+        if explicit.minCount and (tonumber(context.stackCount) or 0) < explicit.minCount then
+            return nil
+        end
         return explicit.category, explicit.reason
     end
 

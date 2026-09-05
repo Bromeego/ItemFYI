@@ -24,6 +24,13 @@ addon.Rules = {
     [280737] = { category = "container", reason = "Warbound Veteran Mistcrest pack — click to open" },
     [280734] = { category = "container", reason = "Warbound Champion Mistcrest pack — click to open" },
     [280732] = { category = "container", reason = "Warbound Hero Mistcrest pack — click to open" },
+
+    -- Stack-based item conversions
+    [279382] = {
+        category = "container",
+        minCount = 2,
+        reason = "Two Venom-Cursed Fragments ready — click to combine",
+    },
 }
 
 addon.CategoryPriority = {
@@ -35,4 +42,3 @@ addon.CategoryPriority = {
     recipe = 15,
     container = 50,
 }
-

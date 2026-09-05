@@ -13,6 +13,7 @@ never opens or learns anything automatically.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
+- Supports minimum-stack rules for items that only become usable in multiples.
 - Uses a secure `/use item:<id>` action, including for equippable appearance
   tokens that should be learned instead of equipped. Resolving by item ID also
   avoids stale bag-slot targets while purchasing caches from a vendor.

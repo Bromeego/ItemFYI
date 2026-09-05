@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added threshold-aware support for Venom-Cursed Fragments, shown only when at
+  least two are available to combine.
 - Fixed Pet Journal species lookup and added detection for non-battle companion
   items such as Emberlyn.
 - Stopped background bag scans from hiding tooltips owned by bags, vendors, or
