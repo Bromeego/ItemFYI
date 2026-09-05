@@ -16,8 +16,9 @@ never opens or learns anything automatically.
 - Supports whole-bag minimum-stack rules for items that only become usable in
   multiples, including Venom-Cursed Fragments, Ascendant Voidshards, and Void
   Vestiges.
-- Only suggests recipes that Blizzard reports as usable by the current
-  character, excluding recipes with unmet profession or skill requirements.
+- Only suggests recipes that are usable by the current character, combining
+  Blizzard's usability result with the tooltip's rendered requirement state so
+  red profession, specialization, level, or skill requirements are excluded.
 - Uses secure item-ID actions for containers and other non-equippable items so
   vendor bag-slot changes cannot stale their targets. Equippable appearance
   tokens use their exact bag slot so WoW learns them instead of trying to equip

@@ -65,6 +65,57 @@ local function IsItemUsable(itemID)
     return usable ~= false
 end
 
+local function IsRequirementText(text)
+    if type(text) ~= "string" then
+        return false
+    end
+
+    text = string.lower(text)
+    text = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
+    text = string.gsub(text, "|r", "")
+    text = string.match(text, "^%s*(.-)%s*$") or ""
+    return string.find(text, "^requires[%s:]") ~= nil
+end
+
+local function GetColorRGB(color)
+    if type(color) ~= "table" then
+        return nil
+    end
+
+    if type(color.GetRGB) == "function" then
+        local ok, red, green, blue = pcall(color.GetRGB, color)
+        if ok then
+            return tonumber(red), tonumber(green), tonumber(blue)
+        end
+    end
+
+    return tonumber(color.r), tonumber(color.g), tonumber(color.b)
+end
+
+local function IsFailureColor(color)
+    local red, green, blue = GetColorRGB(color)
+    return red and green and blue
+        and red >= 0.75
+        and green <= 0.4
+        and blue <= 0.4
+        and red > green * 1.5
+        and red > blue * 1.5
+end
+
+local function FontStringHasFailedRequirement(fontString)
+    if not (fontString and fontString.GetText and fontString.GetTextColor) then
+        return false
+    end
+
+    local text = fontString:GetText()
+    if not IsRequirementText(text) then
+        return false
+    end
+
+    local red, green, blue = fontString:GetTextColor()
+    return IsFailureColor({ r = red, g = green, b = blue })
+end
+
 local function AppendTooltipValue(parts, value)
     if type(value) == "string" and value ~= "" then
         parts[#parts + 1] = value
@@ -107,6 +158,45 @@ function addon:GetTooltipText(context)
     end
 
     return string.lower(table.concat(parts, "\n"))
+end
+
+function addon:HasUnmetRequirement(context)
+    if C_TooltipInfo and C_TooltipInfo.GetBagItem then
+        local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
+        if ok and tooltip and tooltip.lines then
+            for _, line in ipairs(tooltip.lines) do
+                if IsRequirementText(line.leftText) and IsFailureColor(line.leftColor) then
+                    return true
+                end
+                if IsRequirementText(line.rightText) and IsFailureColor(line.rightColor) then
+                    return true
+                end
+                if IsRequirementText(line.text) and IsFailureColor(line.color or line.leftColor) then
+                    return true
+                end
+            end
+        end
+    end
+
+    -- Older clients or tooltip providers may omit structured colours. The
+    -- private scanning tooltip preserves the rendered requirement colour.
+    if CreateFrame and UIParent then
+        if not self.scanTooltip then
+            self.scanTooltip = CreateFrame("GameTooltip", "ItemFYIScanTooltip", UIParent, "GameTooltipTemplate")
+            self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+        end
+        self.scanTooltip:ClearLines()
+        self.scanTooltip:SetBagItem(context.bag, context.slot)
+        local tooltipName = self.scanTooltip:GetName()
+        for lineNumber = 1, self.scanTooltip:NumLines() do
+            if FontStringHasFailedRequirement(_G[tooltipName .. "TextLeft" .. lineNumber])
+                or FontStringHasFailedRequirement(_G[tooltipName .. "TextRight" .. lineNumber]) then
+                return true
+            end
+        end
+    end
+
+    return false
 end
 
 local function GetPetSpecies(context)
@@ -228,7 +318,8 @@ function addon:ClassifyItem(context)
 
     local recipeClassID = Enum and Enum.ItemClass and Enum.ItemClass.Recipe or 9
     local isRecipe = context.classID == recipeClassID or itemType == "recipe"
-    if isRecipe and IsItemUsable(context.itemID) and ContainsAny(tooltipText, recipeText) then
+    if isRecipe and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
+        and ContainsAny(tooltipText, recipeText) then
         return "recipe", "Unlearned recipe — click to learn"
     end
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed recipe filtering when Blizzard's generic item-usability result remains
+  true despite a red unmet profession or skill requirement in the tooltip.
 - Fixed equippable appearance items such as unsupported weapon types trying to
   equip instead of invoking their Warband collection action.
 - Uses exact bag-slot actions only for equippable appearance tokens, while

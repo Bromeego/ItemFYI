@@ -1,6 +1,7 @@
 _G = _G or _ENV
 
 local tooltipText = ""
+local tooltipLines
 local itemData = {}
 
 C_Item = {
@@ -10,7 +11,7 @@ C_Item = {
             1, "", data.icon or 1, 0, data.classID, data.subclassID
     end,
     GetItemInfoInstant = function() end,
-    IsUsableItem = function(itemID) return itemID ~= 111 end,
+    IsUsableItem = function() return true end,
     RequestLoadItemDataByID = function() end,
 }
 
@@ -21,7 +22,7 @@ C_Container = {
 
 C_TooltipInfo = {
     GetBagItem = function()
-        return { lines = { { leftText = tooltipText } } }
+        return { lines = tooltipLines or { { leftText = tooltipText } } }
     end,
 }
 
@@ -144,8 +145,23 @@ category = addon:ClassifyItem(Context(107, { itemType = "Recipe", classID = 9 })
 assert(category == "recipe", "unknown recipe detection failed")
 
 tooltipText = "Use: Teaches you how to craft a test item.\nRequires Northrend Leatherworking (75)"
+tooltipLines = {
+    { leftText = "Use: Teaches you how to craft a test item.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Northrend Leatherworking (75)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
 category = addon:ClassifyItem(Context(111, { itemType = "Recipe", classID = 9 }))
 assert(category == nil, "a recipe unusable by this character should not be actionable")
+
+tooltipLines = {
+    { leftText = "Use: Teaches you how to craft a test item.", leftColor = { r = 0, g = 1, b = 0 } },
+    {
+        leftText = "Requires Northrend Leatherworking (75)",
+        leftColor = { GetRGB = function() return 1, 1, 1 end },
+    },
+}
+category = addon:ClassifyItem(Context(112, { itemType = "Recipe", classID = 9 }))
+assert(category == "recipe", "a recipe with a satisfied requirement should remain actionable")
+tooltipLines = nil
 
 tooltipText = "Locked\nRequires Lockpicking"
 category = addon:ClassifyItem(Context(109, { hasLoot = true }))
