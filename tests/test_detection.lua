@@ -92,6 +92,10 @@ tooltipText = "Use: Gut the Shimmersiren. You monster."
 category = addon:ClassifyItem(Context(238378))
 assert(category == "profession", "explicit Shimmersiren profession action failed")
 
+tooltipText = "Use: Salvage what you can from the Rimefin Tuna."
+category = addon:ClassifyItem(Context(199346))
+assert(category == "profession", "explicit Rotten Rimefin Tuna salvage action failed")
+
 local macro, secureBySlot = addon:BuildSecureUse(Context(201, {
     bag = 2,
     slot = 7,
@@ -193,6 +197,12 @@ completedQuests[95127] = nil
 tooltipText = "Use: Increases Fishing skill by 25 for 10 min."
 category = addon:ClassifyItem(Context(116))
 assert(category == nil, "temporary profession buffs should not be actionable")
+
+tooltipText = "Use: Gut and clean 5 Small Fat Sleeper."
+category = addon:ClassifyItem(Context(111651, { stackCount = 4, totalCount = 4 }))
+assert(category == nil, "Draenor fish should not appear below their cleaning threshold")
+category = addon:ClassifyItem(Context(111651, { stackCount = 3, totalCount = 5 }))
+assert(category == "profession", "Draenor fish should use their whole-bag cleaning threshold")
 
 tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))

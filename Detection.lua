@@ -41,6 +41,10 @@ local function IsProfessionKnowledgeItem(text)
         "use:%s+study to increase your [^\n]- knowledge by %d+") ~= nil
 end
 
+local function GetBulkFishProcessingMinimum(text)
+    return tonumber(string.match(text, "use:%s+gut and clean%s+(%d+)%s+"))
+end
+
 local function GetPermanentSkillIncrease(text)
     local skillName, maximum = string.match(text,
         "use:%s+increases?%s+([^\n]-)%s+skill%s+by%s+%d+.-up to a max of%s+(%d+)")
@@ -352,6 +356,13 @@ function addon:ClassifyItem(context)
     if IsProfessionKnowledgeItem(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "profession", "Profession knowledge — click to study"
+    end
+
+    local fishMinimum = GetBulkFishProcessingMinimum(tooltipText)
+    local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
+    if fishMinimum and availableCount >= fishMinimum and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "profession", "Fish ready to gut and clean — click to process"
     end
 
     local skillName, maximumSkill = GetPermanentSkillIncrease(tooltipText)

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added threshold-aware gutting and cleaning for Draenor fish, shown only when
+  the tooltip-required batch of five is available across equipped bags.
+- Added Rotten Rimefin Tuna salvage while deliberately excluding Frosted
+  Rimefin Tuna because defrosting starts a one-hour expiry timer.
 - Added Shimmersiren as an explicit profession action for gutting from the
   ItemFYI button.
 - Added profession knowledge consumables across Midnight, The War Within, and

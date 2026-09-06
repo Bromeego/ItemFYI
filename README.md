@@ -23,6 +23,11 @@ never opens or learns anything automatically.
   disappear after that week's use.
 - Surfaces Shimmersiren as a usable Midnight profession action so it can be
   gutted directly from the ItemFYI button.
+- Surfaces all small, regular, and enormous Draenor fish only when their
+  tooltip-required batch of five is available across equipped bags.
+- Surfaces Rotten Rimefin Tuna for salvage. Frosted Rimefin Tuna is
+  intentionally excluded because defrosting starts the resulting fish's
+  one-hour expiry timer.
 - Only suggests recipes that are usable by the current character, combining
   Blizzard's usability result with the tooltip's rendered requirement state so
   red profession, specialization, level, or skill requirements are excluded.
@@ -88,6 +93,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 - Profession knowledge items require an explicit study action and a satisfied
   profession requirement. Treatises are additionally hidden after their weekly
   completion flag is set.
+- Temporary fish buffs, location-dependent fish summons, and actions that begin
+  an expiry timer are deliberately excluded.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
 - Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can
