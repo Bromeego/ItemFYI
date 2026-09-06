@@ -12,6 +12,13 @@ addon.Rules = {
     [263977] = { category = "container", reason = "Veteran Dawncrest satchel — click to open" },
     [268297] = { category = "container", reason = "Reward bag — click to open" },
 
+    -- Midnight profession actions
+    [238378] = {
+        category = "profession",
+        requireUsable = true,
+        reason = "Shimmersiren ready — click to gut",
+    },
+
     -- Midnight 12.1 Mistcrest conversions and Warbound rewards
     [269856] = { category = "container", reason = "Adventurer Mistcrest bundle — click to open" },
     [269859] = { category = "container", reason = "Veteran Mistcrest pouch — click to open" },

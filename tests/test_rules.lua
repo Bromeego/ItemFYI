@@ -17,6 +17,9 @@ assert(addon.CategoryPriority.profession < addon.CategoryPriority.container,
     "profession progress items must precede ordinary containers")
 assert(addon.Rules[245755] and addon.Rules[245755].completedQuestID == 95127,
     "Thalassian Alchemy treatise must use its weekly completion quest")
+assert(addon.Rules[238378] and addon.Rules[238378].category == "profession"
+    and addon.Rules[238378].requireUsable == true,
+    "Shimmersiren must be an explicitly usable profession action")
 assert(addon.Rules[222548] and addon.Rules[222548].completedQuestID == 83730,
     "Algari Inscription treatise must use its weekly completion quest")
 assert(addon.Rules[194703] and addon.Rules[194703].completedQuestID == 74112,
@@ -38,5 +41,5 @@ for itemID, rule in pairs(addon.Rules) do
     count = count + 1
 end
 
-assert(count == 65, ("expected 65 explicit rules, found %d"):format(count))
+assert(count == 66, ("expected 66 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))

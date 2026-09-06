@@ -21,6 +21,8 @@ never opens or learns anything automatically.
   Dragonflight through their explicit study action. Weekly Thalassian, Algari,
   Undermine, and Draconic Treatises also use their completion flags so they
   disappear after that week's use.
+- Surfaces Shimmersiren as a usable Midnight profession action so it can be
+  gutted directly from the ItemFYI button.
 - Only suggests recipes that are usable by the current character, combining
   Blizzard's usability result with the tooltip's rendered requirement state so
   red profession, specialization, level, or skill requirements are excluded.

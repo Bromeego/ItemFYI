@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added Shimmersiren as an explicit profession action for gutting from the
+  ItemFYI button.
 - Added profession knowledge consumables across Midnight, The War Within, and
   Dragonflight, including one-time treasures and patron-order rewards detected
   from their explicit study action.

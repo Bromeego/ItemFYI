@@ -88,6 +88,10 @@ end
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
 
+tooltipText = "Use: Gut the Shimmersiren. You monster."
+category = addon:ClassifyItem(Context(238378))
+assert(category == "profession", "explicit Shimmersiren profession action failed")
+
 local macro, secureBySlot = addon:BuildSecureUse(Context(201, {
     bag = 2,
     slot = 7,
