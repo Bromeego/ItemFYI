@@ -9,7 +9,7 @@ never opens or learns anything automatically.
 - Scans all equipped bags at login and after bag changes.
 - Shows one item at a time, with a small `+N` count when more are waiting.
 - Prioritises uncollected mounts, pets, companion Curios, toys, housing decor,
-  transmog tokens, permanent profession skill items, and recipes before
+  transmog tokens, profession skill and knowledge items, and recipes before
   ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
@@ -17,6 +17,10 @@ never opens or learns anything automatically.
 - Supports whole-bag minimum-stack rules for items that only become usable in
   multiples, including Venom-Cursed Fragments, Ascendant Voidshards, and Void
   Vestiges.
+- Detects profession knowledge consumables from Midnight, The War Within, and
+  Dragonflight through their explicit study action. Weekly Thalassian, Algari,
+  Undermine, and Draconic Treatises also use their completion flags so they
+  disappear after that week's use.
 - Only suggests recipes that are usable by the current character, combining
   Blizzard's usability result with the tooltip's rendered requirement state so
   red profession, specialization, level, or skill requirements are excluded.
@@ -79,6 +83,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 - Permanent profession skill items require an explicit base-skill cap in their
   use text. They are hidden when that profession is already at the stated cap;
   temporary skill buffs are excluded.
+- Profession knowledge items require an explicit study action and a satisfied
+  profession requirement. Treatises are additionally hidden after their weekly
+  completion flag is set.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
 - Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can

@@ -53,6 +53,13 @@ C_PetJournal = {
     end,
 }
 
+local completedQuests = {}
+C_QuestLog = {
+    IsQuestFlaggedCompleted = function(questID)
+        return completedQuests[questID] == true
+    end,
+}
+
 PlayerHasToy = function() return false end
 Enum = { ItemClass = { Recipe = 9 } }
 local fishingSkill = 200
@@ -151,6 +158,33 @@ fishingSkill = 300
 category = addon:ClassifyItem(Context(254875))
 assert(category == nil, "a profession skill item should not appear at its stated cap")
 fishingSkill = 200
+
+tooltipText = "Use: Study to increase your Midnight Alchemy Knowledge by 3.\nRequires Midnight Alchemy (1)"
+category = addon:ClassifyItem(Context(238539))
+assert(category == "profession", "generic profession knowledge detection failed")
+
+tooltipLines = {
+    { leftText = "Use: Study to increase your Midnight Alchemy Knowledge by 3.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Midnight Alchemy (1)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(238539))
+assert(category == nil, "knowledge items for an unlearned profession should not appear")
+tooltipLines = nil
+
+tooltipText = "Use: Study to increase your Midnight Alchemy Knowledge by 1."
+category = addon:ClassifyItem(Context(245755))
+assert(category == "profession", "unused weekly treatise should appear")
+tooltipLines = {
+    { leftText = "Use: Study to increase your Midnight Alchemy Knowledge by 1.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Midnight Alchemy (25)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(245755))
+assert(category == nil, "a treatise for an unmet profession requirement should not appear")
+tooltipLines = nil
+completedQuests[95127] = true
+category = addon:ClassifyItem(Context(245755))
+assert(category == nil, "a treatise already used this week should not appear")
+completedQuests[95127] = nil
 
 tooltipText = "Use: Increases Fishing skill by 25 for 10 min."
 category = addon:ClassifyItem(Context(116))

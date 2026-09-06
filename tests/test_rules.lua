@@ -14,7 +14,13 @@ assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
 assert(addon.CategoryPriority.curio < addon.CategoryPriority.container,
     "curios must precede ordinary containers")
 assert(addon.CategoryPriority.profession < addon.CategoryPriority.container,
-    "profession skill items must precede ordinary containers")
+    "profession progress items must precede ordinary containers")
+assert(addon.Rules[245755] and addon.Rules[245755].completedQuestID == 95127,
+    "Thalassian Alchemy treatise must use its weekly completion quest")
+assert(addon.Rules[222548] and addon.Rules[222548].completedQuestID == 83730,
+    "Algari Inscription treatise must use its weekly completion quest")
+assert(addon.Rules[194703] and addon.Rules[194703].completedQuestID == 74112,
+    "Draconic Jewelcrafting treatise must use its weekly completion quest")
 assert(addon.CategoryPriority.mount < addon.CategoryPriority.container, "collectibles must precede containers")
 
 local count = 0
@@ -24,8 +30,13 @@ for itemID, rule in pairs(addon.Rules) do
     assert(type(rule.reason) == "string" and rule.reason ~= "", "rule reason is required")
     assert(rule.minCount == nil or (type(rule.minCount) == "number" and rule.minCount >= 1),
         "rule minimum count must be a positive number")
+    assert(rule.completedQuestID == nil
+        or (type(rule.completedQuestID) == "number" and rule.completedQuestID >= 1),
+        "rule completion quest must be a positive number")
+    assert(rule.requireUsable == nil or type(rule.requireUsable) == "boolean",
+        "rule usability flag must be boolean")
     count = count + 1
 end
 
-assert(count == 21, ("expected 21 explicit rules, found %d"):format(count))
+assert(count == 65, ("expected 65 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))

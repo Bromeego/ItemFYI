@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added profession knowledge consumables across Midnight, The War Within, and
+  Dragonflight, including one-time treasures and patron-order rewards detected
+  from their explicit study action.
+- Added weekly completion gates for all Thalassian, Algari, Undermine, and
+  Draconic Treatises so used treatises do not remain queued until reset.
+- Renamed the profession setting to cover both permanent skill and knowledge
+  items; temporary profession buffs remain excluded.
 - Added a toggleable profession skill category for permanent increases such as
   Muck-Covered Writings, including stated-cap and unmet-requirement checks.
 - Added a toggleable Companion Curios category for items with an explicit action

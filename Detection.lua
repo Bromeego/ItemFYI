@@ -36,6 +36,11 @@ local curioText = {
     "use: adds this curio to your companion's collection",
 }
 
+local function IsProfessionKnowledgeItem(text)
+    return string.find(text,
+        "use:%s+study to increase your [^\n]- knowledge by %d+") ~= nil
+end
+
 local function GetPermanentSkillIncrease(text)
     local skillName, maximum = string.match(text,
         "use:%s+increases?%s+([^\n]-)%s+skill%s+by%s+%d+.-up to a max of%s+(%d+)")
@@ -308,6 +313,14 @@ function addon:ClassifyItem(context)
         if explicit.minCount and availableCount < explicit.minCount then
             return nil
         end
+        if explicit.completedQuestID and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
+            and C_QuestLog.IsQuestFlaggedCompleted(explicit.completedQuestID) then
+            return nil
+        end
+        if explicit.requireUsable
+            and (not IsItemUsable(context.itemID) or self:HasUnmetRequirement(context)) then
+            return nil
+        end
         return explicit.category, explicit.reason
     end
 
@@ -334,6 +347,11 @@ function addon:ClassifyItem(context)
 
     if ContainsAny(tooltipText, curioText) then
         return "curio", "Companion Curio — click to add"
+    end
+
+    if IsProfessionKnowledgeItem(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "profession", "Profession knowledge — click to study"
     end
 
     local skillName, maximumSkill = GetPermanentSkillIncrease(tooltipText)
