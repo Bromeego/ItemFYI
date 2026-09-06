@@ -124,6 +124,18 @@ C_PetJournal.GetPetInfoByItemID = function() return nil end
 category = addon:ClassifyItem(Context(271186))
 assert(category == "pet", "companion tooltip fallback failed")
 
+tooltipText = "Rank 2/4\nUse: Add this Curio to your companion's collection."
+category = addon:ClassifyItem(Context(113))
+assert(category == "curio", "companion Curio detection failed")
+
+tooltipText = "Already known\nUse: Add this Curio to your companion's collection."
+category = addon:ClassifyItem(Context(115))
+assert(category == nil, "an already-known companion Curio should not be actionable")
+
+tooltipText = "A Mislaid Curiosity may appear near you."
+category = addon:ClassifyItem(Context(114))
+assert(category == nil, "Curio flavour text without a collection action should not be actionable")
+
 tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))
 assert(category == "decor", "housing decor detection failed")

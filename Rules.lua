@@ -46,9 +46,10 @@ addon.Rules = {
 addon.CategoryPriority = {
     mount = 10,
     pet = 11,
-    toy = 12,
-    decor = 13,
-    transmog = 14,
-    recipe = 15,
+    curio = 12,
+    toy = 13,
+    decor = 14,
+    transmog = 15,
+    recipe = 16,
     container = 50,
 }

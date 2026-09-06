@@ -7,6 +7,7 @@ local categoryOptions = {
     { key = "mount", label = "Mounts" },
     { key = "toy", label = "Toys" },
     { key = "pet", label = "Battle pets" },
+    { key = "curio", label = "Companion curios" },
     { key = "recipe", label = "Recipes" },
 }
 

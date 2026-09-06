@@ -31,6 +31,11 @@ local companionText = {
     "use: teaches you how to summon and dismiss this companion",
 }
 
+local curioText = {
+    "use: add this curio to your companion's collection",
+    "use: adds this curio to your companion's collection",
+}
+
 local openText = {
     "use: open",
 }
@@ -298,6 +303,10 @@ function addon:ClassifyItem(context)
     -- Their standard use text is still an explicit learn action.
     if not speciesID and ContainsAny(tooltipText, companionText) then
         return "pet", "Uncollected companion — click to learn"
+    end
+
+    if ContainsAny(tooltipText, curioText) then
+        return "curio", "Companion Curio — click to add"
     end
 
     local itemType = string.lower(context.itemType or "")

@@ -8,8 +8,8 @@ never opens or learns anything automatically.
 
 - Scans all equipped bags at login and after bag changes.
 - Shows one item at a time, with a small `+N` count when more are waiting.
-- Prioritises uncollected mounts, pets, toys, housing decor, transmog tokens,
-  and recipes before ordinary containers.
+- Prioritises uncollected mounts, pets, companion Curios, toys, housing decor,
+  transmog tokens, and recipes before ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
@@ -73,6 +73,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   surfaces transmog items with an explicit learn/use instruction.
 - Housing items require an explicit tooltip action; non-usable housing dyes are
   excluded.
+- Companion Curios require the explicit action to add the Curio to the
+  companion collection; incidental Curio references in flavour text are ignored.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
 - Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can
@@ -92,6 +94,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 6. Confirm right-click skips without consuming the item.
 7. Enter and leave combat with the button visible; verify no blocked-action or
    Lua errors and that the button refreshes afterward.
+8. Confirm an uncollected companion Curio appears, can be added, and disappears
+   after collection.
 
 ## Design boundary
 

@@ -160,6 +160,7 @@ assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredCl
     "secure button must register both click phases")
 assert(SlashCmdList.ITEMFYI, "slash command was not registered")
 assert(addon.settingsCategory, "settings category was not registered")
+assert(addon.settingsPanel.categoryChecks.curio, "settings must include a companion Curio toggle")
 SlashCmdList.ITEMFYI("")
 assert(openedCategory == "ItemFYI", "bare /ifyi should open the settings category")
 

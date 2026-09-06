@@ -30,6 +30,7 @@ local defaults = {
         mount = true,
         toy = true,
         pet = true,
+        curio = true,
         recipe = true,
     },
 }

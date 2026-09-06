@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a toggleable Companion Curios category for items with an explicit action
+  to add the Curio to the companion collection.
 - Fixed recipe filtering when Blizzard's generic item-usability result remains
   true despite a red unmet profession or skill requirement in the tooltip.
 - Fixed equippable appearance items such as unsupported weapon types trying to
@@ -25,8 +27,6 @@
   Legwear, from appearing when their tooltip says every contained look is
   already collected.
 - Fixed left-click actions for both click-on-press and click-on-release settings.
-- Uses a secure item-ID `/use` action so equippable appearance tokens are used
-  rather than equipped, and vendor bag-slot changes cannot stale the target.
 - Added optional EllesmereUI and ElvUI skin adapters while preserving ItemFYI's
   built-in dark style as the fallback.
 - Stopped non-usable housing dyes and tooltip-marked locked lockboxes from

@@ -11,6 +11,8 @@ assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5,
     "Ascendant Voidshard must require a stack of five")
 assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
     "Void Vestige must require a stack of four")
+assert(addon.CategoryPriority.curio < addon.CategoryPriority.container,
+    "curios must precede ordinary containers")
 assert(addon.CategoryPriority.mount < addon.CategoryPriority.container, "collectibles must precede containers")
 
 local count = 0
