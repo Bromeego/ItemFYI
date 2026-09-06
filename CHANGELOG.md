@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a toggleable profession skill category for permanent increases such as
+  Muck-Covered Writings, including stated-cap and unmet-requirement checks.
 - Added a toggleable Companion Curios category for items with an explicit action
   to add the Curio to the companion collection.
 - Fixed recipe filtering when Blizzard's generic item-usability result remains

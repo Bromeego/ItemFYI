@@ -8,6 +8,7 @@ local categoryOptions = {
     { key = "toy", label = "Toys" },
     { key = "pet", label = "Battle pets" },
     { key = "curio", label = "Companion curios" },
+    { key = "profession", label = "Profession skill items" },
     { key = "recipe", label = "Recipes" },
 }
 
@@ -101,10 +102,10 @@ function addon:RegisterSettings()
         end)
     end
 
-    CreateLabel(panel, "Button size", "GameFontNormal", 16, -260)
+    CreateLabel(panel, "Button size", "GameFontNormal", 16, -290)
     local sizeSlider = CreateFrame("Slider", "ItemFYIButtonSizeSlider", panel, "OptionsSliderTemplate")
     panel.sizeSlider = sizeSlider
-    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -288)
+    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -318)
     sizeSlider:SetWidth(220)
     sizeSlider:SetMinMaxValues(32, 64)
     sizeSlider:SetValueStep(2)
@@ -123,18 +124,18 @@ function addon:RegisterSettings()
     end)
 
     local resetPosition = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 280, -282)
+    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 280, -312)
     resetPosition:SetSize(150, 24)
     resetPosition:SetText("Reset position")
     resetPosition:SetScript("OnClick", function()
         addon:ResetPosition()
     end)
 
-    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, -340)
-    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, -366)
+    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, -370)
+    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, -396)
 
     local clearSkips = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -392)
+    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -422)
     clearSkips:SetSize(150, 24)
     clearSkips:SetText("Clear session skips")
     clearSkips:SetScript("OnClick", function()

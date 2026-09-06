@@ -9,7 +9,8 @@ never opens or learns anything automatically.
 - Scans all equipped bags at login and after bag changes.
 - Shows one item at a time, with a small `+N` count when more are waiting.
 - Prioritises uncollected mounts, pets, companion Curios, toys, housing decor,
-  transmog tokens, and recipes before ordinary containers.
+  transmog tokens, permanent profession skill items, and recipes before
+  ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
@@ -75,6 +76,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   excluded.
 - Companion Curios require the explicit action to add the Curio to the
   companion collection; incidental Curio references in flavour text are ignored.
+- Permanent profession skill items require an explicit base-skill cap in their
+  use text. They are hidden when that profession is already at the stated cap;
+  temporary skill buffs are excluded.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
 - Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can

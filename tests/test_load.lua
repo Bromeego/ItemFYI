@@ -161,6 +161,7 @@ assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredCl
 assert(SlashCmdList.ITEMFYI, "slash command was not registered")
 assert(addon.settingsCategory, "settings category was not registered")
 assert(addon.settingsPanel.categoryChecks.curio, "settings must include a companion Curio toggle")
+assert(addon.settingsPanel.categoryChecks.profession, "settings must include a profession skill item toggle")
 SlashCmdList.ITEMFYI("")
 assert(openedCategory == "ItemFYI", "bare /ifyi should open the settings category")
 

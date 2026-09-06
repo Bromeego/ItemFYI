@@ -36,6 +36,33 @@ local curioText = {
     "use: adds this curio to your companion's collection",
 }
 
+local function GetPermanentSkillIncrease(text)
+    local skillName, maximum = string.match(text,
+        "use:%s+increases?%s+([^\n]-)%s+skill%s+by%s+%d+.-up to a max of%s+(%d+)")
+    return skillName, tonumber(maximum)
+end
+
+local function HasReachedProfessionCap(skillName, maximum)
+    if not (skillName and maximum and GetProfessions and GetProfessionInfo) then
+        return false
+    end
+
+    local professionIndices = { GetProfessions() }
+    for position = 1, 6 do
+        local professionIndex = professionIndices[position]
+        if professionIndex then
+            local professionName, _, skillLevel = GetProfessionInfo(professionIndex)
+            professionName = string.lower(professionName or "")
+            if professionName ~= "" and string.find(skillName, professionName, 1, true)
+                and (tonumber(skillLevel) or 0) >= maximum then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 local openText = {
     "use: open",
 }
@@ -307,6 +334,12 @@ function addon:ClassifyItem(context)
 
     if ContainsAny(tooltipText, curioText) then
         return "curio", "Companion Curio — click to add"
+    end
+
+    local skillName, maximumSkill = GetPermanentSkillIncrease(tooltipText)
+    if skillName and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
+        and not HasReachedProfessionCap(skillName, maximumSkill) then
+        return "profession", "Permanent profession skill increase — click to use"
     end
 
     local itemType = string.lower(context.itemType or "")

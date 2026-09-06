@@ -50,6 +50,7 @@ addon.CategoryPriority = {
     toy = 13,
     decor = 14,
     transmog = 15,
-    recipe = 16,
+    profession = 16,
+    recipe = 17,
     container = 50,
 }

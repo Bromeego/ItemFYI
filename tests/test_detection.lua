@@ -55,6 +55,13 @@ C_PetJournal = {
 
 PlayerHasToy = function() return false end
 Enum = { ItemClass = { Recipe = 9 } }
+local fishingSkill = 200
+GetProfessions = function() return nil, nil, nil, 4 end
+GetProfessionInfo = function(professionIndex)
+    if professionIndex == 4 then
+        return "Fishing", nil, fishingSkill, 300
+    end
+end
 
 local addon = {}
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
@@ -135,6 +142,19 @@ assert(category == nil, "an already-known companion Curio should not be actionab
 tooltipText = "A Mislaid Curiosity may appear near you."
 category = addon:ClassifyItem(Context(114))
 assert(category == nil, "Curio flavour text without a collection action should not be actionable")
+
+tooltipText = "Use: Increase Midnight Fishing skill by 100, up to a max of 300."
+category = addon:ClassifyItem(Context(254875))
+assert(category == "profession", "permanent profession skill item detection failed")
+
+fishingSkill = 300
+category = addon:ClassifyItem(Context(254875))
+assert(category == nil, "a profession skill item should not appear at its stated cap")
+fishingSkill = 200
+
+tooltipText = "Use: Increases Fishing skill by 25 for 10 min."
+category = addon:ClassifyItem(Context(116))
+assert(category == nil, "temporary profession buffs should not be actionable")
 
 tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))

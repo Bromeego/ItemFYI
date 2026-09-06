@@ -31,6 +31,7 @@ local defaults = {
         toy = true,
         pet = true,
         curio = true,
+        profession = true,
         recipe = true,
     },
 }
