@@ -14,6 +14,9 @@ never opens or learns anything automatically.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
+- Surfaces directly usable legacy tier tokens that create a class-set item for
+  the current loot specialization, while excluding unmet class and level
+  restrictions.
 - Supports whole-bag minimum-stack rules for items that only become usable in
   multiples, including Venom-Cursed Fragments, Ascendant Voidshards, and Void
   Vestiges.
@@ -83,6 +86,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   direct collection API.
 - Equippable armour and weapons are deliberately excluded. Version 0.1 only
   surfaces transmog items with an explicit learn/use instruction.
+- Legacy tier tokens are shown when the current character can activate them.
+  ItemFYI cannot reliably determine whether every possible spec-specific result
+  is already collected, so a token may occasionally create a known appearance.
 - Housing items require an explicit tooltip action; non-usable housing dyes are
   excluded.
 - Companion Curios require the explicit action to add the Curio to the
@@ -109,12 +115,14 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 1. Confirm an ordinary loot container appears and opens with one click.
 2. Confirm Warbound Pack of Hero Mistcrests (`280732`) appears.
 3. Confirm an unlearned transmog token appears even on another armour class.
-4. Confirm known collectibles do not appear.
-5. Confirm housing dye and locked lockboxes do not appear.
-6. Confirm right-click skips without consuming the item.
-7. Enter and leave combat with the button visible; verify no blocked-action or
+4. Confirm an eligible legacy tier token appears and creates its class-set item;
+   confirm a token for another class remains hidden.
+5. Confirm known collectibles do not appear.
+6. Confirm housing dye and locked lockboxes do not appear.
+7. Confirm right-click skips without consuming the item.
+8. Enter and leave combat with the button visible; verify no blocked-action or
    Lua errors and that the button refreshes afterward.
-8. Confirm an uncollected companion Curio appears, can be added, and disappears
+9. Confirm an uncollected companion Curio appears, can be added, and disappears
    after collection.
 
 ## Design boundary

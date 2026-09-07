@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added generic support for directly usable legacy tier tokens that create a
+  class-set item for the current loot specialization.
+- Added class-restriction filtering so tier tokens for an ineligible character
+  are not offered even when Blizzard's generic usability result is incomplete.
 - Added threshold-aware gutting and cleaning for Draenor fish, shown only when
   the tooltip-required batch of five is available across equipped bags.
 - Added Rotten Rimefin Tuna salvage while deliberately excluding Frosted

@@ -3,6 +3,7 @@ _G = _G or _ENV
 local tooltipText = ""
 local tooltipLines
 local itemData = {}
+local itemUsable = true
 
 C_Item = {
     GetItemInfo = function(itemID)
@@ -11,7 +12,7 @@ C_Item = {
             1, "", data.icon or 1, 0, data.classID, data.subclassID
     end,
     GetItemInfoInstant = function() end,
-    IsUsableItem = function() return true end,
+    IsUsableItem = function() return itemUsable end,
     RequestLoadItemDataByID = function() end,
 }
 
@@ -215,6 +216,34 @@ assert(category == nil, "non-usable housing dye should not be actionable")
 tooltipText = "Use: Collect the appearances of the Test Ensemble."
 category = addon:ClassifyItem(Context(105))
 assert(category == "transmog", "transmog token detection failed")
+
+tooltipText = "Use: Create a class set item appropriate for your loot specialization (Balance).\n"
+    .. "Classes: Rogue, Death Knight, Mage, Druid\nRequires Level 30"
+category = addon:ClassifyItem(Context(45661))
+assert(category == "transmog", "usable class-set tier token detection failed")
+
+macro, secureBySlot = addon:BuildSecureUse(Context(45661, { bag = 1, slot = 4 }), "transmog")
+assert(macro == "/use item:45661" and not secureBySlot,
+    "non-equippable tier tokens must use a stable item-ID action")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(45661))
+assert(category == nil, "tier tokens unusable by the current character should not appear")
+itemUsable = true
+
+tooltipLines = {
+    {
+        leftText = "Use: Create a class set item appropriate for your loot specialization.",
+        leftColor = { r = 0, g = 1, b = 0 },
+    },
+    {
+        leftText = "Classes: Paladin, Priest, Warlock",
+        leftColor = { r = 1, g = 0.125, b = 0.125 },
+    },
+}
+category = addon:ClassifyItem(Context(45644))
+assert(category == nil, "tier tokens with an unmet class restriction should not appear")
+tooltipLines = nil
 
 tooltipText = "Already known\nUse: Teaches you how to craft a test item."
 category = addon:ClassifyItem(Context(106, { itemType = "Recipe", classID = 9 }))

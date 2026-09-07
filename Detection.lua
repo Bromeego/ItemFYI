@@ -16,6 +16,10 @@ local transmogText = {
     "use: add this appearance",
 }
 
+local tierTokenText = {
+    "use: create a class set item appropriate for your loot specialization",
+}
+
 local decorText = {
     "use: add this decor",
     "use: adds this decor",
@@ -106,7 +110,7 @@ local function IsItemUsable(itemID)
     return usable ~= false
 end
 
-local function IsRequirementText(text)
+local function IsRestrictionText(text)
     if type(text) ~= "string" then
         return false
     end
@@ -116,6 +120,7 @@ local function IsRequirementText(text)
     text = string.gsub(text, "|r", "")
     text = string.match(text, "^%s*(.-)%s*$") or ""
     return string.find(text, "^requires[%s:]") ~= nil
+        or string.find(text, "^classes[%s:]") ~= nil
 end
 
 local function GetColorRGB(color)
@@ -149,7 +154,7 @@ local function FontStringHasFailedRequirement(fontString)
     end
 
     local text = fontString:GetText()
-    if not IsRequirementText(text) then
+    if not IsRestrictionText(text) then
         return false
     end
 
@@ -206,13 +211,13 @@ function addon:HasUnmetRequirement(context)
         local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
         if ok and tooltip and tooltip.lines then
             for _, line in ipairs(tooltip.lines) do
-                if IsRequirementText(line.leftText) and IsFailureColor(line.leftColor) then
+                if IsRestrictionText(line.leftText) and IsFailureColor(line.leftColor) then
                     return true
                 end
-                if IsRequirementText(line.rightText) and IsFailureColor(line.rightColor) then
+                if IsRestrictionText(line.rightText) and IsFailureColor(line.rightColor) then
                     return true
                 end
-                if IsRequirementText(line.text) and IsFailureColor(line.color or line.leftColor) then
+                if IsRestrictionText(line.text) and IsFailureColor(line.color or line.leftColor) then
                     return true
                 end
             end
@@ -381,6 +386,11 @@ function addon:ClassifyItem(context)
     local hasDecorUse = ContainsAny(tooltipText, decorText)
     if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true)) then
         return "decor", "Housing decor — click to add"
+    end
+
+    if ContainsAny(tooltipText, tierTokenText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Tier token — click to create set item"
     end
 
     if ContainsAny(tooltipText, transmogText) then
