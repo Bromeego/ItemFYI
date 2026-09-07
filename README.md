@@ -17,17 +17,18 @@ never opens or learns anything automatically.
 - Surfaces directly usable legacy tier tokens that create a class-set item for
   the current loot specialization, while excluding unmet class and level
   restrictions.
-- Recognises numeric stack-conversion instructions such as `Combine 10 ... to
-  create ...`, totals matching items across equipped bags, and only offers the
-  action once the threshold is met. Explicit rules cover unusually worded
-  conversions including Fractured Sparks of Starlight, Venom-Cursed Fragments,
-  Ascendant Voidshards, and Void Vestiges.
+- Recognises digit- and word-number stack-conversion instructions such as
+  `Combine 10 ... to create ...` and `Combine two ... to create ...`, totals
+  matching items across equipped bags, and only offers the action once the
+  threshold is met. Fractured Sparks of Starlight and Venom-Cursed Fragments
+  therefore use the same generic detector as Bloom Baubles; only conversions
+  without a safely readable threshold need explicit rules.
 - Detects profession knowledge consumables from Midnight, The War Within, and
   Dragonflight through their explicit study action. Weekly Thalassian, Algari,
   Undermine, and Draconic Treatises also use their completion flags so they
   disappear after that week's use.
-- Surfaces Shimmersiren as a usable Midnight profession action so it can be
-  gutted directly from the ItemFYI button.
+- Recognises explicit single-item gutting and salvage actions generically, so
+  items such as Shimmersiren and Rotten Rimefin Tuna do not need ID rules.
 - Surfaces all small, regular, and enormous Draenor fish only when their
   tooltip-required batch of five is available across equipped bags.
 - Surfaces Rotten Rimefin Tuna for salvage. Frosted Rimefin Tuna is
@@ -140,11 +141,27 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
     Confirm the tooltip warns that the vendor will close, the appearance is
     learned rather than sold, and the merchant remains closed after the click.
 
-## Design boundary
+## Detection and maintenance boundary
 
 ItemFYI is a quiet heads-up, not an inventory manager. Features should earn
 their place by improving detection, confidence, or click safety without turning
 the addon into a permanent dashboard.
+
+Detection follows a strict order so the addon does not become an item database:
+
+1. Prefer Blizzard collection and bag APIs for mounts, pets, toys, and ordinary
+   loot-bearing containers.
+2. Use narrowly scoped action text for reusable families such as learnables,
+   profession progress, stack combines, and processing actions.
+3. Require usability, stack thresholds, and rendered requirement checks where
+   clicking could otherwise fail or perform the wrong action.
+4. Add an item-ID rule only when required state is not exposed generically,
+   such as a hidden weekly completion quest or unreliable container metadata.
+
+Distinct multi-item recipes still require explicit dependency data and are not
+guessed from tooltip prose. Broad `Use:` or item-spell matching is intentionally
+avoided because it would include potions, buffs, equipment, and other items that
+do not belong in ItemFYI.
 
 ## Development note
 

@@ -91,11 +91,16 @@ assert(category == "container", "explicit Mistcrest rule failed")
 
 tooltipText = "Use: Gut the Shimmersiren. You monster."
 category = addon:ClassifyItem(Context(238378))
-assert(category == "profession", "explicit Shimmersiren profession action failed")
+assert(category == "profession", "generic single-item gutting action failed")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(238378))
+assert(category == nil, "an unusable single-item gutting action should remain hidden")
+itemUsable = true
 
 tooltipText = "Use: Salvage what you can from the Rimefin Tuna."
 category = addon:ClassifyItem(Context(199346))
-assert(category == "profession", "explicit Rotten Rimefin Tuna salvage action failed")
+assert(category == "profession", "generic single-item salvage action failed")
 
 local macro, secureBySlot = addon:BuildSecureUse(Context(201, {
     bag = 2,
@@ -141,6 +146,8 @@ tooltipText = "Use: Combine the Ace through Eight to create a deck."
 category = addon:ClassifyItem(Context(119, { stackCount = 8, totalCount = 8 }))
 assert(category == nil, "distinct multi-part combines must not be treated as stack thresholds")
 
+tooltipText = "Use: Combine two fragments to create a Champion Venom-Cursed item "
+    .. "for your specialization."
 category = addon:ClassifyItem(Context(279382, { stackCount = 1 }))
 assert(category == nil, "single Venom-Cursed Fragment should not be actionable")
 
@@ -149,6 +156,14 @@ assert(category == "container", "two Venom-Cursed Fragments should be actionable
 
 category = addon:ClassifyItem(Context(279382, { stackCount = 1, totalCount = 2 }))
 assert(category == "container", "split Venom-Cursed Fragment stacks should use their bag total")
+
+tooltipText = "Use: Combine many fragments to create a mystery item."
+category = addon:ClassifyItem(Context(120, { stackCount = 99, totalCount = 99 }))
+assert(category == nil, "unknown combine quantities must not invent a stack threshold")
+
+tooltipText = "Use: Combine one rune with one catalyst to create a sigil."
+category = addon:ClassifyItem(Context(121, { stackCount = 1, totalCount = 1 }))
+assert(category == nil, "single-item dependency recipes must not become stack conversions")
 
 category = addon:ClassifyItem(Context(268650, { stackCount = 4 }))
 assert(category == nil, "four Ascendant Voidshards should not be actionable")

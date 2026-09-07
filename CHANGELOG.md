@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Generalized word-number stack conversions such as `Combine two ... to create
+  ...`, allowing Venom-Cursed Fragments and similarly worded items to work
+  without item-ID rules.
+- Generalized explicit single-item gutting and salvage actions, replacing the
+  Shimmersiren and Rotten Rimefin Tuna ID rules with guarded tooltip detection.
+- Documented the detection hierarchy and the narrow cases where explicit item
+  data remains necessary, reducing the exception list from 68 to 64 rules.
 - Added generic numeric stack-conversion detection for tooltip actions such as
   Bloom Baubles, using the whole-bag count and Blizzard's usability result.
 - Renamed the container setting to **Openables & stack combines** to reflect the

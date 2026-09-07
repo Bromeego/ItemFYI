@@ -12,18 +12,6 @@ addon.Rules = {
     [263977] = { category = "container", reason = "Veteran Dawncrest satchel — click to open" },
     [268297] = { category = "container", reason = "Reward bag — click to open" },
 
-    -- Profession processing actions
-    [238378] = {
-        category = "profession",
-        requireUsable = true,
-        reason = "Shimmersiren ready — click to gut",
-    },
-    [199346] = {
-        category = "profession",
-        requireUsable = true,
-        reason = "Rotten Rimefin Tuna ready — click to salvage",
-    },
-
     -- Midnight 12.1 Mistcrest conversions and Warbound rewards
     [269856] = { category = "container", reason = "Adventurer Mistcrest bundle — click to open" },
     [269859] = { category = "container", reason = "Veteran Mistcrest pouch — click to open" },
@@ -38,17 +26,6 @@ addon.Rules = {
     [280732] = { category = "container", reason = "Warbound Hero Mistcrest pack — click to open" },
 
     -- Stack-based item conversions
-    [231757] = {
-        category = "container",
-        minCount = 2,
-        requireUsable = true,
-        reason = "Two Fractured Sparks of Starlight ready — click to combine",
-    },
-    [279382] = {
-        category = "container",
-        minCount = 2,
-        reason = "Two Venom-Cursed Fragments ready — click to combine",
-    },
     [268650] = {
         category = "container",
         minCount = 5,

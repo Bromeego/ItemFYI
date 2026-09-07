@@ -49,9 +49,38 @@ local function GetBulkFishProcessingMinimum(text)
     return tonumber(string.match(text, "use:%s+gut and clean%s+(%d+)%s+"))
 end
 
+local combineNumberWords = {
+    two = 2,
+    three = 3,
+    four = 4,
+    five = 5,
+    six = 6,
+    seven = 7,
+    eight = 8,
+    nine = 9,
+    ten = 10,
+    twelve = 12,
+    fifteen = 15,
+    twenty = 20,
+    fifty = 50,
+    hundred = 100,
+}
+
 local function GetStackCombineMinimum(text)
-    return tonumber(string.match(text,
-        "use:%s+combine%s+(%d+)%s+[^\n]-to create"))
+    local amount = string.match(text,
+        "use:%s+combine%s+([%w]+)%s+[^\n]-to create")
+    local minimum = tonumber(amount) or combineNumberWords[amount]
+    if minimum and minimum >= 2 then
+        return minimum
+    end
+end
+
+local function IsSingleItemProfessionProcessingAction(text)
+    -- Keep this deliberately narrower than a generic "Use:" detector. The
+    -- "gut and clean N" family has a separate count-aware path below.
+    local lines = "\n" .. text
+    return string.find(lines, "\n%s*use:%s+gut%s+the%s+") ~= nil
+        or string.find(lines, "\n%s*use:%s+salvage%s+") ~= nil
 end
 
 local function GetPermanentSkillIncrease(text)
@@ -373,6 +402,11 @@ function addon:ClassifyItem(context)
     if fishMinimum and availableCount >= fishMinimum and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "profession", "Fish ready to gut and clean — click to process"
+    end
+
+    if IsSingleItemProfessionProcessingAction(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "profession", "Profession material ready — click to process"
     end
 
     local skillName, maximumSkill = GetPermanentSkillIncrease(tooltipText)

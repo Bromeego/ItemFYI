@@ -8,7 +8,7 @@ local categoryOptions = {
     { key = "toy", label = "Toys" },
     { key = "pet", label = "Battle pets" },
     { key = "curio", label = "Companion curios" },
-    { key = "profession", label = "Profession skill & knowledge" },
+    { key = "profession", label = "Profession progress & processing" },
     { key = "recipe", label = "Recipes" },
 }
 

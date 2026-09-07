@@ -5,11 +5,8 @@ chunk("ItemFYI", addon)
 assert(addon.Rules[280732], "Warbound Pack of Hero Mistcrests is missing")
 assert(addon.Rules[280732].category == "container", "Mistcrest rule has the wrong category")
 assert(addon.Rules[246752], "Hero Dawncrest pack is missing")
-assert(addon.Rules[279382] and addon.Rules[279382].minCount == 2,
-    "Venom-Cursed Fragment must require a stack of two")
-assert(addon.Rules[231757] and addon.Rules[231757].minCount == 2
-    and addon.Rules[231757].requireUsable,
-    "Fractured Spark of Starlight must require two usable fragments")
+assert(addon.Rules[279382] == nil and addon.Rules[231757] == nil,
+    "standard stack conversions should use generic tooltip detection")
 assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5,
     "Ascendant Voidshard must require a stack of five")
 assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
@@ -20,12 +17,8 @@ assert(addon.CategoryPriority.profession < addon.CategoryPriority.container,
     "profession progress items must precede ordinary containers")
 assert(addon.Rules[245755] and addon.Rules[245755].completedQuestID == 95127,
     "Thalassian Alchemy treatise must use its weekly completion quest")
-assert(addon.Rules[238378] and addon.Rules[238378].category == "profession"
-    and addon.Rules[238378].requireUsable == true,
-    "Shimmersiren must be an explicitly usable profession action")
-assert(addon.Rules[199346] and addon.Rules[199346].category == "profession"
-    and addon.Rules[199346].requireUsable == true,
-    "Rotten Rimefin Tuna must be an explicitly usable salvage action")
+assert(addon.Rules[238378] == nil and addon.Rules[199346] == nil,
+    "standard gut and salvage actions should use generic tooltip detection")
 assert(addon.Rules[222548] and addon.Rules[222548].completedQuestID == 83730,
     "Algari Inscription treatise must use its weekly completion quest")
 assert(addon.Rules[194703] and addon.Rules[194703].completedQuestID == 74112,
@@ -47,5 +40,5 @@ for itemID, rule in pairs(addon.Rules) do
     count = count + 1
 end
 
-assert(count == 68, ("expected 68 explicit rules, found %d"):format(count))
+assert(count == 64, ("expected 64 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))
