@@ -40,10 +40,12 @@ never opens or learns anything automatically.
   an unsupported armour or weapon type.
 - Invalidates slot-targeted appearance actions immediately when their bag
   changes and blocks those actions in combat.
-- Keeps slot-targeted appearances available at merchants by briefly closing the
-  merchant interaction for the secure use and reopening it immediately after.
-  If that handoff is unavailable, the action is hidden rather than risking a
-  sale.
+- Keeps slot-targeted appearances available at merchants by closing the
+  merchant interaction immediately before the secure use. WoW does not
+  reliably let addons reopen a fully closed merchant interaction, so the
+  tooltip warns that the vendor will close and the player can interact with it
+  again afterward. If the safe close is unavailable, the action is hidden
+  rather than risking a sale.
 - Suppresses slot-targeted appearance actions while bank, mail, trade, auction,
   scrapping, upgrade, and similar inventory-routing windows are active,
   preventing the click from moving the item instead.
@@ -132,8 +134,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 9. Confirm an uncollected companion Curio appears, can be added, and disappears
    after collection.
 10. With an equippable appearance action waiting, open a merchant and use it.
-    Confirm the appearance is learned rather than sold and that the merchant
-    window returns after the click.
+    Confirm the tooltip warns that the vendor will close, the appearance is
+    learned rather than sold, and the merchant remains closed after the click.
 
 ## Design boundary
 

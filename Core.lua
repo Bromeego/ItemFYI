@@ -97,10 +97,8 @@ function addon:IsSlotActionBlocked()
     return next(self.slotActionBlocks) ~= nil
 end
 
-function addon:CanCycleMerchant()
+function addon:CanCloseMerchantSafely()
     return type(CloseMerchant) == "function"
-        and C_PlayerInteractionManager
-        and type(C_PlayerInteractionManager.ReopenInteraction) == "function"
 end
 
 function addon:SetSlotActionBlock(key, blocked)
@@ -280,11 +278,11 @@ events:SetScript("OnEvent", function(_, event, ...)
         end
     elseif event == "MERCHANT_SHOW" then
         addon.merchantOpen = true
-        if addon:CanCycleMerchant() then
+        if addon:CanCloseMerchantSafely() then
             addon.slotActionBlocks.merchant = nil
             addon:ScheduleScan("merchant opened", 0)
         else
-            -- Older or restricted clients keep the conservative behaviour.
+            -- Clients without a callable close API keep the conservative behaviour.
             addon:SetSlotActionBlock("merchant", true)
         end
     elseif event == "MERCHANT_CLOSED" then

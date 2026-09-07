@@ -20,7 +20,6 @@ local createdFrames = {}
 local bagItem
 local eventFrame
 local merchantCloseCount = 0
-local merchantReopenCount = 0
 local function NewFrame(name)
     local frame = {
         name = name,
@@ -103,14 +102,6 @@ CloseMerchant = function()
         eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
     end
 end
-C_PlayerInteractionManager = {
-    ReopenInteraction = function()
-        merchantReopenCount = merchantReopenCount + 1
-        if eventFrame then
-            eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
-        end
-    end,
-}
 C_Item = {
     GetItemInfo = function(itemID)
         if not bagItem or bagItem.itemID ~= itemID then
@@ -178,10 +169,15 @@ Enum = {
 }
 NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
 GameTooltip = {
-    SetOwner = function(self, owner) self.owner = owner end,
+    SetOwner = function(self, owner)
+        self.owner = owner
+        self.lines = {}
+    end,
     GetOwner = function(self) return self.owner end,
     SetBagItem = Noop,
-    AddLine = Noop,
+    AddLine = function(self, text)
+        self.lines[#self.lines + 1] = text
+    end,
     Show = Noop,
     Hide = function(self)
         self.hideCount = (self.hideCount or 0) + 1
@@ -329,23 +325,33 @@ assert(addon.current and addon.current.itemID == 789 and addon.current.secureByS
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
 assert(addon.merchantOpen and not addon:IsSlotActionBlocked()
     and addon.current and addon.current.itemID == 789,
-    "cycle-capable merchants must keep slot-targeted appearance actions available")
+    "closable merchants must keep slot-targeted appearance actions available")
+
+addon.button.scripts.OnEnter(addon.button)
+local merchantWarningFound = false
+for _, line in ipairs(GameTooltip.lines) do
+    if line == "Vendor will close before use" then
+        merchantWarningFound = true
+    end
+end
+assert(merchantWarningFound,
+    "slot-targeted appearances must explain that using them closes the vendor")
 
 addon.button.scripts.PreClick(addon.button, "LeftButton", true)
-assert(merchantCloseCount == 1 and not addon.merchantOpen and addon.merchantReopenPending,
+assert(merchantCloseCount == 1 and not addon.merchantOpen,
     "a merchant must close before the secure slot action runs")
 addon.button.scripts.PostClick(addon.button, "LeftButton", true)
 addon.button.scripts.PreClick(addon.button, "LeftButton", false)
 addon.button.scripts.PostClick(addon.button, "LeftButton", false)
-assert(merchantReopenCount == 1 and addon.merchantOpen and not addon:IsSlotActionBlocked()
+assert(not addon.merchantOpen and not addon:IsSlotActionBlocked()
     and addon.current and addon.current.itemID == 789,
-    "the merchant interaction must reopen after the secure slot action")
+    "the safe slot action must remain available after closing the merchant")
 
 local closeMerchant = CloseMerchant
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
 CloseMerchant = function() error("simulated merchant close failure") end
 addon.button.scripts.PreClick(addon.button, "LeftButton", true)
-assert(addon:IsSlotActionBlocked() and addon.current == nil
-    and not addon.merchantReopenPending,
+assert(addon:IsSlotActionBlocked() and addon.current == nil,
     "a failed merchant handoff must abort and suppress the secure slot action")
 CloseMerchant = closeMerchant
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
@@ -353,14 +359,14 @@ addon:ScanBags("merchant close failure ended")
 assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
     "ending a failed merchant handoff must restore the eligible appearance action")
 
-local reopenInteraction = C_PlayerInteractionManager.ReopenInteraction
-C_PlayerInteractionManager.ReopenInteraction = nil
+local closeMerchantAgain = CloseMerchant
+CloseMerchant = nil
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
 assert(addon:IsSlotActionBlocked() and addon.current == nil,
-    "clients unable to cycle a merchant must suppress risky slot actions")
+    "clients unable to close a merchant must suppress risky slot actions")
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
-C_PlayerInteractionManager.ReopenInteraction = reopenInteraction
+CloseMerchant = closeMerchantAgain
 addon:ScanBags("merchant fallback ended")
 assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
     "ending the merchant fallback must restore the eligible appearance action")

@@ -109,6 +109,9 @@ function addon:CreateUI()
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(candidate.reason, 0.35, 0.85, 1, true)
         GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
+        if candidate.secureBySlot and addon.merchantOpen then
+            GameTooltip:AddLine("Vendor will close before use", 1, 0.82, 0.2)
+        end
         GameTooltip:AddLine("Right-click to skip this session", 0.9, 0.9, 0.9)
         GameTooltip:AddLine("Ctrl-right-click to ignore", 0.9, 0.9, 0.9)
         GameTooltip:AddLine("Alt-drag to move", 0.65, 0.65, 0.65)
@@ -134,20 +137,19 @@ function addon:CreateUI()
     button:SetScript("PreClick", function(_, mouseButton)
         local candidate = addon.current
         if mouseButton ~= "LeftButton" or not candidate or not candidate.secureBySlot
-            or not addon.merchantOpen or not addon:CanCycleMerchant()
-            or addon:IsInCombat() or addon.merchantReopenPending then
+            or not addon.merchantOpen or not addon:CanCloseMerchantSafely()
+            or addon:IsInCombat() then
             return
         end
 
         -- A bag-slot use is interpreted as a sale while the merchant
         -- interaction is active. Close it immediately before the secure action
-        -- runs, then PostClick will restore the interaction.
-        addon.merchantReopenPending = true
+        -- runs. WoW does not reliably allow addons to reopen a fully closed
+        -- merchant interaction, so the player must interact with the vendor again.
         local closed = pcall(CloseMerchant)
         if not closed or addon.merchantOpen then
             -- MERCHANT_CLOSED is synchronous. If it did not arrive, remove the
             -- action now so this click cannot fall through and sell the item.
-            addon.merchantReopenPending = nil
             addon:SetSlotActionBlock("merchant", true)
         end
     end)
@@ -159,10 +161,6 @@ function addon:CreateUI()
             return
         end
 
-        if mouseButton == "LeftButton" and addon.merchantReopenPending then
-            addon.merchantReopenPending = nil
-            pcall(C_PlayerInteractionManager.ReopenInteraction)
-        end
         if mouseButton == "RightButton" then
             addon:SkipCurrent(IsControlKeyDown())
         else
