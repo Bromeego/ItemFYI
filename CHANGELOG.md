@@ -3,9 +3,12 @@
 ## Unreleased
 
 - Prevented slot-targeted appearance actions from selling or moving their item
-  when merchant and other inventory-routing windows are open.
-- Slot-targeted actions are now removed synchronously when a risky interaction
-  opens and restored after it closes; safe item-ID actions remain available.
+  inside merchant and other inventory-routing windows.
+- Merchant workflows remain continuous: ItemFYI briefly closes the interaction
+  for the secure item use and immediately requests that WoW reopen it. Clients
+  without that safe handoff fall back to hiding the action.
+- Other risky inventory-routing interactions still suppress slot-targeted
+  actions until their window closes; safe item-ID actions remain available.
 - Added generic support for directly usable legacy tier tokens that create a
   class-set item for the current loot specialization.
 - Added class-restriction filtering so tier tokens for an ineligible character

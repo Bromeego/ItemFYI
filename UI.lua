@@ -131,11 +131,37 @@ function addon:CreateUI()
         addon:SavePosition()
     end)
 
+    button:SetScript("PreClick", function(_, mouseButton)
+        local candidate = addon.current
+        if mouseButton ~= "LeftButton" or not candidate or not candidate.secureBySlot
+            or not addon.merchantOpen or not addon:CanCycleMerchant()
+            or addon:IsInCombat() or addon.merchantReopenPending then
+            return
+        end
+
+        -- A bag-slot use is interpreted as a sale while the merchant
+        -- interaction is active. Close it immediately before the secure action
+        -- runs, then PostClick will restore the interaction.
+        addon.merchantReopenPending = true
+        local closed = pcall(CloseMerchant)
+        if not closed or addon.merchantOpen then
+            -- MERCHANT_CLOSED is synchronous. If it did not arrive, remove the
+            -- action now so this click cannot fall through and sell the item.
+            addon.merchantReopenPending = nil
+            addon:SetSlotActionBlock("merchant", true)
+        end
+    end)
+
     button:SetScript("PostClick", function(_, mouseButton, down)
         -- With both click phases registered, perform our insecure follow-up
         -- only once after the mouse button is released.
         if down then
             return
+        end
+
+        if mouseButton == "LeftButton" and addon.merchantReopenPending then
+            addon.merchantReopenPending = nil
+            pcall(C_PlayerInteractionManager.ReopenInteraction)
         end
         if mouseButton == "RightButton" then
             addon:SkipCurrent(IsControlKeyDown())

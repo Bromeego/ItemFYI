@@ -40,9 +40,13 @@ never opens or learns anything automatically.
   an unsupported armour or weapon type.
 - Invalidates slot-targeted appearance actions immediately when their bag
   changes and blocks those actions in combat.
-- Suppresses slot-targeted appearance actions while merchant, bank, mail,
-  trade, auction, scrapping, upgrade, and similar inventory-routing windows are
-  active, preventing the click from selling or moving the item instead.
+- Keeps slot-targeted appearances available at merchants by briefly closing the
+  merchant interaction for the secure use and reopening it immediately after.
+  If that handoff is unavailable, the action is hidden rather than risking a
+  sale.
+- Suppresses slot-targeted appearance actions while bank, mail, trade, auction,
+  scrapping, upgrade, and similar inventory-routing windows are active,
+  preventing the click from moving the item instead.
 - Defers every protected-frame update until combat ends.
 - Right-click skips an item for the session.
 - Ctrl-right-click permanently ignores an item.
@@ -127,9 +131,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
    Lua errors and that the button refreshes afterward.
 9. Confirm an uncollected companion Curio appears, can be added, and disappears
    after collection.
-10. With an equippable appearance action waiting, open a merchant and confirm
-    the action disappears without selling the item, then reappears after closing
-    the merchant.
+10. With an equippable appearance action waiting, open a merchant and use it.
+    Confirm the appearance is learned rather than sold and that the merchant
+    window returns after the click.
 
 ## Design boundary
 

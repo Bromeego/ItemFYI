@@ -18,6 +18,9 @@ end
 
 local createdFrames = {}
 local bagItem
+local eventFrame
+local merchantCloseCount = 0
+local merchantReopenCount = 0
 local function NewFrame(name)
     local frame = {
         name = name,
@@ -94,6 +97,20 @@ IsAltKeyDown = function() return false end
 IsControlKeyDown = function() return false end
 wipe = function(target) for key in pairs(target) do target[key] = nil end end
 C_Timer = { After = function(_, callback) callback() end }
+CloseMerchant = function()
+    merchantCloseCount = merchantCloseCount + 1
+    if eventFrame then
+        eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+    end
+end
+C_PlayerInteractionManager = {
+    ReopenInteraction = function()
+        merchantReopenCount = merchantReopenCount + 1
+        if eventFrame then
+            eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+        end
+    end,
+}
 C_Item = {
     GetItemInfo = function(itemID)
         if not bagItem or bagItem.itemID ~= itemID then
@@ -206,7 +223,7 @@ assert(loadfile("Skinning.lua"))("ItemFYI", addon)
 assert(loadfile("EditMode.lua"))("ItemFYI", addon)
 assert(loadfile("Settings.lua"))("ItemFYI", addon)
 
-local eventFrame = addon.eventFrame
+eventFrame = addon.eventFrame
 assert(eventFrame and eventFrame.scripts.OnEvent, "event frame was not initialized")
 assert(eventFrame.registeredEvents.MERCHANT_SHOW
     and eventFrame.registeredEvents.MERCHANT_CLOSED,
@@ -310,12 +327,43 @@ assert(addon.current and addon.current.itemID == 789 and addon.current.secureByS
     "equippable appearance should be selected outside inventory-routing windows")
 
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
-assert(addon:IsSlotActionBlocked() and addon.current == nil and not addon.button.shown,
-    "opening a merchant must immediately remove slot-targeted appearance actions")
+assert(addon.merchantOpen and not addon:IsSlotActionBlocked()
+    and addon.current and addon.current.itemID == 789,
+    "cycle-capable merchants must keep slot-targeted appearance actions available")
 
+addon.button.scripts.PreClick(addon.button, "LeftButton", true)
+assert(merchantCloseCount == 1 and not addon.merchantOpen and addon.merchantReopenPending,
+    "a merchant must close before the secure slot action runs")
+addon.button.scripts.PostClick(addon.button, "LeftButton", true)
+addon.button.scripts.PreClick(addon.button, "LeftButton", false)
+addon.button.scripts.PostClick(addon.button, "LeftButton", false)
+assert(merchantReopenCount == 1 and addon.merchantOpen and not addon:IsSlotActionBlocked()
+    and addon.current and addon.current.itemID == 789,
+    "the merchant interaction must reopen after the secure slot action")
+
+local closeMerchant = CloseMerchant
+CloseMerchant = function() error("simulated merchant close failure") end
+addon.button.scripts.PreClick(addon.button, "LeftButton", true)
+assert(addon:IsSlotActionBlocked() and addon.current == nil
+    and not addon.merchantReopenPending,
+    "a failed merchant handoff must abort and suppress the secure slot action")
+CloseMerchant = closeMerchant
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+addon:ScanBags("merchant close failure ended")
 assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
-    "closing a merchant must restore the eligible appearance action")
+    "ending a failed merchant handoff must restore the eligible appearance action")
+
+local reopenInteraction = C_PlayerInteractionManager.ReopenInteraction
+C_PlayerInteractionManager.ReopenInteraction = nil
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+assert(addon:IsSlotActionBlocked() and addon.current == nil,
+    "clients unable to cycle a merchant must suppress risky slot actions")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+C_PlayerInteractionManager.ReopenInteraction = reopenInteraction
+addon:ScanBags("merchant fallback ended")
+assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
+    "ending the merchant fallback must restore the eligible appearance action")
 
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
     Enum.PlayerInteractionType.Banker)

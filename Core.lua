@@ -11,6 +11,7 @@ addon.scanPending = false
 addon.scanGeneration = 0
 addon.layoutPending = false
 addon.slotActionBlocks = {}
+addon.merchantOpen = false
 
 -- Bag-slot use actions inherit the behaviour of whichever inventory-routing
 -- window is active. In these interactions, the same click can sell, deposit,
@@ -94,6 +95,12 @@ end
 
 function addon:IsSlotActionBlocked()
     return next(self.slotActionBlocks) ~= nil
+end
+
+function addon:CanCycleMerchant()
+    return type(CloseMerchant) == "function"
+        and C_PlayerInteractionManager
+        and type(C_PlayerInteractionManager.ReopenInteraction) == "function"
 end
 
 function addon:SetSlotActionBlock(key, blocked)
@@ -272,9 +279,21 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:ScheduleScan("combat ended", 0)
         end
     elseif event == "MERCHANT_SHOW" then
-        addon:SetSlotActionBlock("merchant", true)
+        addon.merchantOpen = true
+        if addon:CanCycleMerchant() then
+            addon.slotActionBlocks.merchant = nil
+            addon:ScheduleScan("merchant opened", 0)
+        else
+            -- Older or restricted clients keep the conservative behaviour.
+            addon:SetSlotActionBlock("merchant", true)
+        end
     elseif event == "MERCHANT_CLOSED" then
-        addon:SetSlotActionBlock("merchant", false)
+        addon.merchantOpen = false
+        if addon.slotActionBlocks.merchant then
+            addon:SetSlotActionBlock("merchant", false)
+        else
+            addon:ScheduleScan("merchant closed", 0)
+        end
     elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW"
         or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
         local interactionType = ...
