@@ -109,6 +109,22 @@ macro, secureBySlot = addon:BuildSecureUse(Context(202, { bag = 3, slot = 5 }), 
 assert(macro == "/use item:202" and not secureBySlot,
     "containers must continue resolving by item ID")
 
+tooltipText = "Use: Combine 2 Fractured Sparks of Starlight with 0 Valorstones "
+    .. "to create a Spark of Starlight."
+category = addon:ClassifyItem(Context(231757, { stackCount = 1 }))
+assert(category == nil, "a single Fractured Spark of Starlight should not be actionable")
+
+category = addon:ClassifyItem(Context(231757, { stackCount = 2 }))
+assert(category == "container", "two Fractured Sparks of Starlight should be actionable")
+
+category = addon:ClassifyItem(Context(231757, { stackCount = 1, totalCount = 2 }))
+assert(category == "container", "split Fractured Spark stacks should use their bag total")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(231757, { stackCount = 2 }))
+assert(category == nil, "Fractured Sparks should remain hidden when their conversion is unusable")
+itemUsable = true
+
 category = addon:ClassifyItem(Context(279382, { stackCount = 1 }))
 assert(category == nil, "single Venom-Cursed Fragment should not be actionable")
 

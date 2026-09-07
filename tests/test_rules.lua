@@ -7,6 +7,9 @@ assert(addon.Rules[280732].category == "container", "Mistcrest rule has the wron
 assert(addon.Rules[246752], "Hero Dawncrest pack is missing")
 assert(addon.Rules[279382] and addon.Rules[279382].minCount == 2,
     "Venom-Cursed Fragment must require a stack of two")
+assert(addon.Rules[231757] and addon.Rules[231757].minCount == 2
+    and addon.Rules[231757].requireUsable,
+    "Fractured Spark of Starlight must require two usable fragments")
 assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5,
     "Ascendant Voidshard must require a stack of five")
 assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
@@ -44,5 +47,5 @@ for itemID, rule in pairs(addon.Rules) do
     count = count + 1
 end
 
-assert(count == 67, ("expected 67 explicit rules, found %d"):format(count))
+assert(count == 68, ("expected 68 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))

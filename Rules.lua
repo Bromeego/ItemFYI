@@ -38,6 +38,12 @@ addon.Rules = {
     [280732] = { category = "container", reason = "Warbound Hero Mistcrest pack — click to open" },
 
     -- Stack-based item conversions
+    [231757] = {
+        category = "container",
+        minCount = 2,
+        requireUsable = true,
+        reason = "Two Fractured Sparks of Starlight ready — click to combine",
+    },
     [279382] = {
         category = "container",
         minCount = 2,

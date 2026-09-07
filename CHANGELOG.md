@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added Fractured Spark of Starlight conversion when at least two usable
+  fragments are present across equipped bags.
 - Stopped housing plans with unmet profession or skill requirements from being
   offered to characters that cannot add them.
 - Prevented slot-targeted appearance actions from selling or moving their item

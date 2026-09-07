@@ -18,8 +18,8 @@ never opens or learns anything automatically.
   the current loot specialization, while excluding unmet class and level
   restrictions.
 - Supports whole-bag minimum-stack rules for items that only become usable in
-  multiples, including Venom-Cursed Fragments, Ascendant Voidshards, and Void
-  Vestiges.
+  multiples, including Fractured Sparks of Starlight, Venom-Cursed Fragments,
+  Ascendant Voidshards, and Void Vestiges.
 - Detects profession knowledge consumables from Midnight, The War Within, and
   Dragonflight through their explicit study action. Weekly Thalassian, Algari,
   Undermine, and Draconic Treatises also use their completion flags so they
