@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Prevented slot-targeted appearance actions from selling or moving their item
+  when merchant and other inventory-routing windows are open.
+- Slot-targeted actions are now removed synchronously when a risky interaction
+  opens and restored after it closes; safe item-ID actions remain available.
 - Added generic support for directly usable legacy tier tokens that create a
   class-set item for the current loot specialization.
 - Added class-restriction filtering so tier tokens for an ineligible character

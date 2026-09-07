@@ -10,6 +10,37 @@ addon.candidates = {}
 addon.scanPending = false
 addon.scanGeneration = 0
 addon.layoutPending = false
+addon.slotActionBlocks = {}
+
+-- Bag-slot use actions inherit the behaviour of whichever inventory-routing
+-- window is active. In these interactions, the same click can sell, deposit,
+-- attach, trade, scrap, or select the item instead of using it.
+local unsafeSlotInteractionTypes = {}
+local unsafeSlotInteractionNames = {
+    "TradePartner",
+    "Banker",
+    "GuildBanker",
+    "MailInfo",
+    "Auctioneer",
+    "Transmogrifier",
+    "VoidStorageBanker",
+    "BlackMarketAuctioneer",
+    "ScrappingMachine",
+    "ItemInteraction",
+    "LegendaryCrafting",
+    "ItemUpgrade",
+    "ForgeMaster",
+    "CharacterBanker",
+    "AccountBanker",
+}
+
+for _, name in ipairs(unsafeSlotInteractionNames) do
+    local interactionType = Enum and Enum.PlayerInteractionType
+        and Enum.PlayerInteractionType[name]
+    if interactionType ~= nil then
+        unsafeSlotInteractionTypes[interactionType] = true
+    end
+end
 
 local defaults = {
     enabled = true,
@@ -59,6 +90,35 @@ end
 
 function addon:IsCategoryEnabled(category)
     return not self.db or not self.db.categories or self.db.categories[category] ~= false
+end
+
+function addon:IsSlotActionBlocked()
+    return next(self.slotActionBlocks) ~= nil
+end
+
+function addon:SetSlotActionBlock(key, blocked)
+    if key == nil then
+        return
+    end
+
+    local wasBlocked = self.slotActionBlocks[key] == true
+    if blocked then
+        self.slotActionBlocks[key] = true
+    else
+        self.slotActionBlocks[key] = nil
+    end
+
+    if wasBlocked == blocked then
+        return
+    end
+
+    if blocked and self.current and self.current.secureBySlot and not self:IsInCombat() then
+        -- Remove the protected action synchronously. Leaving it clickable until
+        -- the delayed scan could allow a merchant or bank to consume the click.
+        self:SetCandidate(nil, 0)
+    end
+    self:ScheduleScan(blocked and "unsafe item interaction opened"
+        or "unsafe item interaction closed", 0)
 end
 
 function addon:ScheduleScan(reason, delay)
@@ -174,6 +234,10 @@ events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:RegisterEvent("ITEM_DATA_LOAD_RESULT")
+events:RegisterEvent("MERCHANT_SHOW")
+events:RegisterEvent("MERCHANT_CLOSED")
+events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
 
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -206,6 +270,17 @@ events:SetScript("OnEvent", function(_, event, ...)
         end
         if addon.scanPending then
             addon:ScheduleScan("combat ended", 0)
+        end
+    elseif event == "MERCHANT_SHOW" then
+        addon:SetSlotActionBlock("merchant", true)
+    elseif event == "MERCHANT_CLOSED" then
+        addon:SetSlotActionBlock("merchant", false)
+    elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW"
+        or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
+        local interactionType = ...
+        if unsafeSlotInteractionTypes[interactionType] then
+            addon:SetSlotActionBlock("interaction:" .. tostring(interactionType),
+                event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
         end
     elseif event == "BAG_UPDATE" then
         local changedBag = ...

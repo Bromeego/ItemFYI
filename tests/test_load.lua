@@ -17,6 +17,7 @@ local function NewRegion()
 end
 
 local createdFrames = {}
+local bagItem
 local function NewFrame(name)
     local frame = {
         name = name,
@@ -27,7 +28,10 @@ local function NewFrame(name)
         width = 42,
         height = 42,
     }
-    function frame:RegisterEvent() end
+    function frame:RegisterEvent(event)
+        self.registeredEvents = self.registeredEvents or {}
+        self.registeredEvents[event] = true
+    end
     function frame:SetScript(script, callback) self.scripts[script] = callback end
     function frame:HookScript(script, callback) self.hooks[script] = callback end
     function frame:SetSize(width, height) self.width, self.height = width, height end
@@ -91,20 +95,70 @@ IsControlKeyDown = function() return false end
 wipe = function(target) for key in pairs(target) do target[key] = nil end end
 C_Timer = { After = function(_, callback) callback() end }
 C_Item = {
-    GetItemInfo = function() return nil end,
+    GetItemInfo = function(itemID)
+        if not bagItem or bagItem.itemID ~= itemID then
+            return nil
+        end
+        return bagItem.name, "item:" .. itemID, 4, 1, 1, "Armor", "Cosmetic", 1,
+            bagItem.equipLocation, bagItem.icon, 0, 4, 0
+    end,
+    IsUsableItem = function() return true end,
     RequestLoadItemDataByID = Noop,
 }
 C_Container = {
-    GetContainerNumSlots = function() return 0 end,
-    GetContainerItemInfo = function() return nil end,
-    GetContainerItemID = function() return nil end,
-    GetContainerItemLink = function() return nil end,
+    GetContainerNumSlots = function(bag)
+        return bag == 0 and bagItem and 1 or 0
+    end,
+    GetContainerItemInfo = function(bag, slot)
+        if bag == 0 and slot == 1 and bagItem then
+            return {
+                itemID = bagItem.itemID,
+                hyperlink = "item:" .. bagItem.itemID,
+                iconFileID = bagItem.icon,
+                stackCount = 1,
+            }
+        end
+    end,
+    GetContainerItemID = function(bag, slot)
+        return bag == 0 and slot == 1 and bagItem and bagItem.itemID or nil
+    end,
+    GetContainerItemLink = function(bag, slot)
+        return bag == 0 and slot == 1 and bagItem and ("item:" .. bagItem.itemID) or nil
+    end,
 }
-C_TooltipInfo = { GetBagItem = function() return { lines = {} } end }
+C_TooltipInfo = {
+    GetBagItem = function()
+        return {
+            lines = bagItem and {
+                { leftText = "Use: Add this appearance to your Warband collection." },
+            } or {},
+        }
+    end,
+}
 C_MountJournal = {}
 C_ToyBox = {}
 C_PetJournal = {}
-Enum = { ItemClass = { Recipe = 9 } }
+Enum = {
+    ItemClass = { Recipe = 9 },
+    PlayerInteractionType = {
+        TradePartner = 1,
+        Merchant = 5,
+        Banker = 8,
+        GuildBanker = 10,
+        MailInfo = 17,
+        Auctioneer = 21,
+        Transmogrifier = 24,
+        VoidStorageBanker = 26,
+        BlackMarketAuctioneer = 27,
+        ScrappingMachine = 40,
+        ItemInteraction = 44,
+        LegendaryCrafting = 48,
+        ItemUpgrade = 53,
+        ForgeMaster = 66,
+        CharacterBanker = 67,
+        AccountBanker = 68,
+    },
+}
 NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
 GameTooltip = {
     SetOwner = function(self, owner) self.owner = owner end,
@@ -154,6 +208,12 @@ assert(loadfile("Settings.lua"))("ItemFYI", addon)
 
 local eventFrame = addon.eventFrame
 assert(eventFrame and eventFrame.scripts.OnEvent, "event frame was not initialized")
+assert(eventFrame.registeredEvents.MERCHANT_SHOW
+    and eventFrame.registeredEvents.MERCHANT_CLOSED,
+    "merchant safety events must be registered")
+assert(eventFrame.registeredEvents.PLAYER_INTERACTION_MANAGER_FRAME_SHOW
+    and eventFrame.registeredEvents.PLAYER_INTERACTION_MANAGER_FRAME_HIDE,
+    "inventory-routing interaction events must be registered")
 eventFrame.scripts.OnEvent(eventFrame, "ADDON_LOADED", "ItemFYI")
 assert(addon.button, "secure action button was not created")
 assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredClicks[2] == "AnyDown",
@@ -238,5 +298,33 @@ addon:SetCandidate({
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
 assert(addon.current == nil and not addon.button.shown,
     "a changed bag must invalidate a slot-targeted appearance action")
+
+bagItem = {
+    itemID = 789,
+    name = "Test Warband Appearance",
+    icon = 1,
+    equipLocation = "INVTYPE_WEAPON",
+}
+addon:ScanBags("merchant safety test")
+assert(addon.current and addon.current.itemID == 789 and addon.current.secureBySlot,
+    "equippable appearance should be selected outside inventory-routing windows")
+
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+assert(addon:IsSlotActionBlocked() and addon.current == nil and not addon.button.shown,
+    "opening a merchant must immediately remove slot-targeted appearance actions")
+
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
+    "closing a merchant must restore the eligible appearance action")
+
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+    Enum.PlayerInteractionType.Banker)
+assert(addon:IsSlotActionBlocked() and addon.current == nil,
+    "bank interactions must suppress slot-targeted appearance actions")
+
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+    Enum.PlayerInteractionType.Banker)
+assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
+    "closing an inventory-routing interaction must restore appearance actions")
 
 print("load and secure-button smoke test passed")

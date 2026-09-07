@@ -495,22 +495,24 @@ function addon:ScanBags(reason)
         if category and self:IsCategoryEnabled(category) and not seen[key]
             and not self.db.ignored[key] and not self.sessionSkipped[key] then
             local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
-            seen[key] = true
-            candidates[#candidates + 1] = {
-                key = key,
-                itemID = context.itemID,
-                name = context.name,
-                link = context.link,
-                icon = context.icon,
-                count = context.totalCount,
-                bag = context.bag,
-                slot = context.slot,
-                category = category,
-                reason = itemReason,
-                priority = self.CategoryPriority[category] or 100,
-                secureMacro = secureMacro,
-                secureBySlot = secureBySlot,
-            }
+            if not (secureBySlot and self:IsSlotActionBlocked()) then
+                seen[key] = true
+                candidates[#candidates + 1] = {
+                    key = key,
+                    itemID = context.itemID,
+                    name = context.name,
+                    link = context.link,
+                    icon = context.icon,
+                    count = context.totalCount,
+                    bag = context.bag,
+                    slot = context.slot,
+                    category = category,
+                    reason = itemReason,
+                    priority = self.CategoryPriority[category] or 100,
+                    secureMacro = secureMacro,
+                    secureBySlot = secureBySlot,
+                }
+            end
         end
     end
 
