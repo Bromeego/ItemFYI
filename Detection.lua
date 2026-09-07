@@ -384,7 +384,8 @@ function addon:ClassifyItem(context)
         or itemSubType == "housing decor"
         or itemSubType == "decoration"
     local hasDecorUse = ContainsAny(tooltipText, decorText)
-    if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true)) then
+    if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true))
+        and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
         return "decor", "Housing decor — click to add"
     end
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stopped housing plans with unmet profession or skill requirements from being
+  offered to characters that cannot add them.
 - Prevented slot-targeted appearance actions from selling or moving their item
   inside merchant and other inventory-routing windows.
 - Slot-targeted appearances now explain that their merchant window will close

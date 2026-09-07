@@ -209,6 +209,21 @@ tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))
 assert(category == "decor", "housing decor detection failed")
 
+tooltipText = "Housing Decor\nUse: Add this Decor to your House Chest.\n"
+    .. "Requires Midnight Blacksmithing (50)"
+tooltipLines = {
+    { leftText = "Housing Decor", leftColor = { r = 1, g = 1, b = 1 } },
+    { leftText = "Use: Add this Decor to your House Chest.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Midnight Blacksmithing (50)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(117, { itemType = "Housing", itemSubType = "Housing Decor" }))
+assert(category == nil, "housing decor with an unmet profession requirement should not appear")
+
+tooltipLines[3].leftColor = { GetRGB = function() return 1, 1, 1 end }
+category = addon:ClassifyItem(Context(117, { itemType = "Housing", itemSubType = "Housing Decor" }))
+assert(category == "decor", "housing decor with a satisfied profession requirement should appear")
+tooltipLines = nil
+
 tooltipText = "Housing Dye\nUsed to recolour housing decor."
 category = addon:ClassifyItem(Context(108, { itemType = "Housing", itemSubType = "Dye" }))
 assert(category == nil, "non-usable housing dye should not be actionable")

@@ -98,8 +98,8 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 - Legacy tier tokens are shown when the current character can activate them.
   ItemFYI cannot reliably determine whether every possible spec-specific result
   is already collected, so a token may occasionally create a known appearance.
-- Housing items require an explicit tooltip action; non-usable housing dyes are
-  excluded.
+- Housing items require an explicit tooltip action and satisfied character or
+  profession requirements; non-usable housing dyes are excluded.
 - Companion Curios require the explicit action to add the Curio to the
   companion collection; incidental Curio references in flavour text are ignored.
 - Permanent profession skill items require an explicit base-skill cap in their
