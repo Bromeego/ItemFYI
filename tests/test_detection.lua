@@ -125,6 +125,22 @@ category = addon:ClassifyItem(Context(231757, { stackCount = 2 }))
 assert(category == nil, "Fractured Sparks should remain hidden when their conversion is unusable")
 itemUsable = true
 
+tooltipText = "Use: Combine 10 Bloom Baubles to create an Aquarius Bloom."
+category = addon:ClassifyItem(Context(118, { stackCount = 9, totalCount = 9 }))
+assert(category == nil, "a numeric stack conversion should remain hidden below its tooltip threshold")
+
+category = addon:ClassifyItem(Context(118, { stackCount = 6, totalCount = 10 }))
+assert(category == "container", "numeric stack conversions should use their whole-bag count")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(118, { stackCount = 10, totalCount = 10 }))
+assert(category == nil, "an unusable numeric stack conversion should remain hidden")
+itemUsable = true
+
+tooltipText = "Use: Combine the Ace through Eight to create a deck."
+category = addon:ClassifyItem(Context(119, { stackCount = 8, totalCount = 8 }))
+assert(category == nil, "distinct multi-part combines must not be treated as stack thresholds")
+
 category = addon:ClassifyItem(Context(279382, { stackCount = 1 }))
 assert(category == nil, "single Venom-Cursed Fragment should not be actionable")
 

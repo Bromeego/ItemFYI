@@ -17,8 +17,10 @@ never opens or learns anything automatically.
 - Surfaces directly usable legacy tier tokens that create a class-set item for
   the current loot specialization, while excluding unmet class and level
   restrictions.
-- Supports whole-bag minimum-stack rules for items that only become usable in
-  multiples, including Fractured Sparks of Starlight, Venom-Cursed Fragments,
+- Recognises numeric stack-conversion instructions such as `Combine 10 ... to
+  create ...`, totals matching items across equipped bags, and only offers the
+  action once the threshold is met. Explicit rules cover unusually worded
+  conversions including Fractured Sparks of Starlight, Venom-Cursed Fragments,
   Ascendant Voidshards, and Void Vestiges.
 - Detects profession knowledge consumables from Midnight, The War Within, and
   Dragonflight through their explicit study action. Weekly Thalassian, Algari,
@@ -112,8 +114,9 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
   an expiry timer are deliberately excluded.
 - Locked lockboxes are excluded until their tooltip no longer reports them as
   locked or requiring lockpicking.
-- Multi-part combines such as Darkmoon card sets are excluded until ItemFYI can
-  verify every distinct required item; they are not treated as stack thresholds.
+- Multi-part combines such as Darkmoon card sets are excluded because ItemFYI
+  cannot verify every distinct required item; only numeric stack conversions
+  with a usable item action are detected generically.
 - No bank scanning, lockpicking, disenchanting, quest automation, auto-opening,
   analytics, or external dependencies.
 - The secure button requires in-game testing. Static tests cannot reproduce

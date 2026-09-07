@@ -49,6 +49,11 @@ local function GetBulkFishProcessingMinimum(text)
     return tonumber(string.match(text, "use:%s+gut and clean%s+(%d+)%s+"))
 end
 
+local function GetStackCombineMinimum(text)
+    return tonumber(string.match(text,
+        "use:%s+combine%s+(%d+)%s+[^\n]-to create"))
+end
+
 local function GetPermanentSkillIncrease(text)
     local skillName, maximum = string.match(text,
         "use:%s+increases?%s+([^\n]-)%s+skill%s+by%s+%d+.-up to a max of%s+(%d+)")
@@ -403,6 +408,13 @@ function addon:ClassifyItem(context)
     if isRecipe and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
         and ContainsAny(tooltipText, recipeText) then
         return "recipe", "Unlearned recipe — click to learn"
+    end
+
+    local combineMinimum = GetStackCombineMinimum(tooltipText)
+    local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
+    if combineMinimum and availableCount >= combineMinimum and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "container", ("Stack of %d ready — click to combine"):format(combineMinimum)
     end
 
     if context.hasLoot or ContainsAny(tooltipText, openText) then

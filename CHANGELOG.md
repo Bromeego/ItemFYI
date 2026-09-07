@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added generic numeric stack-conversion detection for tooltip actions such as
+  Bloom Baubles, using the whole-bag count and Blizzard's usability result.
+- Renamed the container setting to **Openables & stack combines** to reflect the
+  actions it controls.
 - Added Fractured Spark of Starlight conversion when at least two usable
   fragments are present across equipped bags.
 - Stopped housing plans with unmet profession or skill requirements from being
