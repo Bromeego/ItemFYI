@@ -9,14 +9,17 @@ never opens or learns anything automatically.
 - Scans all equipped bags at login and after bag changes.
 - Shows one item at a time, with a small `+N` count when more are waiting.
 - Prioritises uncollected mounts, pets, companion Curios, toys, housing decor,
-  transmog tokens, profession skill and knowledge items, and recipes before
-  ordinary containers.
+  transmog tokens, learnable visual effects, profession skill and knowledge
+  items, and recipes before ordinary containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
 - Surfaces directly usable legacy tier tokens that create a class-set item for
   the current loot specialization, while excluding unmet class and level
   restrictions.
+- Recognises learnable visual-effect consumables from their explicit unlock
+  action, including all five Coiled Huntress pearls, without maintaining a
+  separate item-ID list for them.
 - Recognises digit- and word-number stack-conversion instructions such as
   `Combine 10 ... to create ...` and `Combine two ... to create ...`, totals
   matching items across equipped bags, and only offers the action once the

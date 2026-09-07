@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added generic learnable visual-effect detection for all five Coiled Huntress
+  pearls: Cerulean, Sinful, Amber, Cursebound, and Blighted.
+- Renamed the transmog setting to **Transmog & visual unlocks** to reflect the
+  additional learnable family it controls.
 - Generalized word-number stack conversions such as `Combine two ... to create
   ...`, allowing Venom-Cursed Fragments and similarly worded items to work
   without item-ID rules.

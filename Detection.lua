@@ -16,6 +16,11 @@ local transmogText = {
     "use: add this appearance",
 }
 
+local function IsVisualEffectUnlock(text)
+    return string.find(text, "use: learn to infuse ", 1, true) ~= nil
+        and string.find(text, "unlocking additional visual effects", 1, true) ~= nil
+end
+
 local tierTokenText = {
     "use: create a class set item appropriate for your loot specialization",
 }
@@ -431,6 +436,11 @@ function addon:ClassifyItem(context)
     if ContainsAny(tooltipText, tierTokenText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "transmog", "Tier token — click to create set item"
+    end
+
+    if IsVisualEffectUnlock(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Visual effect unlock — click to learn"
     end
 
     if ContainsAny(tooltipText, transmogText) then

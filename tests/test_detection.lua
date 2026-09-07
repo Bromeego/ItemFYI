@@ -279,6 +279,29 @@ tooltipText = "Use: Collect the appearances of the Test Ensemble."
 category = addon:ClassifyItem(Context(105))
 assert(category == "transmog", "transmog token detection failed")
 
+local pearlTooltips = {
+    { 278335, "a cerulean hue" },
+    { 278336, "a red hue" },
+    { 278337, "an amber hue" },
+    { 278339, "a purple hue" },
+    { 278340, "Ula'tek's essence" },
+}
+for _, pearl in ipairs(pearlTooltips) do
+    tooltipText = ("Use: Learn to infuse The Coiled Huntress with %s, unlocking additional "
+        .. "visual effects when she sheds her skin.\nThis effect is Warband-wide."):format(pearl[2])
+    category = addon:ClassifyItem(Context(pearl[1]))
+    assert(category == "transmog", ("Coiled Huntress pearl %d should be learnable"):format(pearl[1]))
+end
+
+itemUsable = false
+category = addon:ClassifyItem(Context(278336))
+assert(category == nil, "an unusable visual-effect unlock should remain hidden")
+itemUsable = true
+
+tooltipText = "Use: Learn to infuse a weapon with power."
+category = addon:ClassifyItem(Context(122))
+assert(category == nil, "unrelated infusion actions must not be treated as visual unlocks")
+
 tooltipText = "Use: Create a class set item appropriate for your loot specialization (Balance).\n"
     .. "Classes: Rogue, Death Knight, Mage, Druid\nRequires Level 30"
 category = addon:ClassifyItem(Context(45661))
