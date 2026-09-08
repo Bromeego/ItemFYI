@@ -86,9 +86,12 @@ end
 local function IsSingleItemProfessionProcessingAction(text)
     -- Keep this deliberately narrower than a generic "Use:" detector. The
     -- "gut and clean N" family has a separate count-aware path below.
+    -- "Disenchant this item to produce ..." is a bag-item processing action,
+    -- not the Enchanting profession spell used on gear.
     local lines = "\n" .. text
     return string.find(lines, "\n%s*use:%s+gut%s+the%s+") ~= nil
         or string.find(lines, "\n%s*use:%s+salvage%s+") ~= nil
+        or string.find(lines, "\n%s*use:%s+disenchant this item to produce") ~= nil
 end
 
 local function GetPermanentSkillIncrease(text)

@@ -107,6 +107,19 @@ tooltipText = "Use: Salvage what you can from the Rimefin Tuna."
 category = addon:ClassifyItem(Context(199346))
 assert(category == "profession", "generic single-item salvage action failed")
 
+tooltipText = "Use: Disenchant this item to produce Soothsayer's Dust."
+category = addon:ClassifyItem(Context(72018, { itemType = "Quest" }))
+assert(category == "profession", "bag-item disenchant-to-produce actions should be processed")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(72018, { itemType = "Quest" }))
+assert(category == nil, "an unusable disenchant-to-produce action should remain hidden")
+itemUsable = true
+
+tooltipText = "Can be disenchanted."
+category = addon:ClassifyItem(Context(72019, { itemType = "Weapon", equipLocation = "INVTYPE_WEAPON" }))
+assert(category == nil, "ordinary disenchantable gear must not be treated as a processing action")
+
 local macro, secureBySlot = addon:BuildSecureUse(Context(201, {
     bag = 2,
     slot = 7,

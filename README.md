@@ -31,8 +31,9 @@ never opens or learns anything automatically.
   Dragonflight through their explicit study action. Weekly Thalassian, Algari,
   Undermine, and Draconic Treatises also use their completion flags so they
   disappear after that week's use.
-- Recognises explicit single-item gutting and salvage actions generically, so
-  items such as Shimmersiren and Rotten Rimefin Tuna do not need ID rules.
+- Recognises explicit single-item gutting, salvage, and bag-item disenchant
+  actions generically, so items such as Shimmersiren, Rotten Rimefin Tuna, and
+  Darkmoon Faire Discarded Weapons do not need ID rules.
 - Surfaces all small, regular, and enormous Draenor fish only when their
   tooltip-required batch of five is available across equipped bags.
 - Surfaces Rotten Rimefin Tuna for salvage. Frosted Rimefin Tuna is
@@ -124,8 +125,10 @@ per Blizzard UI layout. Alt-drag remains available as a quick fallback.
 - Multi-part combines such as Darkmoon card sets are excluded because ItemFYI
   cannot verify every distinct required item; only numeric stack conversions
   with a usable item action are detected generically.
-- No bank scanning, lockpicking, disenchanting, quest automation, auto-opening,
-  analytics, or external dependencies.
+- No bank scanning, lockpicking, profession disenchanting of gear, quest
+  automation, auto-opening, analytics, or external dependencies. Bag items
+  whose own use text is `Disenchant this item to produce ...` are treated as
+  processing actions, not as Enchanting-profession disenchanting.
 - The secure button requires in-game testing. Static tests cannot reproduce
   Blizzard's combat-lockdown and taint behaviour.
 

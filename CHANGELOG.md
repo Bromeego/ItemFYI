@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2
+
+- Detected bag items whose use text is `Disenchant this item to produce ...`,
+  such as Darkmoon Faire Discarded Weapons, using the same processing path as
+  salvage. Ordinary gear that can be disenchanted with Enchanting remains
+  excluded.
+
 ## 0.2.1
 
 - Detected 12.1 Venomous Abyss tier tokens such as Venomcast Relic, whose use
