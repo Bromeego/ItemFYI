@@ -330,6 +330,18 @@ tooltipText = "Use: Create a class set item appropriate for your loot specializa
 category = addon:ClassifyItem(Context(45661))
 assert(category == "transmog", "usable class-set tier token detection failed")
 
+tooltipText = "Use: Create a soulbound set leg item appropriate for your class."
+category = addon:ClassifyItem(Context(280001))
+assert(category == "transmog", "12.1 soulbound set-slot tokens should be detected")
+
+tooltipText = "Use: Create a soulbound set helm item appropriate for your class."
+category = addon:ClassifyItem(Context(280002))
+assert(category == "transmog", "12.1 helm set tokens should use the same detector")
+
+tooltipText = "Use: Create a soulbound mystery item appropriate for your class."
+category = addon:ClassifyItem(Context(280003))
+assert(category == nil, "non-set creations must not be treated as tier tokens")
+
 macro, secureBySlot = addon:BuildSecureUse(Context(45661, { bag = 1, slot = 4 }), "transmog")
 assert(macro == "/use item:45661" and not secureBySlot,
     "non-equippable tier tokens must use a stable item-ID action")

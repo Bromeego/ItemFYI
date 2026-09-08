@@ -15,7 +15,8 @@ never opens or learns anything automatically.
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
 - Surfaces directly usable legacy tier tokens that create a class-set item for
-  the current loot specialization, while excluding unmet class and level
+  the current loot specialization, and 12.1 slot tokens that create a soulbound
+  set item for the current class, while excluding unmet class and level
   restrictions.
 - Recognises learnable visual-effect consumables from their explicit unlock
   action, including all five Coiled Huntress pearls, without maintaining a

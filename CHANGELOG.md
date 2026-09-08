@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Detected 12.1 Venomous Abyss tier tokens such as Venomcast Relic, whose use
+  text creates a soulbound set slot item for the current class rather than a
+  loot-specialization class-set item.
+
 ## 0.2.0
 
 - Stopped Alt-drag from using the current item when click-on-press is enabled.

@@ -21,9 +21,12 @@ local function IsVisualEffectUnlock(text)
         and string.find(text, "unlocking additional visual effects", 1, true) ~= nil
 end
 
-local tierTokenText = {
-    "use: create a class set item appropriate for your loot specialization",
-}
+local function IsTierTokenAction(text)
+    -- Legacy: "Use: Create a class set item appropriate for your loot specialization"
+    -- 12.1: "Use: Create a soulbound set leg item appropriate for your class."
+    return string.find(text,
+        "use:%s+create a [^\n]-%f[%a]set%f[%A] [^\n]-item appropriate for your") ~= nil
+end
 
 local decorText = {
     "use: add this decor",
@@ -490,7 +493,7 @@ function addon:ClassifyItem(context)
         return "decor", "Housing decor — click to add"
     end
 
-    if ContainsAny(tooltipText, tierTokenText) and IsItemUsable(context.itemID)
+    if IsTierTokenAction(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "transmog", "Tier token — click to create set item"
     end
