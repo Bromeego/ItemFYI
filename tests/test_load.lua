@@ -40,6 +40,10 @@ local function NewFrame(name)
     function frame:SetScript(script, callback) self.scripts[script] = callback end
     function frame:HookScript(script, callback) self.hooks[script] = callback end
     function frame:SetSize(width, height) self.width, self.height = width, height end
+    function frame:GetSize() return self.width, self.height end
+    function frame:SetFrameLevel(level) self.frameLevel = level end
+    function frame:GetFrameLevel() return self.frameLevel or 1 end
+    function frame:SetClipsChildren() end
     function frame:SetWidth(width) self.width = width end
     function frame:SetOrientation() end
     function frame:SetClampedToScreen() end
@@ -69,6 +73,7 @@ local function NewFrame(name)
         end
     end
     function frame:ClearAllPoints() end
+    function frame:SetAllPoints() end
     function frame:SetPoint(point, _, relativePoint, x, y)
         self.point = { point, relativePoint, x, y }
     end
@@ -185,7 +190,11 @@ GameTooltip = {
 }
 local glowButton
 ActionButtonSpellAlertManager = {
-    ShowAlert = function(_, button) glowButton = button end,
+    ShowAlert = function(_, button)
+        glowButton = button
+        button.SpellActivationAlert = button.SpellActivationAlert or NewFrame("ItemFYISpellActivationAlert")
+        button.SpellActivationAlert:SetSize(button.width, button.height)
+    end,
     HideAlert = function() glowButton = nil end,
 }
 SlashCmdList = {}
@@ -305,6 +314,12 @@ assert(addon.button.attributes.macrotext1 == "/use item:123",
 assert(addon.button.attributes.item1 == nil, "left click should not use the equip-aware item action")
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
 assert(glowButton == addon.button, "candidate should use the modern spell-alert glow")
+assert(addon.button.SpellActivationAlert
+    and addon.button.SpellActivationAlert.width == addon.button.width * 2,
+    "spell-alert glow should sit outside the icon so the stack count stays readable")
+assert(addon.button.badge
+    and addon.button.badge:GetFrameLevel() > addon.button.SpellActivationAlert:GetFrameLevel(),
+    "stack count overlay must draw above the glow")
 
 altDown = true
 local merchantCountBeforeAlt = merchantCloseCount

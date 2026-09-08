@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Sized the attention glow outside the icon and raised the stack count above it
+  so the quantity is no longer hidden by the proc sparkle.
+
 ## 0.2.2
 
 - Detected bag items whose use text is `Disenchant this item to produce ...`,

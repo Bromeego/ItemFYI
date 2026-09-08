@@ -12,13 +12,36 @@ local function HideButtonTooltip(button)
     end
 end
 
+local GLOW_SIZE_SCALE = 2
+
+local function FitButtonGlow(button)
+    local alert = button and button.SpellActivationAlert
+    if not (alert and alert.SetSize) then
+        return
+    end
+
+    local width, height = button:GetSize()
+    width = tonumber(width) or 42
+    height = tonumber(height) or width
+    alert:ClearAllPoints()
+    alert:SetPoint("CENTER", button, "CENTER")
+    alert:SetSize(width * GLOW_SIZE_SCALE, height * GLOW_SIZE_SCALE)
+
+    if button.badge and button.badge.SetFrameLevel then
+        local alertLevel = alert.GetFrameLevel and alert:GetFrameLevel() or button:GetFrameLevel()
+        button.badge:SetFrameLevel((tonumber(alertLevel) or 1) + 5)
+    end
+end
+
 local function ShowButtonGlow(button)
     if ActionButtonSpellAlertManager and ActionButtonSpellAlertManager.ShowAlert then
         ActionButtonSpellAlertManager:ShowAlert(button)
+        FitButtonGlow(button)
         return
     end
     if ActionButton_ShowOverlayGlow then
         ActionButton_ShowOverlayGlow(button)
+        FitButtonGlow(button)
     end
 end
 
@@ -61,6 +84,7 @@ function addon:ApplyButtonLayout(useSavedPosition)
     local size = math.max(32, math.min(64, tonumber(self.db.size) or 42))
     self.db.size = size
     self.button:SetSize(size, size)
+    FitButtonGlow(self.button)
 
     if self.editModeRegistered and not useSavedPosition then
         self.editModeLib:RepositionFrame(self.button)
@@ -92,6 +116,9 @@ function addon:CreateUI()
     button:SetClampedToScreen(true)
     button:SetMovable(true)
     button:EnableMouse(true)
+    if button.SetClipsChildren then
+        button:SetClipsChildren(false)
+    end
     -- Secure actions may fire on press or release depending on the player's
     -- ActionButtonUseKeyDown setting, so register both phases.
     button:RegisterForClicks("AnyUp", "AnyDown")
@@ -114,9 +141,14 @@ function addon:CreateUI()
     button.highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
     button.highlight:SetBlendMode("ADD")
 
-    button.count = CreateText(button, "NumberFontNormal", "BOTTOMRIGHT", -2, 2)
+    -- Keep count and +N above the spell-alert glow, which is a child frame.
+    button.badge = CreateFrame("Frame", nil, button)
+    button.badge:SetAllPoints()
+    button.badge:SetFrameLevel(button:GetFrameLevel() + 10)
+
+    button.count = CreateText(button.badge, "NumberFontNormal", "BOTTOMRIGHT", -2, 2)
     button.Count = button.count
-    button.more = CreateText(button, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
+    button.more = CreateText(button.badge, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
     button.more:SetTextColor(0.35, 0.85, 1)
 
     button:SetScript("OnEnter", function(frame)
