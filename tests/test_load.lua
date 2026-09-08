@@ -13,6 +13,9 @@ local function NewRegion()
         SetTextColor = Noop,
         SetText = function(self, value) self.text = value end,
         GetText = function(self) return self.text end,
+        SetWidth = Noop,
+        SetJustifyH = Noop,
+        SetWordWrap = Noop,
     }
 end
 
@@ -38,6 +41,7 @@ local function NewFrame(name)
     function frame:HookScript(script, callback) self.hooks[script] = callback end
     function frame:SetSize(width, height) self.width, self.height = width, height end
     function frame:SetWidth(width) self.width = width end
+    function frame:SetOrientation() end
     function frame:SetClampedToScreen() end
     function frame:SetMovable() end
     function frame:EnableMouse() end
@@ -82,17 +86,12 @@ end
 
 UIParent = { GetRect = function() return 0, 0, 1920, 1080 end }
 CreateFrame = function(_, name)
-    local frame = NewFrame(name)
-    if name == "ItemFYIButtonSizeSlider" then
-        _G.ItemFYIButtonSizeSliderLow = NewRegion()
-        _G.ItemFYIButtonSizeSliderHigh = NewRegion()
-        _G.ItemFYIButtonSizeSliderText = NewRegion()
-    end
-    return frame
+    return NewFrame(name)
 end
 local inCombat = false
+local altDown = false
 InCombatLockdown = function() return inCombat end
-IsAltKeyDown = function() return false end
+IsAltKeyDown = function() return altDown end
 IsControlKeyDown = function() return false end
 wipe = function(target) for key in pairs(target) do target[key] = nil end end
 C_Timer = { After = function(_, callback) callback() end }
@@ -184,6 +183,11 @@ GameTooltip = {
         self.owner = nil
     end,
 }
+local glowButton
+ActionButtonSpellAlertManager = {
+    ShowAlert = function(_, button) glowButton = button end,
+    HideAlert = function() glowButton = nil end,
+}
 SlashCmdList = {}
 local editModeLib = { framesDB = {} }
 function editModeLib:RegisterFrame(frame, _, db)
@@ -227,16 +231,25 @@ assert(eventFrame.registeredEvents.MERCHANT_SHOW
 assert(eventFrame.registeredEvents.PLAYER_INTERACTION_MANAGER_FRAME_SHOW
     and eventFrame.registeredEvents.PLAYER_INTERACTION_MANAGER_FRAME_HIDE,
     "inventory-routing interaction events must be registered")
+assert(eventFrame.registeredEvents.PLAYER_LOOT_SPEC_UPDATED
+    and eventFrame.registeredEvents.QUEST_TURNED_IN
+    and eventFrame.registeredEvents.UNIT_QUEST_LOG_CHANGED,
+    "loot spec and quest completion events must be registered")
 eventFrame.scripts.OnEvent(eventFrame, "ADDON_LOADED", "ItemFYI")
 assert(addon.button, "secure action button was not created")
 assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredClicks[2] == "AnyDown",
     "secure button must register both click phases")
 assert(SlashCmdList.ITEMFYI, "slash command was not registered")
+assert(type(_G.ItemFYI_OnAddonCompartmentClick) == "function",
+    "addon compartment click handler must be registered")
 assert(addon.settingsCategory, "settings category was not registered")
 assert(addon.settingsPanel.categoryChecks.curio, "settings must include a companion Curio toggle")
 assert(addon.settingsPanel.categoryChecks.profession, "settings must include a profession progress item toggle")
 SlashCmdList.ITEMFYI("")
 assert(openedCategory == "ItemFYI", "bare /ifyi should open the settings category")
+openedCategory = nil
+_G.ItemFYI_OnAddonCompartmentClick()
+assert(openedCategory == "ItemFYI", "addon compartment click should open settings")
 
 addon.settingsPanel.categoryChecks.container.checked = false
 addon.settingsPanel.categoryChecks.container.scripts.OnClick(addon.settingsPanel.categoryChecks.container)
@@ -291,6 +304,30 @@ assert(addon.button.attributes.macrotext1 == "/use item:123",
     "secure macro must resolve the item by ID at click time")
 assert(addon.button.attributes.item1 == nil, "left click should not use the equip-aware item action")
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
+assert(glowButton == addon.button, "candidate should use the modern spell-alert glow")
+
+altDown = true
+local merchantCountBeforeAlt = merchantCloseCount
+addon.button.scripts.PreClick(addon.button, "LeftButton", true)
+assert(addon.button.attributes.type1 == nil,
+    "alt-click must clear the secure action before click-on-press")
+assert(merchantCloseCount == merchantCountBeforeAlt,
+    "alt-click must not close a merchant")
+addon.button.scripts.PostClick(addon.button, "LeftButton", true)
+addon.button.scripts.PostClick(addon.button, "LeftButton", false)
+assert(addon.button.attributes.type1 == "macro" and addon.current and addon.current.itemID == 123,
+    "releasing an alt-click must restore the action without consuming the item")
+altDown = false
+
+addon.db.ignored["999"] = { name = "Ignored Gem" }
+addon:RefreshSettingsPanel()
+assert(string.find(addon.settingsPanel.ignoredStatus.text, "Ignored Gem", 1, true),
+    "settings must list ignored item names")
+local ignoredEntries = addon:GetIgnoredEntries()
+assert(ignoredEntries[1] and ignoredEntries[1].key == "999" and ignoredEntries[1].name == "Ignored Gem",
+    "ignored entries must keep the stored name")
+addon.db.ignored["999"] = nil
+addon:RefreshSettingsPanel()
 
 addon.button.scripts.PostClick(addon.button, "LeftButton", true)
 assert(addon.current and addon.current.itemID == 123,
@@ -380,5 +417,17 @@ eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.Banker)
 assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
     "closing an inventory-routing interaction must restore appearance actions")
+
+local generation = addon.scanGeneration
+eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "target")
+assert(addon.scanGeneration == generation,
+    "other-unit quest log changes must not scan")
+eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "player")
+assert(addon.scanGeneration > generation,
+    "player quest log changes must rescan")
+generation = addon.scanGeneration
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOOT_SPEC_UPDATED")
+assert(addon.scanGeneration > generation,
+    "loot spec changes must rescan")
 
 print("load and secure-button smoke test passed")

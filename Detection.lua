@@ -115,9 +115,10 @@ local function HasReachedProfessionCap(skillName, maximum)
     return false
 end
 
-local openText = {
-    "use: open",
-}
+local function IsOpenAction(text)
+    -- Require a non-letter after "open" so "Use: Opens a portal" is excluded.
+    return string.find(text, "use: open%f[%A]") ~= nil
+end
 
 local function ContainsAny(text, needles)
     for _, needle in ipairs(needles) do
@@ -211,77 +212,100 @@ local function AppendTooltipValue(parts, value)
     end
 end
 
-function addon:GetTooltipText(context)
+local function CollectRestrictionState(text, color, state)
+    if not IsRestrictionText(text) then
+        return
+    end
+    state.sawRestrictionText = true
+    if color ~= nil then
+        state.sawRestrictionColor = true
+        if IsFailureColor(color) then
+            state.unmetRequirement = true
+        end
+    end
+end
+
+local function EnsureScanTooltip(self)
+    if not (CreateFrame and UIParent) then
+        return nil
+    end
+    if not self.scanTooltip then
+        self.scanTooltip = CreateFrame("GameTooltip", "ItemFYIScanTooltip", UIParent, "GameTooltipTemplate")
+        self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    end
+    return self.scanTooltip
+end
+
+function addon:GetTooltipSnapshot(context)
+    if context.tooltipSnapshot then
+        return context.tooltipSnapshot
+    end
+
     local parts = {}
+    local state = {
+        unmetRequirement = false,
+        sawRestrictionText = false,
+        sawRestrictionColor = false,
+    }
+    local battlePetSpeciesID
 
     if C_TooltipInfo and C_TooltipInfo.GetBagItem then
         local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
-        if ok and tooltip and tooltip.lines then
-            for _, line in ipairs(tooltip.lines) do
-                AppendTooltipValue(parts, line.leftText)
-                AppendTooltipValue(parts, line.rightText)
-                AppendTooltipValue(parts, line.text)
-                AppendTooltipValue(parts, line.args)
+        if ok and tooltip then
+            if tooltip.battlePet then
+                battlePetSpeciesID = tonumber(tooltip.battlePet.speciesID)
+            end
+            if tooltip.lines then
+                for _, line in ipairs(tooltip.lines) do
+                    AppendTooltipValue(parts, line.leftText)
+                    AppendTooltipValue(parts, line.rightText)
+                    AppendTooltipValue(parts, line.text)
+                    AppendTooltipValue(parts, line.args)
+                    CollectRestrictionState(line.leftText, line.leftColor, state)
+                    CollectRestrictionState(line.rightText, line.rightColor, state)
+                    CollectRestrictionState(line.text, line.color or line.leftColor, state)
+                end
             end
         end
     end
 
-    if #parts == 0 and CreateFrame and UIParent then
-        if not self.scanTooltip then
-            self.scanTooltip = CreateFrame("GameTooltip", "ItemFYIScanTooltip", UIParent, "GameTooltipTemplate")
-            self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
-        end
-        self.scanTooltip:ClearLines()
-        self.scanTooltip:SetBagItem(context.bag, context.slot)
-        local tooltipName = self.scanTooltip:GetName()
-        for lineNumber = 1, self.scanTooltip:NumLines() do
-            local left = _G[tooltipName .. "TextLeft" .. lineNumber]
-            local right = _G[tooltipName .. "TextRight" .. lineNumber]
-            AppendTooltipValue(parts, left and left:GetText())
-            AppendTooltipValue(parts, right and right:GetText())
+    local needScanForText = #parts == 0
+    local needScanForColor = state.sawRestrictionText and not state.sawRestrictionColor
+        and not state.unmetRequirement
+    if needScanForText or needScanForColor then
+        local scanTooltip = EnsureScanTooltip(self)
+        if scanTooltip then
+            scanTooltip:ClearLines()
+            scanTooltip:SetBagItem(context.bag, context.slot)
+            local tooltipName = scanTooltip:GetName()
+            for lineNumber = 1, scanTooltip:NumLines() do
+                local left = _G[tooltipName .. "TextLeft" .. lineNumber]
+                local right = _G[tooltipName .. "TextRight" .. lineNumber]
+                if needScanForText then
+                    AppendTooltipValue(parts, left and left:GetText())
+                    AppendTooltipValue(parts, right and right:GetText())
+                end
+                if FontStringHasFailedRequirement(left) or FontStringHasFailedRequirement(right) then
+                    state.unmetRequirement = true
+                end
+            end
         end
     end
 
-    return string.lower(table.concat(parts, "\n"))
+    context.tooltipSnapshot = {
+        text = string.lower(table.concat(parts, "\n")),
+        unmetRequirement = state.unmetRequirement,
+        battlePetSpeciesID = battlePetSpeciesID,
+    }
+    return context.tooltipSnapshot
+end
+
+function addon:GetTooltipText(context)
+    return self:GetTooltipSnapshot(context).text
 end
 
 function addon:HasUnmetRequirement(context)
-    if C_TooltipInfo and C_TooltipInfo.GetBagItem then
-        local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
-        if ok and tooltip and tooltip.lines then
-            for _, line in ipairs(tooltip.lines) do
-                if IsRestrictionText(line.leftText) and IsFailureColor(line.leftColor) then
-                    return true
-                end
-                if IsRestrictionText(line.rightText) and IsFailureColor(line.rightColor) then
-                    return true
-                end
-                if IsRestrictionText(line.text) and IsFailureColor(line.color or line.leftColor) then
-                    return true
-                end
-            end
-        end
-    end
-
-    -- Older clients or tooltip providers may omit structured colours. The
-    -- private scanning tooltip preserves the rendered requirement colour.
-    if CreateFrame and UIParent then
-        if not self.scanTooltip then
-            self.scanTooltip = CreateFrame("GameTooltip", "ItemFYIScanTooltip", UIParent, "GameTooltipTemplate")
-            self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
-        end
-        self.scanTooltip:ClearLines()
-        self.scanTooltip:SetBagItem(context.bag, context.slot)
-        local tooltipName = self.scanTooltip:GetName()
-        for lineNumber = 1, self.scanTooltip:NumLines() do
-            if FontStringHasFailedRequirement(_G[tooltipName .. "TextLeft" .. lineNumber])
-                or FontStringHasFailedRequirement(_G[tooltipName .. "TextRight" .. lineNumber]) then
-                return true
-            end
-        end
-    end
-
-    return false
+    return self:GetTooltipSnapshot(context).unmetRequirement
 end
 
 local function GetPetSpecies(context)
@@ -291,11 +315,9 @@ local function GetPetSpecies(context)
         return speciesID
     end
 
-    if C_TooltipInfo and C_TooltipInfo.GetBagItem then
-        local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
-        if ok and tooltip and tooltip.battlePet then
-            return tonumber(tooltip.battlePet.speciesID)
-        end
+    local snapshot = addon:GetTooltipSnapshot(context)
+    if snapshot.battlePetSpeciesID then
+        return snapshot.battlePetSpeciesID
     end
 
     if C_PetJournal and C_PetJournal.GetPetInfoByItemID then
@@ -348,6 +370,42 @@ local function IsUncollectedToy(itemID)
     return known == false
 end
 
+local function QueryCollectedAppearance(query)
+    if not query or not C_TransmogCollection then
+        return false
+    end
+
+    if C_TransmogCollection.PlayerHasTransmogByItemInfo then
+        local ok, collected = pcall(C_TransmogCollection.PlayerHasTransmogByItemInfo, query)
+        if ok and collected == true then
+            return true
+        end
+    end
+
+    if type(query) == "number" and C_TransmogCollection.PlayerHasTransmog then
+        local ok, collected = pcall(C_TransmogCollection.PlayerHasTransmog, query)
+        if ok and collected == true then
+            return true
+        end
+    end
+
+    if C_TransmogCollection.GetItemInfo and C_TransmogCollection.PlayerHasTransmogItemModifiedAppearance then
+        local ok, _, sourceID = pcall(C_TransmogCollection.GetItemInfo, query)
+        if ok and sourceID then
+            local hasOk, hasAppearance = pcall(C_TransmogCollection.PlayerHasTransmogItemModifiedAppearance, sourceID)
+            if hasOk and hasAppearance == true then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function IsCollectedAppearance(itemID, itemLink)
+    return QueryCollectedAppearance(itemID) or QueryCollectedAppearance(itemLink)
+end
+
 function addon:ClassifyItem(context)
     local tooltipText = self:GetTooltipText(context)
     local alreadyKnown = ContainsAny(tooltipText, knownText)
@@ -355,9 +413,9 @@ function addon:ClassifyItem(context)
         return nil
     end
 
+    local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
     local explicit = self.Rules[context.itemID]
     if explicit then
-        local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
         if explicit.minCount and availableCount < explicit.minCount then
             return nil
         end
@@ -403,7 +461,6 @@ function addon:ClassifyItem(context)
     end
 
     local fishMinimum = GetBulkFishProcessingMinimum(tooltipText)
-    local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
     if fishMinimum and availableCount >= fishMinimum and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "profession", "Fish ready to gut and clean — click to process"
@@ -444,6 +501,11 @@ function addon:ClassifyItem(context)
     end
 
     if ContainsAny(tooltipText, transmogText) then
+        -- Warband tokens must still appear on the wrong armour class, so this
+        -- path uses collection APIs instead of generic usability checks.
+        if IsCollectedAppearance(context.itemID, context.link) then
+            return nil
+        end
         return "transmog", "Uncollected appearance — click to learn"
     end
 
@@ -455,13 +517,12 @@ function addon:ClassifyItem(context)
     end
 
     local combineMinimum = GetStackCombineMinimum(tooltipText)
-    local availableCount = tonumber(context.totalCount) or tonumber(context.stackCount) or 0
     if combineMinimum and availableCount >= combineMinimum and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "container", ("Stack of %d ready — click to combine"):format(combineMinimum)
     end
 
-    if context.hasLoot or ContainsAny(tooltipText, openText) then
+    if context.hasLoot or IsOpenAction(tooltipText) then
         return "container", "Openable container — click to open"
     end
 end

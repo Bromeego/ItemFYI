@@ -19,12 +19,19 @@ local function CreateLabel(parent, text, template, x, y)
     return label
 end
 
-local function CountEntries(values)
-    local count = 0
-    for _ in pairs(values or {}) do
-        count = count + 1
+local function IsChecked(control)
+    return control:GetChecked() and true or false
+end
+
+local function CreateSizeSlider(parent)
+    local templates = { "UISliderTemplate", "UISliderTemplateWithLabels" }
+    for _, template in ipairs(templates) do
+        local ok, slider = pcall(CreateFrame, "Slider", "ItemFYIButtonSizeSlider", parent, template)
+        if ok and slider then
+            return slider
+        end
     end
-    return count
+    return CreateFrame("Slider", "ItemFYIButtonSizeSlider", parent)
 end
 
 function addon:RefreshSettingsPanel()
@@ -40,7 +47,7 @@ function addon:RefreshSettingsPanel()
         checkbox:SetEnabled(self.db.enabled ~= false)
     end
     panel.sizeSlider:SetValue(self.db.size or 42)
-    panel.ignoredStatus:SetText(("Permanently ignored items: %d"):format(CountEntries(self.db.ignored)))
+    panel.ignoredStatus:SetText(self:FormatIgnoredSummary())
     panel.refreshing = false
 end
 
@@ -77,7 +84,7 @@ function addon:RegisterSettings()
         if panel.refreshing then
             return
         end
-        addon.db.enabled = control:GetChecked() == true
+        addon.db.enabled = IsChecked(control)
         addon:RefreshSettingsPanel()
         addon:ScheduleScan("settings changed", 0)
     end)
@@ -97,25 +104,37 @@ function addon:RegisterSettings()
             if panel.refreshing then
                 return
             end
-            addon.db.categories[categoryKey] = control:GetChecked() == true
+            addon.db.categories[categoryKey] = IsChecked(control)
             addon:ScheduleScan("category changed", 0)
         end)
     end
 
     CreateLabel(panel, "Button size", "GameFontNormal", 16, -290)
-    local sizeSlider = CreateFrame("Slider", "ItemFYIButtonSizeSlider", panel, "OptionsSliderTemplate")
+    local sizeSlider = CreateSizeSlider(panel)
     panel.sizeSlider = sizeSlider
-    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -318)
-    sizeSlider:SetWidth(220)
+    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -328)
+    sizeSlider:SetSize(220, 17)
+    sizeSlider:SetOrientation("HORIZONTAL")
     sizeSlider:SetMinMaxValues(32, 64)
     sizeSlider:SetValueStep(2)
     sizeSlider:SetObeyStepOnDrag(true)
-    _G.ItemFYIButtonSizeSliderLow:SetText("32")
-    _G.ItemFYIButtonSizeSliderHigh:SetText("64")
-    _G.ItemFYIButtonSizeSliderText:SetText("42 px")
+
+    local sizeValue = sizeSlider:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    sizeValue:SetPoint("BOTTOM", sizeSlider, "TOP", 0, 2)
+    sizeValue:SetText("42 px")
+    panel.sizeSliderValue = sizeValue
+
+    local sizeLow = sizeSlider:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    sizeLow:SetPoint("TOPLEFT", sizeSlider, "BOTTOMLEFT", 0, -2)
+    sizeLow:SetText("32")
+
+    local sizeHigh = sizeSlider:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    sizeHigh:SetPoint("TOPRIGHT", sizeSlider, "BOTTOMRIGHT", 0, -2)
+    sizeHigh:SetText("64")
+
     sizeSlider:SetScript("OnValueChanged", function(control, value)
         value = math.floor((tonumber(value) or 42) / 2 + 0.5) * 2
-        _G.ItemFYIButtonSizeSliderText:SetText(("%d px"):format(value))
+        sizeValue:SetText(("%d px"):format(value))
         if panel.refreshing then
             return
         end
@@ -124,18 +143,23 @@ function addon:RegisterSettings()
     end)
 
     local resetPosition = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 280, -312)
+    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 280, -322)
     resetPosition:SetSize(150, 24)
     resetPosition:SetText("Reset position")
     resetPosition:SetScript("OnClick", function()
         addon:ResetPosition()
     end)
 
-    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, -370)
-    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, -396)
+    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, -380)
+    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, -406)
+    panel.ignoredStatus:SetWidth(540)
+    panel.ignoredStatus:SetJustifyH("LEFT")
+    if panel.ignoredStatus.SetWordWrap then
+        panel.ignoredStatus:SetWordWrap(true)
+    end
 
     local clearSkips = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -422)
+    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -452)
     clearSkips:SetSize(150, 24)
     clearSkips:SetText("Clear session skips")
     clearSkips:SetScript("OnClick", function()

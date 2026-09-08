@@ -29,11 +29,13 @@ addon.Rules = {
     [268650] = {
         category = "container",
         minCount = 5,
+        requireUsable = true,
         reason = "Five Ascendant Voidshards ready — click to combine",
     },
     [279576] = {
         category = "container",
         minCount = 4,
+        requireUsable = true,
         reason = "Four Void Vestiges ready — click to combine",
     },
 }

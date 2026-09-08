@@ -62,6 +62,11 @@ C_QuestLog = {
 }
 
 PlayerHasToy = function() return false end
+C_TransmogCollection = {
+    PlayerHasTransmogByItemInfo = function(itemID)
+        return itemID == 1234
+    end,
+}
 Enum = { ItemClass = { Recipe = 9 } }
 local fishingSkill = 200
 GetProfessions = function() return nil, nil, nil, 4 end
@@ -171,6 +176,13 @@ assert(category == nil, "four Ascendant Voidshards should not be actionable")
 category = addon:ClassifyItem(Context(268650, { stackCount = 5 }))
 assert(category == "container", "five Ascendant Voidshards should be actionable")
 
+itemUsable = false
+category = addon:ClassifyItem(Context(268650, { stackCount = 5 }))
+assert(category == nil, "unusable Voidshards should remain hidden")
+category = addon:ClassifyItem(Context(279576, { stackCount = 4 }))
+assert(category == nil, "unusable Void Vestiges should remain hidden")
+itemUsable = true
+
 category = addon:ClassifyItem(Context(279576, { stackCount = 4 }))
 assert(category == "container", "four Void Vestiges should be actionable")
 
@@ -278,6 +290,17 @@ assert(category == nil, "non-usable housing dye should not be actionable")
 tooltipText = "Use: Collect the appearances of the Test Ensemble."
 category = addon:ClassifyItem(Context(105))
 assert(category == "transmog", "transmog token detection failed")
+
+category = addon:ClassifyItem(Context(1234))
+assert(category == nil, "appearances already known to C_TransmogCollection should not appear")
+
+tooltipText = "Use: Opens a portal to Dalaran."
+category = addon:ClassifyItem(Context(130))
+assert(category == nil, "portal open-text must not be treated as a container")
+
+tooltipText = "Use: Open the satchel."
+category = addon:ClassifyItem(Context(131))
+assert(category == "container", "explicit open actions should remain containers")
 
 local pearlTooltips = {
     { 278335, "a cerulean hue" },

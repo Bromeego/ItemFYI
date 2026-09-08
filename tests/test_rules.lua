@@ -7,10 +7,12 @@ assert(addon.Rules[280732].category == "container", "Mistcrest rule has the wron
 assert(addon.Rules[246752], "Hero Dawncrest pack is missing")
 assert(addon.Rules[279382] == nil and addon.Rules[231757] == nil,
     "standard stack conversions should use generic tooltip detection")
-assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5,
-    "Ascendant Voidshard must require a stack of five")
-assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4,
-    "Void Vestige must require a stack of four")
+assert(addon.Rules[268650] and addon.Rules[268650].minCount == 5
+    and addon.Rules[268650].requireUsable == true,
+    "Ascendant Voidshard must require a usable stack of five")
+assert(addon.Rules[279576] and addon.Rules[279576].minCount == 4
+    and addon.Rules[279576].requireUsable == true,
+    "Void Vestige must require a usable stack of four")
 assert(addon.CategoryPriority.curio < addon.CategoryPriority.container,
     "curios must precede ordinary containers")
 assert(addon.CategoryPriority.profession < addon.CategoryPriority.container,

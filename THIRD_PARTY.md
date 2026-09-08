@@ -7,8 +7,10 @@ ItemFYI embeds `EditModeExpanded-1.0`, authored and maintained by Teelo
 
 Source: <https://github.com/teelolws/EditModeExpanded>
 
-The upstream project permits its library portion to be included, used, and
-distributed by other addons when the author is credited.
+The source declares the library portion may be included, used, and
+distributed by other addons when the author is credited. ItemFYI embeds
+EditModeExpanded-1.0 MINOR 118, which matches upstream `main` as of
+2026-09-08.
 
 ## LibStub
 

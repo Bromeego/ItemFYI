@@ -77,6 +77,7 @@ never opens or learns anything automatically.
 - `/ifyi list` — list all currently detected actions.
 - `/ifyi skip` — skip the current item for this session.
 - `/ifyi ignore` — permanently ignore the current item.
+- `/ifyi ignored` — list permanently ignored items.
 - `/ifyi unignore <key>` — restore an ignored item.
 - `/ifyi clearignored` — clear the permanent ignore list.
 - `/ifyi clearskips` — clear session skips.
@@ -84,9 +85,10 @@ never opens or learns anything automatically.
 
 ## Settings
 
-Open **Options → AddOns → ItemFYI** or type `/ifyi`. The panel can enable or
-disable ItemFYI, toggle individual item categories, change the button size,
-reset its position, clear skipped or ignored items, and rescan the bags.
+Open **Options → AddOns → ItemFYI**, type `/ifyi`, or use the minimap Addon
+Compartment. The panel can enable or disable ItemFYI, toggle individual item
+categories, change the button size, reset its position, list and clear skipped
+or ignored items, and rescan the bags.
 
 Settings changed during combat are saved immediately. Any protected button
 layout or item update is applied after combat ends.

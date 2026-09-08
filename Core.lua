@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.1.0"
+addon.version = "0.2.0"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
@@ -155,7 +155,10 @@ function addon:SkipCurrent(permanent)
     end
 
     if permanent then
-        self.db.ignored[candidate.key] = true
+        self.db.ignored[candidate.key] = {
+            name = candidate.name,
+            link = candidate.link,
+        }
         self:Print(("Ignoring %s. Use /ifyi unignore %s to restore it."):format(candidate.name, candidate.key))
         self:RefreshSettingsPanel()
     else
@@ -164,6 +167,57 @@ function addon:SkipCurrent(permanent)
     end
 
     self:ScheduleScan("dismissed", 0)
+end
+
+function addon:GetIgnoredEntries()
+    local entries = {}
+    for key, value in pairs(self.db and self.db.ignored or {}) do
+        local name
+        if type(value) == "table" then
+            name = value.name or value.link
+        end
+        entries[#entries + 1] = {
+            key = tostring(key),
+            name = (name and name ~= "" and name) or tostring(key),
+        }
+    end
+    table.sort(entries, function(left, right)
+        if left.name ~= right.name then
+            return left.name < right.name
+        end
+        return left.key < right.key
+    end)
+    return entries
+end
+
+function addon:FormatIgnoredSummary()
+    local entries = self:GetIgnoredEntries()
+    local count = #entries
+    if count == 0 then
+        return "Permanently ignored items: 0"
+    end
+
+    local shown = math.min(count, 8)
+    local names = {}
+    for index = 1, shown do
+        names[index] = entries[index].name
+    end
+    local extra = count > shown and (" (+%d more)"):format(count - shown) or ""
+    return ("Permanently ignored items: %d\n%s%s"):format(count, table.concat(names, ", "), extra)
+end
+
+function addon:ListIgnored()
+    local entries = self:GetIgnoredEntries()
+    if #entries == 0 then
+        self:Print("No permanently ignored items.")
+        return
+    end
+
+    self:Print(("%d permanently ignored item%s:"):format(#entries, #entries == 1 and "" or "s"))
+    for _, entry in ipairs(entries) do
+        print(("  %s [%s]"):format(entry.name, entry.key))
+    end
+    self:Print("Use /ifyi unignore <key> to restore an item.")
 end
 
 function addon:ListCandidates()
@@ -194,7 +248,7 @@ function addon:HandleSlash(input)
     if command == "" then
         self:OpenSettings()
     elseif command == "help" then
-        self:Print("/ifyi scan, list, skip, ignore, unignore <key>, clearignored, clearskips, reset")
+        self:Print("/ifyi opens settings. Commands: scan, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
     elseif command == "scan" then
         self.sessionSkipped = {}
         self:ScheduleScan("manual", 0)
@@ -204,6 +258,8 @@ function addon:HandleSlash(input)
         self:SkipCurrent(false)
     elseif command == "ignore" then
         self:SkipCurrent(true)
+    elseif command == "ignored" then
+        self:ListIgnored()
     elseif command == "unignore" and argument ~= "" then
         self.db.ignored[argument] = nil
         local numericKey = tonumber(argument)
@@ -243,6 +299,9 @@ events:RegisterEvent("MERCHANT_SHOW")
 events:RegisterEvent("MERCHANT_CLOSED")
 events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
 events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
+events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
+events:RegisterEvent("QUEST_TURNED_IN")
+events:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
 
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -262,6 +321,9 @@ events:SetScript("OnEvent", function(_, event, ...)
         SLASH_ITEMFYI1 = "/ifyi"
         SlashCmdList.ITEMFYI = function(text)
             addon:HandleSlash(text)
+        end
+        _G.ItemFYI_OnAddonCompartmentClick = function()
+            addon:OpenSettings()
         end
     elseif event == "PLAYER_LOGIN" then
         addon:RegisterSkinning()
@@ -299,6 +361,12 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:SetSlotActionBlock("interaction:" .. tostring(interactionType),
                 event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
         end
+    elseif event == "UNIT_QUEST_LOG_CHANGED" then
+        local unit = ...
+        if unit ~= "player" then
+            return
+        end
+        addon:ScheduleScan(event, 0.15)
     elseif event == "BAG_UPDATE" then
         local changedBag = ...
         local current = addon.current

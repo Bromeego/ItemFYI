@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+- Stopped Alt-drag from using the current item when click-on-press is enabled.
+- Stopped `Use: Opens ...` portal and similar text from matching as openables.
+- Required Voidshards and Void Vestiges to be usable before they are offered.
+- Switched the attention glow to `ActionButtonSpellAlertManager`, with the
+  deprecated overlay-glow helpers as a fallback.
+- Replaced the deprecated Options slider template with `UISliderTemplate` and
+  addon-owned labels.
+- Cached each bag tooltip once per scan, including requirement colours and
+  battle-pet metadata.
+- Hid appearances already known to `C_TransmogCollection` while still showing
+  Warband tokens on the wrong armour class.
+- Rescanned after loot-spec changes and player quest-log updates so weekly
+  treatises and spec-specific tokens refresh without a bag event.
+- Listed ignored item names in settings and added `/ifyi ignored`.
+- Documented that a bare `/ifyi` opens settings, and registered the Addon
+  Compartment entry.
+- Confirmed the embedded EditModeExpanded-1.0 library is still upstream MINOR
+  118 for 12.1.
 
 - Added generic learnable visual-effect detection for all five Coiled Huntress
   pearls: Cerulean, Sinful, Amber, Cursebound, and Blighted.

@@ -12,6 +12,26 @@ local function HideButtonTooltip(button)
     end
 end
 
+local function ShowButtonGlow(button)
+    if ActionButtonSpellAlertManager and ActionButtonSpellAlertManager.ShowAlert then
+        ActionButtonSpellAlertManager:ShowAlert(button)
+        return
+    end
+    if ActionButton_ShowOverlayGlow then
+        ActionButton_ShowOverlayGlow(button)
+    end
+end
+
+local function HideButtonGlow(button)
+    if ActionButtonSpellAlertManager and ActionButtonSpellAlertManager.HideAlert then
+        ActionButtonSpellAlertManager:HideAlert(button)
+        return
+    end
+    if ActionButton_HideOverlayGlow then
+        ActionButton_HideOverlayGlow(button)
+    end
+end
+
 function addon:SavePosition(skipEditMode)
     if not self.button or not self.db then
         return
@@ -126,19 +146,40 @@ function addon:CreateUI()
         if addon:IsInCombat() or not IsAltKeyDown() then
             return
         end
+        addon.movingButton = true
+        frame:SetAttribute("type1", nil)
+        frame:SetAttribute("macrotext1", nil)
         frame:StartMoving()
     end)
 
     button:SetScript("OnDragStop", function(frame)
         frame:StopMovingOrSizing()
+        addon.movingButton = false
         addon:SavePosition()
+        local candidate = addon.current
+        if candidate and not addon:IsInCombat() then
+            frame:SetAttribute("type1", "macro")
+            frame:SetAttribute("macrotext1", candidate.secureMacro)
+        end
     end)
 
-    button:SetScript("PreClick", function(_, mouseButton)
+    button:SetScript("PreClick", function(frame, mouseButton)
+        if addon:IsInCombat() then
+            return
+        end
+
+        -- Alt-drag shares the left button with the secure use. Clear the
+        -- action before click-on-press can consume the item.
+        if mouseButton == "LeftButton" and IsAltKeyDown() then
+            addon.suppressingSecureUse = true
+            frame:SetAttribute("type1", nil)
+            frame:SetAttribute("macrotext1", nil)
+            return
+        end
+
         local candidate = addon.current
         if mouseButton ~= "LeftButton" or not candidate or not candidate.secureBySlot
-            or not addon.merchantOpen or not addon:CanCloseMerchantSafely()
-            or addon:IsInCombat() then
+            or not addon.merchantOpen or not addon:CanCloseMerchantSafely() then
             return
         end
 
@@ -154,10 +195,20 @@ function addon:CreateUI()
         end
     end)
 
-    button:SetScript("PostClick", function(_, mouseButton, down)
+    button:SetScript("PostClick", function(frame, mouseButton, down)
         -- With both click phases registered, perform our insecure follow-up
         -- only once after the mouse button is released.
         if down then
+            return
+        end
+
+        if addon.suppressingSecureUse or addon.movingButton then
+            addon.suppressingSecureUse = false
+            local candidate = addon.current
+            if candidate and not addon.movingButton and not addon:IsInCombat() then
+                frame:SetAttribute("type1", "macro")
+                frame:SetAttribute("macrotext1", candidate.secureMacro)
+            end
             return
         end
 
@@ -181,15 +232,15 @@ function addon:SetCandidate(candidate, total)
     end
 
     self.current = candidate
+    self.suppressingSecureUse = false
+    self.movingButton = false
     self.button:SetAttribute("type1", nil)
     self.button:SetAttribute("macrotext1", nil)
     self.button:SetAttribute("item1", nil)
     self.button:SetAttribute("type2", nil)
 
     if not candidate then
-        if ActionButton_HideOverlayGlow then
-            ActionButton_HideOverlayGlow(self.button)
-        end
+        HideButtonGlow(self.button)
         if self:EditModeIsActive() then
             self.button.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
             self.button.count:SetText("")
@@ -211,8 +262,5 @@ function addon:SetCandidate(candidate, total)
     self.button:SetAttribute("type1", "macro")
     self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()
-
-    if ActionButton_ShowOverlayGlow then
-        ActionButton_ShowOverlayGlow(self.button)
-    end
+    ShowButtonGlow(self.button)
 end
