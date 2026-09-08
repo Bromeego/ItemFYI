@@ -315,6 +315,56 @@ tooltipText = "Use: Open the satchel."
 category = addon:ClassifyItem(Context(131))
 assert(category == "container", "explicit open actions should remain containers")
 
+tooltipText = "Naval Equipment\nSoulbound\nUse: Equip a ship with a Trained Shark Tank.\nCounters: Minelayer"
+category = addon:ClassifyItem(Context(127892, { itemSubType = "Naval Equipment" }))
+assert(category == "progress", "WoD naval equipment should be actionable")
+
+tooltipText = "Use: Equip a ship with an Ice Cutter."
+category = addon:ClassifyItem(Context(127884, { itemSubType = "Other" }))
+assert(category == "progress", "naval equipment use text should be detected without the item subtype")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(127884, { itemSubType = "Naval Equipment" }))
+assert(category == nil, "unusable naval equipment should remain hidden")
+itemUsable = true
+
+tooltipText = "Use: Equip this cloak."
+category = addon:ClassifyItem(Context(132, { itemSubType = "Cloth" }))
+assert(category == nil, "ordinary equip actions must not be treated as garrison items")
+
+tooltipText = "Use: Increases a follower's armor item level by 6."
+category = addon:ClassifyItem(Context(114808))
+assert(category == "progress", "garrison follower upgrades should be actionable")
+
+tooltipText = "Use: Instantly upgrade a follower's weapon item level to 675."
+category = addon:ClassifyItem(Context(120302))
+assert(category == "progress", "garrison follower item-level tokens should be actionable")
+
+tooltipText = "Use: Provides the plans needed to upgrade your Barn to Level 2."
+category = addon:ClassifyItem(Context(111929))
+assert(category == "progress", "garrison building blueprints should be actionable")
+
+tooltipText = "Use: Grants 750 reputation with the Army of the Light. (2 Sec Cooldown)\nCurrent: Paragon (250/10,000)"
+category = addon:ClassifyItem(Context(152956))
+assert(category == "progress", "Legion reputation insignias should be actionable at Paragon")
+
+tooltipText = "Use: Grants 2000 reputation with the Army of the Light. (2 Sec Cooldown)"
+category = addon:ClassifyItem(Context(152957))
+assert(category == "progress", "numeric reputation grants should be detected generically")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(152956))
+assert(category == nil, "unusable reputation tokens should remain hidden")
+itemUsable = true
+
+tooltipText = "A badge of the Army of the Light.\nReputation with this faction is earned through Argus world quests."
+category = addon:ClassifyItem(Context(133))
+assert(category == nil, "flavour text mentioning reputation must not become a reputation token")
+
+tooltipText = "Use: Grants 750 artifact power to your currently equipped artifact."
+category = addon:ClassifyItem(Context(134))
+assert(category == nil, "artifact power items must not be treated as reputation tokens")
+
 local pearlTooltips = {
     { 278335, "a cerulean hue" },
     { 278336, "a red hue" },

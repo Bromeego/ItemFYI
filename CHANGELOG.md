@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.6
+
+- Detected WoD garrison bag items from their use text, including naval
+  equipment such as Ice Cutter and Trained Shark Tank, follower upgrades, and
+  building blueprints.
+- Detected reputation tokens such as Legion insignias whose use text grants a
+  numeric amount of reputation, including after the faction is at Paragon.
+
 ## 0.2.5
 
 - Hid the battle-pet companion tooltip when leaving the ItemFYI button, and

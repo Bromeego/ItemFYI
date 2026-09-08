@@ -10,7 +10,8 @@ never opens or learns anything automatically.
 - Shows one item at a time, with a small `+N` count when more are waiting.
 - Prioritises uncollected mounts, pets, companion Curios, toys, housing decor,
   transmog tokens, learnable visual effects, profession skill and knowledge
-  items, and recipes before ordinary containers.
+  items, recipes, garrison items, and reputation tokens before ordinary
+  containers.
 - Uses Blizzard collection APIs where available, tooltip signals for explicit
   learnable tokens and non-battle companions, and a small exception list for
   known crest packs.
@@ -34,6 +35,12 @@ never opens or learns anything automatically.
 - Recognises explicit single-item gutting, salvage, and bag-item disenchant
   actions generically, so items such as Shimmersiren, Rotten Rimefin Tuna, and
   Darkmoon Faire Discarded Weapons do not need ID rules.
+- Surfaces WoD garrison bag items from their use text, including naval
+  equipment such as Ice Cutter and Trained Shark Tank, follower upgrades, and
+  building blueprints.
+- Surfaces reputation tokens whose use text grants a numeric amount of
+  reputation, such as Legion insignias, including when the faction is already
+  at Paragon.
 - Surfaces all small, regular, and enormous Draenor fish only when their
   tooltip-required batch of five is available across equipped bags.
 - Surfaces Rotten Rimefin Tuna for salvage. Frosted Rimefin Tuna is
@@ -161,7 +168,8 @@ Detection follows a strict order so the addon does not become an item database:
 1. Prefer Blizzard collection and bag APIs for mounts, pets, toys, and ordinary
    loot-bearing containers.
 2. Use narrowly scoped action text for reusable families such as learnables,
-   profession progress, stack combines, and processing actions.
+   profession progress, garrison and reputation tokens, stack combines, and
+   processing actions.
 3. Require usability, stack thresholds, and rendered requirement checks where
    clicking could otherwise fail or perform the wrong action.
 4. Add an item-ID rule only when required state is not exposed generically,

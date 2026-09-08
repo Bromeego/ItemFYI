@@ -2,7 +2,7 @@
 ## Title: ItemFYI: Openables & Learnables
 ## Notes: A lightweight heads-up for actionable items already sitting in your bags.
 ## Author: Bromeego
-## Version: 0.2.5
+## Version: 0.2.6
 ## SavedVariables: ItemFYIDB
 ## IconTexture: Interface\Icons\INV_Misc_Bag_08
 ## Category-enUS: Bags & Inventory

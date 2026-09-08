@@ -112,5 +112,6 @@ addon.CategoryPriority = {
     transmog = 15,
     profession = 16,
     recipe = 17,
+    progress = 18,
     container = 50,
 }

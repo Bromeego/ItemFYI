@@ -100,6 +100,35 @@ local function GetPermanentSkillIncrease(text)
     return skillName, tonumber(maximum)
 end
 
+local function GetGarrisonActionReason(text, context)
+    local itemSubType = string.lower(context and context.itemSubType or "")
+    if itemSubType == "naval equipment"
+        or string.find(text, "use:%s+equip a ship with") then
+        return "Naval equipment — click to equip a ship"
+    end
+    if string.find(text, "use:%s+unlocks the ability to build")
+        or string.find(text, "use:%s+unlocks the [^\n]- ship type") then
+        return "Shipyard blueprint — click to learn"
+    end
+    if string.find(text, "use:%s+provides the plans needed to")
+        or string.find(text, "use:%s+provides the plans to build")
+        or string.find(text, "use:%s+teaches the blueprints needed") then
+        return "Garrison blueprint — click to learn"
+    end
+    if string.find(text, "use:%s+increases? a [^\n]-follower")
+        or string.find(text, "use:%s+increases? the item level of a [^\n]-follower")
+        or string.find(text, "use:%s+instantly upgrade a follower")
+        or string.find(text, "use:%s+create an uncommon, rare or epic follower") then
+        return "Follower upgrade — click to apply"
+    end
+end
+
+local function IsReputationGrantAction(text)
+    return string.find(text, "use:%s+grants?%s+%d+%s+reputation with") ~= nil
+        or string.find(text, "use:%s+awards?%s+%d+%s+reputation with") ~= nil
+        or string.find(text, "use:%s+increases? your reputation with") ~= nil
+end
+
 local function HasReachedProfessionCap(skillName, maximum)
     if not (skillName and maximum and GetProfessions and GetProfessionInfo) then
         return false
@@ -486,6 +515,16 @@ function addon:ClassifyItem(context)
     if skillName and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
         and not HasReachedProfessionCap(skillName, maximumSkill) then
         return "profession", "Permanent profession skill increase — click to use"
+    end
+
+    local garrisonReason = GetGarrisonActionReason(tooltipText, context)
+    if garrisonReason and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
+        return "progress", garrisonReason
+    end
+
+    if IsReputationGrantAction(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "progress", "Reputation token — click to use"
     end
 
     local itemType = string.lower(context.itemType or "")

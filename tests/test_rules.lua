@@ -17,6 +17,8 @@ assert(addon.CategoryPriority.curio < addon.CategoryPriority.container,
     "curios must precede ordinary containers")
 assert(addon.CategoryPriority.profession < addon.CategoryPriority.container,
     "profession progress items must precede ordinary containers")
+assert(addon.CategoryPriority.progress < addon.CategoryPriority.container,
+    "garrison and reputation items must precede ordinary containers")
 assert(addon.Rules[245755] and addon.Rules[245755].completedQuestID == 95127,
     "Thalassian Alchemy treatise must use its weekly completion quest")
 assert(addon.Rules[238378] == nil and addon.Rules[199346] == nil,
