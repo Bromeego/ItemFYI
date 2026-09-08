@@ -315,11 +315,20 @@ assert(addon.button.attributes.item1 == nil, "left click should not use the equi
 assert(addon.button.attributes.type2 == nil, "right click must not use the item")
 assert(glowButton == addon.button, "candidate should use the modern spell-alert glow")
 assert(addon.button.SpellActivationAlert
-    and addon.button.SpellActivationAlert.width == addon.button.width * 2,
-    "spell-alert glow should sit outside the icon so the stack count stays readable")
+    and addon.button.SpellActivationAlert.width == addon.button.width * 1.7,
+    "spell-alert glow should sit just outside the icon so the stack count stays readable")
 assert(addon.button.badge
     and addon.button.badge:GetFrameLevel() > addon.button.SpellActivationAlert:GetFrameLevel(),
     "stack count overlay must draw above the glow")
+
+addon.settingsPanel.showGlow.checked = false
+addon.settingsPanel.showGlow.scripts.OnClick(addon.settingsPanel.showGlow)
+assert(addon.db.showGlow == false, "glow checkbox should persist its value")
+assert(glowButton == nil, "disabling the glow should hide the spell-alert overlay")
+addon.settingsPanel.showGlow.checked = true
+addon.settingsPanel.showGlow.scripts.OnClick(addon.settingsPanel.showGlow)
+assert(addon.db.showGlow == true and glowButton == addon.button,
+    "enabling the glow should restore the spell-alert overlay")
 
 altDown = true
 local merchantCountBeforeAlt = merchantCloseCount

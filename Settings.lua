@@ -46,6 +46,8 @@ function addon:RefreshSettingsPanel()
         checkbox:SetChecked(self:IsCategoryEnabled(key))
         checkbox:SetEnabled(self.db.enabled ~= false)
     end
+    panel.showGlow:SetChecked(self.db.showGlow ~= false)
+    panel.showGlow:SetEnabled(self.db.enabled ~= false)
     panel.sizeSlider:SetValue(self.db.size or 42)
     panel.ignoredStatus:SetText(self:FormatIgnoredSummary())
     panel.refreshing = false
@@ -87,6 +89,20 @@ function addon:RegisterSettings()
         addon.db.enabled = IsChecked(control)
         addon:RefreshSettingsPanel()
         addon:ScheduleScan("settings changed", 0)
+    end)
+
+    local showGlow = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+    panel.showGlow = showGlow
+    showGlow:SetPoint("TOPLEFT", panel, "TOPLEFT", 232, -70)
+    showGlow.text = showGlow:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    showGlow.text:SetPoint("LEFT", showGlow, "RIGHT", 4, 0)
+    showGlow.text:SetText("Show attention glow")
+    showGlow:SetScript("OnClick", function(control)
+        if panel.refreshing then
+            return
+        end
+        addon.db.showGlow = IsChecked(control)
+        addon:ApplyButtonGlow()
     end)
 
     CreateLabel(panel, "Item categories", "GameFontNormal", 16, -108)

@@ -12,7 +12,7 @@ local function HideButtonTooltip(button)
     end
 end
 
-local GLOW_SIZE_SCALE = 2
+local GLOW_SIZE_SCALE = 1.7
 
 local function FitButtonGlow(button)
     local alert = button and button.SpellActivationAlert
@@ -52,6 +52,21 @@ local function HideButtonGlow(button)
     end
     if ActionButton_HideOverlayGlow then
         ActionButton_HideOverlayGlow(button)
+    end
+end
+
+function addon:ShouldShowGlow()
+    return not self.db or self.db.showGlow ~= false
+end
+
+function addon:ApplyButtonGlow()
+    if not self.button then
+        return
+    end
+    if self.current and self:ShouldShowGlow() then
+        ShowButtonGlow(self.button)
+    else
+        HideButtonGlow(self.button)
     end
 end
 
@@ -294,5 +309,5 @@ function addon:SetCandidate(candidate, total)
     self.button:SetAttribute("type1", "macro")
     self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()
-    ShowButtonGlow(self.button)
+    self:ApplyButtonGlow()
 end

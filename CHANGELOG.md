@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Tightened the attention glow so it sits closer to the icon.
+- Added a settings toggle to show or hide the attention glow.
+
 ## 0.2.3
 
 - Sized the attention glow outside the icon and raised the stack count above it

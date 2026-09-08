@@ -89,8 +89,8 @@ never opens or learns anything automatically.
 
 Open **Options → AddOns → ItemFYI**, type `/ifyi`, or use the minimap Addon
 Compartment. The panel can enable or disable ItemFYI, toggle individual item
-categories, change the button size, reset its position, list and clear skipped
-or ignored items, and rescan the bags.
+categories, show or hide the attention glow, change the button size, reset its
+position, list and clear skipped or ignored items, and rescan the bags.
 
 Settings changed during combat are saved immediately. Any protected button
 layout or item update is applied after combat ends.
