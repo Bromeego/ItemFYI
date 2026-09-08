@@ -278,11 +278,16 @@ function addon:GetTooltipSnapshot(context)
     local needScanForText = #parts == 0
     local needScanForColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
-    if needScanForText or needScanForColor then
+    if (needScanForText or needScanForColor) and not battlePetSpeciesID then
         local scanTooltip = EnsureScanTooltip(self)
         if scanTooltip then
+            local companionShown = BattlePetTooltip and BattlePetTooltip.IsShown
+                and BattlePetTooltip:IsShown()
             scanTooltip:ClearLines()
             scanTooltip:SetBagItem(context.bag, context.slot)
+            if not companionShown then
+                self:HideCompanionTooltips()
+            end
             local tooltipName = scanTooltip:GetName()
             for lineNumber = 1, scanTooltip:NumLines() do
                 local left = _G[tooltipName .. "TextLeft" .. lineNumber]

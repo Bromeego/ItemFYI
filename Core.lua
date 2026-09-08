@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.4"
+addon.version = "0.2.5"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
@@ -88,6 +88,19 @@ end
 
 function addon:IsInCombat()
     return InCombatLockdown and InCombatLockdown()
+end
+
+function addon:HideCompanionTooltips()
+    if BattlePetToolTip_Hide then
+        BattlePetToolTip_Hide()
+    elseif BattlePetTooltip and BattlePetTooltip.Hide then
+        BattlePetTooltip:Hide()
+    end
+    if FloatingBattlePet_Hide then
+        FloatingBattlePet_Hide()
+    elseif FloatingBattlePetTooltip and FloatingBattlePetTooltip.Hide then
+        FloatingBattlePetTooltip:Hide()
+    end
 end
 
 function addon:IsCategoryEnabled(category)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Hid the battle-pet companion tooltip when leaving the ItemFYI button, and
+  stopped bag scans from leaving a pet card stuck over other items.
+
 ## 0.2.4
 
 - Tightened the attention glow so it sits closer to the icon.

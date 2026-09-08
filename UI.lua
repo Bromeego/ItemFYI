@@ -6,9 +6,13 @@ local function CreateText(parent, template, point, x, y)
     return text
 end
 
-local function HideButtonTooltip(button)
+local function HideButtonTooltip(button, hideCompanions)
     if GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button then
         GameTooltip:Hide()
+        hideCompanions = true
+    end
+    if hideCompanions then
+        addon:HideCompanionTooltips()
     end
 end
 
@@ -26,6 +30,9 @@ local function FitButtonGlow(button)
     alert:ClearAllPoints()
     alert:SetPoint("CENTER", button, "CENTER")
     alert:SetSize(width * GLOW_SIZE_SCALE, height * GLOW_SIZE_SCALE)
+    if alert.EnableMouse then
+        alert:EnableMouse(false)
+    end
 
     if button.badge and button.badge.SetFrameLevel then
         local alertLevel = alert.GetFrameLevel and alert:GetFrameLevel() or button:GetFrameLevel()
@@ -186,7 +193,7 @@ function addon:CreateUI()
     end)
 
     button:SetScript("OnLeave", function(frame)
-        HideButtonTooltip(frame)
+        HideButtonTooltip(frame, true)
     end)
 
     button:SetScript("OnDragStart", function(frame)

@@ -188,6 +188,17 @@ GameTooltip = {
         self.owner = nil
     end,
 }
+BattlePetTooltip = {
+    shown = false,
+    Hide = function(self)
+        self.shown = false
+        self.hideCount = (self.hideCount or 0) + 1
+    end,
+    IsShown = function(self) return self.shown end,
+}
+BattlePetToolTip_Hide = function()
+    BattlePetTooltip:Hide()
+end
 local glowButton
 ActionButtonSpellAlertManager = {
     ShowAlert = function(_, button)
@@ -284,11 +295,15 @@ assert(addon.button.alpha == 0.65, "Edit Mode placeholder should be visually mut
 EditModeManagerFrame.editModeActive = false
 local externalTooltipOwner = {}
 GameTooltip.owner = externalTooltipOwner
+BattlePetTooltip.shown = true
 local priorHideCount = GameTooltip.hideCount or 0
+local priorPetHideCount = BattlePetTooltip.hideCount or 0
 addon:SetCandidate(nil, 0)
 assert(not addon.button.shown, "empty button should hide after leaving Edit Mode")
 assert(GameTooltip.owner == externalTooltipOwner and (GameTooltip.hideCount or 0) == priorHideCount,
     "empty scans must not hide tooltips owned by other UI elements")
+assert(BattlePetTooltip.shown and (BattlePetTooltip.hideCount or 0) == priorPetHideCount,
+    "empty scans must not hide a battle-pet tooltip owned by another UI element")
 
 GameTooltip.owner = addon.button
 addon:SetCandidate(nil, 0)
@@ -329,6 +344,20 @@ addon.settingsPanel.showGlow.checked = true
 addon.settingsPanel.showGlow.scripts.OnClick(addon.settingsPanel.showGlow)
 assert(addon.db.showGlow == true and glowButton == addon.button,
     "enabling the glow should restore the spell-alert overlay")
+
+BattlePetTooltip.shown = true
+addon.button.scripts.OnLeave(addon.button)
+assert(not BattlePetTooltip.shown, "leaving the button must hide the battle-pet companion tooltip")
+
+addon.button.scripts.OnEnter(addon.button)
+BattlePetTooltip.shown = true
+local stolenTooltipOwner = {}
+GameTooltip.owner = stolenTooltipOwner
+addon.button.scripts.OnLeave(addon.button)
+assert(not BattlePetTooltip.shown,
+    "leaving the button must hide the battle-pet tooltip even if GameTooltip already moved")
+assert(GameTooltip.owner == stolenTooltipOwner,
+    "leaving the button must not hide another frame's GameTooltip")
 
 altDown = true
 local merchantCountBeforeAlt = merchantCloseCount
