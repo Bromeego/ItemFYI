@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.7
+
+- Stopped bag scans from erroring on caged battle pets after a reload, when
+  Blizzard's pet tooltip tries to anchor to a GameTooltip that has no points yet.
+
 ## 0.2.6
 
 - Detected WoD garrison bag items from their use text, including naval

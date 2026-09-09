@@ -467,4 +467,47 @@ tooltipText = "You have collected all of the transmog looks contained in this ca
 category = addon:ClassifyItem(Context(264321, { hasLoot = true }))
 assert(category == nil, "completed appearance cache should not be actionable")
 
+-- BattlePetToolTip_Show copies GameTooltip:GetPoint(1). After a reload that
+-- point does not exist yet, so a scan-tooltip SetBagItem on a caged pet errors.
+C_TooltipInfo.GetBagItem = function()
+    return { lines = {} }
+end
+tooltipLines = nil
+tooltipText = ""
+
+local setBagItemCalls = 0
+CreateFrame = function(_, name)
+    return {
+        SetOwner = function() end,
+        ClearLines = function() end,
+        GetName = function() return name end,
+        NumLines = function() return 0 end,
+        SetBagItem = function()
+            setBagItemCalls = setBagItemCalls + 1
+            error('BattlePetTooltip:SetPoint(): Usage: ("point" [, region or nil] [, "relativePoint"] [, offsetX, offsetY]')
+        end,
+    }
+end
+UIParent = UIParent or {}
+addon.HideCompanionTooltips = function() end
+
+C_PetJournal.GetPetInfoByItemID = function(itemID)
+    if itemID == 271185 then
+        return "Emberlyn", 1, 1, 262985, nil, nil, nil, nil, nil, nil, nil, 1, 555
+    end
+    return nil
+end
+
+category = addon:ClassifyItem(Context(103, { link = "|Hbattlepet:77:1:1:1:1:1:0:0|h[Test Pet]|h" }))
+assert(category == "pet", "battle-pet classification must not require a scan tooltip")
+assert(setBagItemCalls == 0, "known battle pets must not call SetBagItem on the scan tooltip")
+
+category = addon:ClassifyItem(Context(271185))
+assert(category == "pet", "item-ID battle-pet lookup must not require a scan tooltip")
+assert(setBagItemCalls == 0, "GetPetInfoByItemID pets must not call SetBagItem on the scan tooltip")
+
+category = addon:ClassifyItem(Context(100, { hasLoot = true }))
+assert(category == "container", "scan-tooltip SetBagItem errors must not hide openable items")
+assert(setBagItemCalls == 1, "non-pet items should still fall back to the scan tooltip")
+
 print("detection tests passed")

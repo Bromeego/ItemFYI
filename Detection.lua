@@ -266,9 +266,29 @@ local function EnsureScanTooltip(self)
     end
     if not self.scanTooltip then
         self.scanTooltip = CreateFrame("GameTooltip", "ItemFYIScanTooltip", UIParent, "GameTooltipTemplate")
-        self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
     end
+    -- Hide() and some Set methods clear the owner; restore it before each scan.
+    self.scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
     return self.scanTooltip
+end
+
+local function GetBattlePetSpeciesID(context, tooltipBattlePet)
+    if tooltipBattlePet then
+        local speciesID = tonumber(tooltipBattlePet.speciesID)
+        if speciesID then
+            return speciesID
+        end
+    end
+
+    local speciesID = tonumber((context.link or ""):match("battlepet:(%d+)"))
+    if speciesID then
+        return speciesID
+    end
+
+    if C_PetJournal and C_PetJournal.GetPetInfoByItemID and context.itemID then
+        -- This legacy API returns the pet name first and speciesID thirteenth.
+        return tonumber(select(13, C_PetJournal.GetPetInfoByItemID(context.itemID)))
+    end
 end
 
 function addon:GetTooltipSnapshot(context)
@@ -288,7 +308,7 @@ function addon:GetTooltipSnapshot(context)
         local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
         if ok and tooltip then
             if tooltip.battlePet then
-                battlePetSpeciesID = tonumber(tooltip.battlePet.speciesID)
+                battlePetSpeciesID = GetBattlePetSpeciesID(context, tooltip.battlePet)
             end
             if tooltip.lines then
                 for _, line in ipairs(tooltip.lines) do
@@ -307,14 +327,20 @@ function addon:GetTooltipSnapshot(context)
     local needScanForText = #parts == 0
     local needScanForColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
+    -- SetBagItem on a battle pet calls BattlePetToolTip_Show, which copies
+    -- GameTooltip:GetPoint(1). That point does not exist after a reload until
+    -- the player has hovered something, and BugSack reports the SetPoint error.
+    if needScanForText or needScanForColor then
+        battlePetSpeciesID = battlePetSpeciesID or GetBattlePetSpeciesID(context)
+    end
     if (needScanForText or needScanForColor) and not battlePetSpeciesID then
         local scanTooltip = EnsureScanTooltip(self)
         if scanTooltip then
             local companionShown = BattlePetTooltip and BattlePetTooltip.IsShown
                 and BattlePetTooltip:IsShown()
             scanTooltip:ClearLines()
-            scanTooltip:SetBagItem(context.bag, context.slot)
-            if not companionShown then
+            pcall(scanTooltip.SetBagItem, scanTooltip, context.bag, context.slot)
+            if not companionShown and self.HideCompanionTooltips then
                 self:HideCompanionTooltips()
             end
             local tooltipName = scanTooltip:GetName()
@@ -349,22 +375,8 @@ function addon:HasUnmetRequirement(context)
 end
 
 local function GetPetSpecies(context)
-    local link = context.link or ""
-    local speciesID = tonumber(link:match("battlepet:(%d+)"))
-    if speciesID then
-        return speciesID
-    end
-
     local snapshot = addon:GetTooltipSnapshot(context)
-    if snapshot.battlePetSpeciesID then
-        return snapshot.battlePetSpeciesID
-    end
-
-    if C_PetJournal and C_PetJournal.GetPetInfoByItemID then
-        -- This legacy API returns the pet name first and speciesID thirteenth.
-        local speciesID = select(13, C_PetJournal.GetPetInfoByItemID(context.itemID))
-        return tonumber(speciesID)
-    end
+    return snapshot.battlePetSpeciesID or GetBattlePetSpeciesID(context)
 end
 
 local function IsUncollectedPet(context)
