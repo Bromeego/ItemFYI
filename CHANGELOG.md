@@ -4,6 +4,7 @@
 
 - Stopped bag scans from erroring on caged battle pets after a reload, when
   Blizzard's pet tooltip tries to anchor to a GameTooltip that has no points yet.
+- Kept Lua 5.1 tests passing when pet-journal lookup returns no species ID.
 
 ## 0.2.6
 

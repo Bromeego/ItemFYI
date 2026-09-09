@@ -287,7 +287,8 @@ local function GetBattlePetSpeciesID(context, tooltipBattlePet)
 
     if C_PetJournal and C_PetJournal.GetPetInfoByItemID and context.itemID then
         -- This legacy API returns the pet name first and speciesID thirteenth.
-        return tonumber(select(13, C_PetJournal.GetPetInfoByItemID(context.itemID)))
+        -- Extra parentheses keep Lua 5.1 from calling tonumber with no argument.
+        return tonumber((select(13, C_PetJournal.GetPetInfoByItemID(context.itemID))))
     end
 end
 
