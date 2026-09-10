@@ -150,6 +150,12 @@ C_TooltipInfo = {
 C_MountJournal = {}
 C_ToyBox = {}
 C_PetJournal = {}
+local completedQuests = {}
+C_QuestLog = {
+    IsQuestFlaggedCompleted = function(questID)
+        return completedQuests[questID] == true
+    end,
+}
 local appearanceCollected = false
 C_TransmogCollection = {
     PlayerHasTransmogByItemInfo = function()
@@ -543,8 +549,20 @@ eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "target")
 assert(addon.scanGeneration == generation,
     "other-unit quest log changes must not scan")
 eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "player")
+assert(addon.scanGeneration == generation,
+    "player quest log changes must not scan unless a watched completion quest flipped")
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_TURNED_IN", 12345)
+assert(addon.scanGeneration == generation,
+    "currency-only world quest turn-ins must not rescan bags")
+completedQuests[95127] = true
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_TURNED_IN", 95127)
 assert(addon.scanGeneration > generation,
-    "player quest log changes must rescan")
+    "treatise weekly completion quests must rescan")
+generation = addon.scanGeneration
+completedQuests[83730] = true
+eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "player")
+assert(addon.scanGeneration > generation,
+    "player quest log changes must rescan when a watched completion quest flips")
 generation = addon.scanGeneration
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOOT_SPEC_UPDATED")
 assert(addon.scanGeneration > generation,

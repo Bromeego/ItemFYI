@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.13"
+addon.version = "0.2.14"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
@@ -153,6 +153,50 @@ function addon:SetSlotActionBlock(key, blocked)
     end
     self:ScheduleScan(blocked and "unsafe item interaction opened"
         or "unsafe item interaction closed", GetBagScanDelay())
+end
+
+function addon:IsWatchedCompletionQuest(questID)
+    return questID ~= nil and self.WatchedQuestIDs and self.WatchedQuestIDs[questID] == true
+end
+
+function addon:SnapshotWatchedQuests()
+    local snapshot = {}
+    if self.WatchedQuestIDs and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+        for questID in pairs(self.WatchedQuestIDs) do
+            snapshot[questID] = C_QuestLog.IsQuestFlaggedCompleted(questID) == true
+        end
+    end
+    self.watchedQuestState = snapshot
+end
+
+function addon:NoteWatchedQuestCompleted(questID)
+    if not self.watchedQuestState then
+        self:SnapshotWatchedQuests()
+    end
+    if questID then
+        self.watchedQuestState[questID] = true
+    end
+end
+
+function addon:ShouldRescanForQuestLog()
+    if not self.watchedQuestState then
+        self:SnapshotWatchedQuests()
+        return false
+    end
+    if not (self.WatchedQuestIDs and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted) then
+        return false
+    end
+
+    local previous = self.watchedQuestState
+    local changed = false
+    for questID in pairs(self.WatchedQuestIDs) do
+        local isDone = C_QuestLog.IsQuestFlaggedCompleted(questID) == true
+        if previous[questID] ~= isDone then
+            previous[questID] = isDone
+            changed = true
+        end
+    end
+    return changed
 end
 
 function addon:ScheduleScan(reason, delay)
@@ -357,6 +401,7 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "PLAYER_LOGIN" then
         addon:RegisterSkinning()
         addon:RegisterEditMode()
+        addon:SnapshotWatchedQuests()
         addon:ScheduleScan("login", 0.4)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if addon.layoutPending then
@@ -398,12 +443,22 @@ events:SetScript("OnEvent", function(_, event, ...)
             and addon:ShouldRescanForLoadedItem(itemID, success) then
             addon:ScheduleScan(event, GetBagScanDelay())
         end
+    elseif event == "QUEST_TURNED_IN" then
+        -- World quests and other turn-ins fire this even when the reward is
+        -- only currency. Rescan bags only for weekly treatise quests.
+        local questID = ...
+        if addon:IsWatchedCompletionQuest(questID) then
+            addon:NoteWatchedQuestCompleted(questID)
+            addon:ScheduleScan(event, 0.15)
+        end
     elseif event == "UNIT_QUEST_LOG_CHANGED" then
         local unit = ...
         if unit ~= "player" then
             return
         end
-        addon:ScheduleScan(event, 0.15)
+        if addon:ShouldRescanForQuestLog() then
+            addon:ScheduleScan(event, 0.15)
+        end
     elseif event == "BAG_UPDATE" then
         local changedBag = ...
         local current = addon.current

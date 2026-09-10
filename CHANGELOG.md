@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.14
+
+- Stopped currency-only world quest turn-ins from reclassifying every bag
+  slot. Quest-log scans now run only when a weekly treatise completion flag
+  actually changes; bag rewards still refresh through normal bag events.
+
 ## 0.2.13
 
 - Stopped treating every bag scan as a full tooltip refetch. Unchanged slots

@@ -40,6 +40,8 @@ addon.Rules = {
     },
 }
 
+addon.WatchedQuestIDs = {}
+
 local function AddTreatise(itemID, completedQuestID)
     addon.Rules[itemID] = {
         category = "profession",
@@ -47,6 +49,7 @@ local function AddTreatise(itemID, completedQuestID)
         requireUsable = true,
         reason = "Profession treatise ready — click to study",
     }
+    addon.WatchedQuestIDs[completedQuestID] = true
 end
 
 -- Treatises are weekly consumables. Their hidden quest completion flags are
