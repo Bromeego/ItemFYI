@@ -255,6 +255,9 @@ assert(eventFrame.registeredEvents.PLAYER_LOOT_SPEC_UPDATED
     and eventFrame.registeredEvents.QUEST_TURNED_IN
     and eventFrame.registeredEvents.UNIT_QUEST_LOG_CHANGED,
     "loot spec and quest completion events must be registered")
+assert(eventFrame.registeredEvents.GET_ITEM_INFO_RECEIVED
+    and eventFrame.registeredEvents.ITEM_DATA_LOAD_RESULT,
+    "item-data load events must be registered so missing bag items can refresh")
 eventFrame.scripts.OnEvent(eventFrame, "ADDON_LOADED", "ItemFYI")
 assert(addon.button, "secure action button was not created")
 assert(addon.button.registeredClicks[1] == "AnyUp" and addon.button.registeredClicks[2] == "AnyDown",
@@ -280,6 +283,25 @@ eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOGIN")
 assert(addon.editModeRegistered, "button was not registered with Edit Mode")
 assert(addon.db.editModeMigration == 1, "legacy position was not migrated")
 assert(addon.current == nil, "empty bags should not select a candidate")
+
+local hoverScanGeneration = addon.scanGeneration
+eventFrame.scripts.OnEvent(eventFrame, "GET_ITEM_INFO_RECEIVED", 19019, true)
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_DATA_LOAD_RESULT", 19019, true)
+assert(addon.scanGeneration == hoverScanGeneration,
+    "hovering unrelated items must not rescan bags")
+eventFrame.scripts.OnEvent(eventFrame, "GET_ITEM_INFO_RECEIVED", 4242, false)
+assert(addon.scanGeneration == hoverScanGeneration,
+    "failed item loads must not rescan bags")
+addon:NotePendingItemLoad(4242)
+eventFrame.scripts.OnEvent(eventFrame, "GET_ITEM_INFO_RECEIVED", 4242, false)
+assert(addon.scanGeneration == hoverScanGeneration
+    and addon.pendingItemLoads[4242] == true,
+    "a failed requested load should wait for a later success")
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_DATA_LOAD_RESULT", 4242, true)
+assert(addon.scanGeneration == hoverScanGeneration + 1,
+    "a previously requested item load should rescan bags")
+assert(addon.pendingItemLoads[4242] == nil,
+    "a completed item load should not keep asking for rescans")
 
 inCombat = true
 addon:ResetPosition()

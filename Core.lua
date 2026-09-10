@@ -3,12 +3,13 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.8"
+addon.version = "0.2.9"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
 addon.scanPending = false
 addon.scanGeneration = 0
+addon.pendingItemLoads = {}
 addon.layoutPending = false
 addon.slotActionBlocks = {}
 addon.merchantOpen = false
@@ -375,6 +376,14 @@ events:SetScript("OnEvent", function(_, event, ...)
         if unsafeSlotInteractionTypes[interactionType] then
             addon:SetSlotActionBlock("interaction:" .. tostring(interactionType),
                 event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
+        end
+    elseif event == "GET_ITEM_INFO_RECEIVED" or event == "ITEM_DATA_LOAD_RESULT" then
+        -- Hovering any item loads tooltip data and fires these. Only rescan
+        -- when a previous bag pass asked for that item ID and it was missing.
+        local itemID, success = ...
+        if addon.ShouldRescanForLoadedItem
+            and addon:ShouldRescanForLoadedItem(itemID, success) then
+            addon:ScheduleScan(event, 0.15)
         end
     elseif event == "UNIT_QUEST_LOG_CHANGED" then
         local unit = ...

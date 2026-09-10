@@ -95,6 +95,28 @@ local function Context(itemID, fields)
     return fields
 end
 
+local requestedID
+local originalRequest = C_Item.RequestLoadItemDataByID
+local originalGetItemInfo = C_Item.GetItemInfo
+C_Item.RequestLoadItemDataByID = function(itemID)
+    requestedID = itemID
+end
+C_Item.GetItemInfo = function() return nil end
+assert(addon:BuildContext(0, 1, { itemID = 4242 }) == nil,
+    "unloaded items should not build a context")
+assert(requestedID == 4242, "unloaded items should request item data")
+assert(addon.pendingItemLoads and addon.pendingItemLoads[4242] == true,
+    "unloaded items should be remembered for a later rescan")
+assert(addon:ShouldRescanForLoadedItem(19019, true) == false,
+    "unrelated item loads must not request a bag rescan")
+assert(addon:ShouldRescanForLoadedItem(4242, false) == false
+    and addon.pendingItemLoads[4242] == true,
+    "a failed requested load should wait for a later success")
+assert(addon:ShouldRescanForLoadedItem(4242, true) == true,
+    "a previously requested item load should request a bag rescan")
+C_Item.GetItemInfo = originalGetItemInfo
+C_Item.RequestLoadItemDataByID = originalRequest
+
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
 

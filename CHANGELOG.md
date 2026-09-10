@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.9
+
+- Stopped bag rescans on `GET_ITEM_INFO_RECEIVED` and `ITEM_DATA_LOAD_RESULT`
+  unless ItemFYI previously asked for that item, so hovering tooltips no longer
+  hitch while every bag slot is reclassified.
+
 ## 0.2.8
 
 - Identified caged battle pets from TooltipData's `battlePetSpeciesID` field,

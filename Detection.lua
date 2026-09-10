@@ -672,6 +672,25 @@ function addon:ClassifyItem(context)
     end
 end
 
+function addon:NotePendingItemLoad(itemID)
+    if itemID == nil then
+        return
+    end
+    self.pendingItemLoads = self.pendingItemLoads or {}
+    self.pendingItemLoads[itemID] = true
+end
+
+function addon:ShouldRescanForLoadedItem(itemID, success)
+    if success == false or itemID == nil then
+        return false
+    end
+    if not self.pendingItemLoads or not self.pendingItemLoads[itemID] then
+        return false
+    end
+    self.pendingItemLoads[itemID] = nil
+    return true
+end
+
 function addon:BuildContext(bag, slot, info)
     local itemID = info.itemID or C_Container.GetContainerItemID(bag, slot)
     if not itemID then
@@ -682,6 +701,7 @@ function addon:BuildContext(bag, slot, info)
         _, classID, subclassID = GetItemInfo(itemID)
     if not itemName then
         if C_Item and C_Item.RequestLoadItemDataByID then
+            self:NotePendingItemLoad(itemID)
             C_Item.RequestLoadItemDataByID(itemID)
         end
         return nil
