@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.10
+
+- Coalesced mailbox and other bag bursts into one scan after items stop
+  arriving, and reused tooltip snapshots for unchanged slots so picking up
+  mail no longer reclassifies the whole bag on every item.
+
 ## 0.2.9
 
 - Stopped bag rescans on `GET_ITEM_INFO_RECEIVED` and `ITEM_DATA_LOAD_RESULT`

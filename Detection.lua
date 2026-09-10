@@ -369,9 +369,58 @@ local function GetBattlePetSpeciesID(context, tooltip)
     end
 end
 
+local bagScanReasons = {
+    BAG_UPDATE = true,
+    BAG_UPDATE_DELAYED = true,
+    GET_ITEM_INFO_RECEIVED = true,
+    ITEM_DATA_LOAD_RESULT = true,
+}
+
+local function SlotCacheKey(bag, slot)
+    return tostring(bag) .. ":" .. tostring(slot)
+end
+
+function addon:InvalidateScanCache()
+    self.scanCache = {}
+end
+
+function addon:GetSlotTooltipCache(context)
+    local cache = self.scanCache
+    if not cache or not context then
+        return
+    end
+    local entry = cache[SlotCacheKey(context.bag, context.slot)]
+    if not entry then
+        return
+    end
+    if entry.itemID == context.itemID and entry.link == context.link
+        and entry.stackCount == context.stackCount then
+        return entry.snapshot
+    end
+end
+
+function addon:SetSlotTooltipCache(context, snapshot)
+    if not context or not snapshot then
+        return
+    end
+    self.scanCache = self.scanCache or {}
+    self.scanCache[SlotCacheKey(context.bag, context.slot)] = {
+        itemID = context.itemID,
+        link = context.link,
+        stackCount = context.stackCount,
+        snapshot = snapshot,
+    }
+end
+
 function addon:GetTooltipSnapshot(context)
     if context.tooltipSnapshot then
         return context.tooltipSnapshot
+    end
+
+    local cached = self.useScanCache and self:GetSlotTooltipCache(context)
+    if cached then
+        context.tooltipSnapshot = cached
+        return cached
     end
 
     local parts = {}
@@ -443,6 +492,9 @@ function addon:GetTooltipSnapshot(context)
         unmetRequirement = state.unmetRequirement,
         battlePetSpeciesID = battlePetSpeciesID,
     }
+    if self.useScanCache then
+        self:SetSlotTooltipCache(context, context.tooltipSnapshot)
+    end
     return context.tooltipSnapshot
 end
 
@@ -750,6 +802,10 @@ function addon:ScanBags(reason)
         return
     end
 
+    if not bagScanReasons[reason] then
+        self:InvalidateScanCache()
+    end
+
     local candidates = {}
     local contexts = {}
     local totalCounts = {}
@@ -771,6 +827,19 @@ function addon:ScanBags(reason)
         end
     end
 
+    if bagScanReasons[reason] and self.scanCache then
+        local live = {}
+        for _, context in ipairs(contexts) do
+            live[SlotCacheKey(context.bag, context.slot)] = true
+        end
+        for key in pairs(self.scanCache) do
+            if not live[key] then
+                self.scanCache[key] = nil
+            end
+        end
+    end
+
+    self.useScanCache = true
     for _, context in ipairs(contexts) do
         context.totalCount = totalCounts[context.itemID]
         local category, itemReason = self:ClassifyItem(context)
@@ -798,6 +867,7 @@ function addon:ScanBags(reason)
             end
         end
     end
+    self.useScanCache = nil
 
     table.sort(candidates, function(left, right)
         if left.priority ~= right.priority then

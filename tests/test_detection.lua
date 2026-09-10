@@ -118,6 +118,49 @@ assert(addon:ShouldRescanForLoadedItem(4242, true) == true,
     "a previously requested item load should request a bag rescan")
 C_Item.RequestLoadItemDataByID = originalRequest
 
+addon.useScanCache = true
+local snapshotCalls = 0
+local originalGetBagItem = C_TooltipInfo.GetBagItem
+C_TooltipInfo.GetBagItem = function(...)
+    snapshotCalls = snapshotCalls + 1
+    return originalGetBagItem(...)
+end
+tooltipText = "Use: Open the satchel."
+local firstSnapshot = addon:GetTooltipSnapshot(Context(100, {
+    hasLoot = true,
+    bag = 1,
+    slot = 2,
+    stackCount = 1,
+}))
+local afterFirst = snapshotCalls
+local secondSnapshot = addon:GetTooltipSnapshot(Context(100, {
+    hasLoot = true,
+    bag = 1,
+    slot = 2,
+    stackCount = 1,
+}))
+assert(snapshotCalls == afterFirst, "unchanged bag slots should reuse tooltip snapshots")
+assert(firstSnapshot.text == secondSnapshot.text,
+    "cached tooltip snapshots should keep the original text")
+addon:GetTooltipSnapshot(Context(100, {
+    hasLoot = true,
+    bag = 1,
+    slot = 2,
+    stackCount = 2,
+}))
+assert(snapshotCalls > afterFirst, "stack changes should refresh the tooltip snapshot")
+addon:InvalidateScanCache()
+addon:GetTooltipSnapshot(Context(100, {
+    hasLoot = true,
+    bag = 1,
+    slot = 2,
+    stackCount = 2,
+}))
+assert(snapshotCalls > afterFirst + 1, "invalidating the scan cache should refetch tooltips")
+C_TooltipInfo.GetBagItem = originalGetBagItem
+addon.useScanCache = nil
+tooltipText = ""
+
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
 

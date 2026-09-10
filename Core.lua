@@ -3,13 +3,14 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.9"
+addon.version = "0.2.10"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
 addon.scanPending = false
 addon.scanGeneration = 0
 addon.pendingItemLoads = {}
+addon.scanCache = {}
 addon.layoutPending = false
 addon.slotActionBlocks = {}
 addon.merchantOpen = false
@@ -140,6 +141,18 @@ function addon:SetSlotActionBlock(key, blocked)
     end
     self:ScheduleScan(blocked and "unsafe item interaction opened"
         or "unsafe item interaction closed", 0)
+end
+
+local BAG_SCAN_DELAY = 0.3
+local BUSY_BAG_SCAN_DELAY = 0.45
+
+local function GetBagScanDelay()
+    -- Mail take-all and similar bursts fire many bag events. Wait until they
+    -- settle so we classify once instead of after every item.
+    if addon:IsSlotActionBlocked() then
+        return BUSY_BAG_SCAN_DELAY
+    end
+    return BAG_SCAN_DELAY
 end
 
 function addon:ScheduleScan(reason, delay)
@@ -400,7 +413,9 @@ events:SetScript("OnEvent", function(_, event, ...)
             -- rebuild it after Blizzard finishes the bag change.
             addon:SetCandidate(nil, 0)
         end
-        addon:ScheduleScan(event, 0.05)
+        addon:ScheduleScan(event, GetBagScanDelay())
+    elseif event == "BAG_UPDATE_DELAYED" then
+        addon:ScheduleScan(event, GetBagScanDelay())
     else
         addon:ScheduleScan(event, 0.15)
     end
