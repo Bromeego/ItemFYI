@@ -67,7 +67,11 @@ C_TransmogCollection = {
         return itemID == 1234
     end,
 }
-Enum = { ItemClass = { Recipe = 9 } }
+Enum = {
+    ItemClass = { Recipe = 9, Miscellaneous = 15, Battlepet = 17 },
+    ItemMiscellaneousSubclass = { CompanionPet = 2 },
+    TooltipDataType = { Item = 0, BattlePet = 6, CompanionPet = 9 },
+}
 local fishingSkill = 200
 GetProfessions = function() return nil, nil, nil, 4 end
 GetProfessionInfo = function(professionIndex)
@@ -469,7 +473,17 @@ assert(category == nil, "completed appearance cache should not be actionable")
 
 -- BattlePetToolTip_Show copies GameTooltip:GetPoint(1). After a reload that
 -- point does not exist yet, so a scan-tooltip SetBagItem on a caged pet errors.
+local tooltipOverride
+local surfaceArgsCalls = 0
+TooltipUtil = {
+    SurfaceArgs = function()
+        surfaceArgsCalls = surfaceArgsCalls + 1
+    end,
+}
 C_TooltipInfo.GetBagItem = function()
+    if tooltipOverride then
+        return tooltipOverride
+    end
     return { lines = {} }
 end
 tooltipLines = nil
@@ -495,6 +509,9 @@ C_PetJournal.GetPetInfoByItemID = function(itemID)
     if itemID == 271185 then
         return "Emberlyn", 1, 1, 262985, nil, nil, nil, nil, nil, nil, nil, 1, 555
     end
+    if itemID == "item:271185" then
+        error("GetPetInfoByItemID requires an item ID")
+    end
     return nil
 end
 
@@ -506,8 +523,50 @@ category = addon:ClassifyItem(Context(271185))
 assert(category == "pet", "item-ID battle-pet lookup must not require a scan tooltip")
 assert(setBagItemCalls == 0, "GetPetInfoByItemID pets must not call SetBagItem on the scan tooltip")
 
+tooltipOverride = { battlePetSpeciesID = 77, lines = {} }
+category = addon:ClassifyItem(Context(1628, { link = "item:1628" }))
+assert(category == "pet", "TooltipData.battlePetSpeciesID must classify caged pets")
+assert(setBagItemCalls == 0, "battlePetSpeciesID pets must not call SetBagItem on the scan tooltip")
+assert(surfaceArgsCalls > 0, "TooltipUtil.SurfaceArgs should be used when it exists")
+
+tooltipOverride = { battlePet = { speciesID = 77 }, lines = {} }
+category = addon:ClassifyItem(Context(1629, { link = "item:1629" }))
+assert(category == "pet", "nested battlePet.speciesID must still classify caged pets")
+assert(setBagItemCalls == 0, "nested battlePet pets must not call SetBagItem on the scan tooltip")
+
+tooltipOverride = {
+    args = { { field = "battlePetSpeciesID", intVal = 77 } },
+    lines = {},
+}
+category = addon:ClassifyItem(Context(1630, { link = "item:1630" }))
+assert(category == "pet", "packed TooltipData.args battlePetSpeciesID must classify caged pets")
+assert(setBagItemCalls == 0, "args-field battle pets must not call SetBagItem on the scan tooltip")
+
+tooltipOverride = {
+    type = Enum.TooltipDataType.BattlePet,
+    hyperlink = "|Hbattlepet:77:1:1:1:1:1:0:0|h[Test Pet]|h",
+    lines = {},
+}
+category = addon:ClassifyItem(Context(1631, { link = "item:1631" }))
+assert(category == "pet", "battle-pet tooltip type plus hyperlink must classify caged pets")
+assert(setBagItemCalls == 0, "battle-pet tooltip type must not call SetBagItem on the scan tooltip")
+
+tooltipOverride = { lines = {} }
+category = addon:ClassifyItem(Context(82800, {
+    link = "item:82800",
+    classID = 15,
+    subclassID = 2,
+    itemSubType = "Companion Pets",
+}))
+assert(setBagItemCalls == 0, "companion-pet item class must not call SetBagItem on the scan tooltip")
+
 category = addon:ClassifyItem(Context(100, { hasLoot = true }))
 assert(category == "container", "scan-tooltip SetBagItem errors must not hide openable items")
 assert(setBagItemCalls == 1, "non-pet items should still fall back to the scan tooltip")
+
+TooltipUtil = nil
+tooltipOverride = { battlePetSpeciesID = 77, lines = {} }
+category = addon:ClassifyItem(Context(1632, { link = "item:1632" }))
+assert(category == "pet", "missing TooltipUtil.SurfaceArgs must not break battle-pet detection")
 
 print("detection tests passed")

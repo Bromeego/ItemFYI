@@ -272,23 +272,100 @@ local function EnsureScanTooltip(self)
     return self.scanTooltip
 end
 
-local function GetBattlePetSpeciesID(context, tooltipBattlePet)
-    if tooltipBattlePet then
-        local speciesID = tonumber(tooltipBattlePet.speciesID)
-        if speciesID then
-            return speciesID
+local PET_CAGE_ITEM_ID = 82800
+
+local function SpeciesFromBattlePetLink(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    return tonumber(value:match("battlepet:(%d+)"))
+end
+
+local function SpeciesFromTooltipArgs(args)
+    if type(args) ~= "table" then
+        return nil
+    end
+    for _, arg in pairs(args) do
+        if type(arg) == "table" and arg.field == "battlePetSpeciesID" then
+            return tonumber(arg.intVal or arg.floatVal or arg.stringVal)
+        end
+    end
+end
+
+local function SurfaceTooltipData(tooltip)
+    -- SurfaceArgs flattened TooltipData.args onto named fields. It became a
+    -- no-op in Dragonflight and was removed in 11.0.2; call it only if present.
+    if not (tooltip and TooltipUtil and type(TooltipUtil.SurfaceArgs) == "function") then
+        return
+    end
+    pcall(TooltipUtil.SurfaceArgs, tooltip)
+    if tooltip.lines then
+        for _, line in ipairs(tooltip.lines) do
+            pcall(TooltipUtil.SurfaceArgs, line)
+        end
+    end
+end
+
+local function IsBattlePetTooltipType(tooltipType)
+    local types = Enum and Enum.TooltipDataType
+    return types ~= nil and (tooltipType == types.BattlePet or tooltipType == types.CompanionPet)
+end
+
+local function IsCompanionPetItem(context)
+    if tonumber(context.itemID) == PET_CAGE_ITEM_ID then
+        return true
+    end
+
+    local itemClass = Enum and Enum.ItemClass
+    local companionSubclass = Enum and Enum.ItemMiscellaneousSubclass
+        and Enum.ItemMiscellaneousSubclass.CompanionPet
+    if itemClass then
+        if itemClass.Battlepet and context.classID == itemClass.Battlepet then
+            return true
+        end
+        if itemClass.Miscellaneous and companionSubclass
+            and context.classID == itemClass.Miscellaneous
+            and context.subclassID == companionSubclass then
+            return true
         end
     end
 
-    local speciesID = tonumber((context.link or ""):match("battlepet:(%d+)"))
+    local subType = string.lower(context.itemSubType or "")
+    return subType == "companion pets" or subType == "companion pet"
+end
+
+local function GetBattlePetSpeciesIDFromTooltip(tooltip)
+    if type(tooltip) ~= "table" then
+        return nil
+    end
+
+    local speciesID = tonumber(tooltip.battlePetSpeciesID)
+    if not speciesID and type(tooltip.battlePet) == "table" then
+        speciesID = tonumber(tooltip.battlePet.speciesID)
+    end
+    return speciesID
+        or SpeciesFromBattlePetLink(tooltip.hyperlink)
+        or SpeciesFromBattlePetLink(tooltip.battlePetLink)
+        or SpeciesFromTooltipArgs(tooltip.args)
+end
+
+local function GetBattlePetSpeciesID(context, tooltip)
+    local speciesID = GetBattlePetSpeciesIDFromTooltip(tooltip)
+        or SpeciesFromBattlePetLink(context and context.link)
     if speciesID then
         return speciesID
     end
 
-    if C_PetJournal and C_PetJournal.GetPetInfoByItemID and context.itemID then
+    if C_PetJournal and C_PetJournal.GetPetInfoByItemID and context and context.itemID then
         -- This legacy API returns the pet name first and speciesID thirteenth.
         -- Extra parentheses keep Lua 5.1 from calling tonumber with no argument.
-        return tonumber((select(13, C_PetJournal.GetPetInfoByItemID(context.itemID))))
+        -- GetPetInfoByItemID errors if given an item link instead of an ID.
+        local ok, resolved = pcall(function()
+            return tonumber((select(13, C_PetJournal.GetPetInfoByItemID(context.itemID))))
+        end)
+        if ok then
+            return resolved
+        end
     end
 end
 
@@ -304,13 +381,15 @@ function addon:GetTooltipSnapshot(context)
         sawRestrictionColor = false,
     }
     local battlePetSpeciesID
+    local skipCompanionScan = IsCompanionPetItem(context)
 
     if C_TooltipInfo and C_TooltipInfo.GetBagItem then
         local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
         if ok and tooltip then
-            if tooltip.battlePet then
-                battlePetSpeciesID = GetBattlePetSpeciesID(context, tooltip.battlePet)
-            end
+            SurfaceTooltipData(tooltip)
+            skipCompanionScan = skipCompanionScan or IsBattlePetTooltipType(tooltip.type)
+            battlePetSpeciesID = GetBattlePetSpeciesIDFromTooltip(tooltip)
+                or SpeciesFromBattlePetLink(context.link)
             if tooltip.lines then
                 for _, line in ipairs(tooltip.lines) do
                     AppendTooltipValue(parts, line.leftText)
@@ -334,7 +413,7 @@ function addon:GetTooltipSnapshot(context)
     if needScanForText or needScanForColor then
         battlePetSpeciesID = battlePetSpeciesID or GetBattlePetSpeciesID(context)
     end
-    if (needScanForText or needScanForColor) and not battlePetSpeciesID then
+    if (needScanForText or needScanForColor) and not battlePetSpeciesID and not skipCompanionScan then
         local scanTooltip = EnsureScanTooltip(self)
         if scanTooltip then
             local companionShown = BattlePetTooltip and BattlePetTooltip.IsShown
@@ -388,7 +467,10 @@ local function IsUncollectedPet(context)
     if not speciesID then
         return false
     end
-    local owned, limit = C_PetJournal.GetNumCollectedInfo(speciesID)
+    local ok, owned, limit = pcall(C_PetJournal.GetNumCollectedInfo, speciesID)
+    if not ok then
+        return false
+    end
     owned = tonumber(owned) or 0
     limit = tonumber(limit) or 3
     return owned < limit, speciesID

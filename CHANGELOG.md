@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8
+
+- Identified caged battle pets from TooltipData's `battlePetSpeciesID` field,
+  battle-pet tooltip type, and companion-pet item class so bag scans skip
+  `SetBagItem` after a reload even when the nested `battlePet` table is absent.
+
 ## 0.2.7
 
 - Stopped bag scans from erroring on caged battle pets after a reload, when

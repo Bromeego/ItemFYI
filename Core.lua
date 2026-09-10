@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.7"
+addon.version = "0.2.8"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
