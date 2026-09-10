@@ -7,6 +7,10 @@ local itemUsable = true
 
 C_Item = {
     GetItemInfo = function(itemID)
+        -- 4242 is the unloaded-item probe used by BuildContext tests.
+        if itemID == 4242 then
+            return nil
+        end
         local data = assert(itemData[itemID], "missing test item " .. tostring(itemID))
         return data.name, "item:" .. itemID, 1, 1, 1, data.itemType, data.itemSubType,
             1, "", data.icon or 1, 0, data.classID, data.subclassID
@@ -97,11 +101,9 @@ end
 
 local requestedID
 local originalRequest = C_Item.RequestLoadItemDataByID
-local originalGetItemInfo = C_Item.GetItemInfo
 C_Item.RequestLoadItemDataByID = function(itemID)
     requestedID = itemID
 end
-C_Item.GetItemInfo = function() return nil end
 assert(addon:BuildContext(0, 1, { itemID = 4242 }) == nil,
     "unloaded items should not build a context")
 assert(requestedID == 4242, "unloaded items should request item data")
@@ -114,7 +116,6 @@ assert(addon:ShouldRescanForLoadedItem(4242, false) == false
     "a failed requested load should wait for a later success")
 assert(addon:ShouldRescanForLoadedItem(4242, true) == true,
     "a previously requested item load should request a bag rescan")
-C_Item.GetItemInfo = originalGetItemInfo
 C_Item.RequestLoadItemDataByID = originalRequest
 
 local category = addon:ClassifyItem(Context(280732))
