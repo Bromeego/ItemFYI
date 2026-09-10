@@ -269,6 +269,9 @@ function addon:CreateUI()
         if mouseButton == "RightButton" then
             addon:SkipCurrent(IsControlKeyDown())
         else
+            if addon.current then
+                addon:InvalidateScanCacheForItem(addon.current.itemID)
+            end
             addon:ScheduleScan("item used", 0.3)
         end
     end)

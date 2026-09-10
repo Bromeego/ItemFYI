@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.13
+
+- Stopped treating every bag scan as a full tooltip refetch. Unchanged slots
+  reuse cached snapshots, but each scan still runs live collection and
+  usability checks. Using an item only refreshes other copies of that item.
+  Login and a manual scan still fetch fresh tooltips.
+
+## 0.2.12
+
+- Stopped opening a vendor from immediately reclassifying every bag slot. That
+  hitch stacked with auto-sell addons as junk left the bags. Merchant and other
+  inventory-routing window scans now wait for bag events to settle and reuse
+  unchanged tooltip snapshots.
+
+## 0.2.11
+
+- Stopped leaving combat from immediately reclassifying every bag slot, which
+  froze the client as loot such as Cursed Surge bags appeared. Combat-end
+  scans now wait for bag events to settle and reuse unchanged tooltip snapshots.
+
 ## 0.2.10
 
 - Coalesced mailbox and other bag bursts into one scan after items stop

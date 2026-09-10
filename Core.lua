@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.10"
+addon.version = "0.2.13"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
@@ -118,6 +118,18 @@ function addon:CanCloseMerchantSafely()
     return type(CloseMerchant) == "function"
 end
 
+local BAG_SCAN_DELAY = 0.3
+local BUSY_BAG_SCAN_DELAY = 0.45
+
+local function GetBagScanDelay()
+    -- Mail take-all, vendor auto-sell, and similar bursts fire many bag events.
+    -- Wait until they settle so we classify once instead of after every item.
+    if addon:IsSlotActionBlocked() then
+        return BUSY_BAG_SCAN_DELAY
+    end
+    return BAG_SCAN_DELAY
+end
+
 function addon:SetSlotActionBlock(key, blocked)
     if key == nil then
         return
@@ -140,19 +152,7 @@ function addon:SetSlotActionBlock(key, blocked)
         self:SetCandidate(nil, 0)
     end
     self:ScheduleScan(blocked and "unsafe item interaction opened"
-        or "unsafe item interaction closed", 0)
-end
-
-local BAG_SCAN_DELAY = 0.3
-local BUSY_BAG_SCAN_DELAY = 0.45
-
-local function GetBagScanDelay()
-    -- Mail take-all and similar bursts fire many bag events. Wait until they
-    -- settle so we classify once instead of after every item.
-    if addon:IsSlotActionBlocked() then
-        return BUSY_BAG_SCAN_DELAY
-    end
-    return BAG_SCAN_DELAY
+        or "unsafe item interaction closed", GetBagScanDelay())
 end
 
 function addon:ScheduleScan(reason, delay)
@@ -365,13 +365,13 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:ApplyButtonLayout(useSavedPosition)
         end
         if addon.scanPending then
-            addon:ScheduleScan("combat ended", 0)
+            addon:ScheduleScan("combat ended", GetBagScanDelay())
         end
     elseif event == "MERCHANT_SHOW" then
         addon.merchantOpen = true
         if addon:CanCloseMerchantSafely() then
             addon.slotActionBlocks.merchant = nil
-            addon:ScheduleScan("merchant opened", 0)
+            addon:ScheduleScan("merchant opened", GetBagScanDelay())
         else
             -- Clients without a callable close API keep the conservative behaviour.
             addon:SetSlotActionBlock("merchant", true)
@@ -381,7 +381,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         if addon.slotActionBlocks.merchant then
             addon:SetSlotActionBlock("merchant", false)
         else
-            addon:ScheduleScan("merchant closed", 0)
+            addon:ScheduleScan("merchant closed", GetBagScanDelay())
         end
     elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW"
         or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
@@ -396,7 +396,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         local itemID, success = ...
         if addon.ShouldRescanForLoadedItem
             and addon:ShouldRescanForLoadedItem(itemID, success) then
-            addon:ScheduleScan(event, 0.15)
+            addon:ScheduleScan(event, GetBagScanDelay())
         end
     elseif event == "UNIT_QUEST_LOG_CHANGED" then
         local unit = ...

@@ -369,11 +369,10 @@ local function GetBattlePetSpeciesID(context, tooltip)
     end
 end
 
-local bagScanReasons = {
-    BAG_UPDATE = true,
-    BAG_UPDATE_DELAYED = true,
-    GET_ITEM_INFO_RECEIVED = true,
-    ITEM_DATA_LOAD_RESULT = true,
+local refreshTooltipReasons = {
+    login = true,
+    manual = true,
+    ["manual settings scan"] = true,
 }
 
 local function SlotCacheKey(bag, slot)
@@ -382,6 +381,17 @@ end
 
 function addon:InvalidateScanCache()
     self.scanCache = {}
+end
+
+function addon:InvalidateScanCacheForItem(itemID)
+    if not (self.scanCache and itemID) then
+        return
+    end
+    for key, entry in pairs(self.scanCache) do
+        if entry.itemID == itemID then
+            self.scanCache[key] = nil
+        end
+    end
 end
 
 function addon:GetSlotTooltipCache(context)
@@ -404,12 +414,13 @@ function addon:SetSlotTooltipCache(context, snapshot)
         return
     end
     self.scanCache = self.scanCache or {}
-    self.scanCache[SlotCacheKey(context.bag, context.slot)] = {
-        itemID = context.itemID,
-        link = context.link,
-        stackCount = context.stackCount,
-        snapshot = snapshot,
-    }
+    local key = SlotCacheKey(context.bag, context.slot)
+    local entry = self.scanCache[key] or {}
+    entry.itemID = context.itemID
+    entry.link = context.link
+    entry.stackCount = context.stackCount
+    entry.snapshot = snapshot
+    self.scanCache[key] = entry
 end
 
 function addon:GetTooltipSnapshot(context)
@@ -802,7 +813,7 @@ function addon:ScanBags(reason)
         return
     end
 
-    if not bagScanReasons[reason] then
+    if refreshTooltipReasons[reason] then
         self:InvalidateScanCache()
     end
 
@@ -827,7 +838,7 @@ function addon:ScanBags(reason)
         end
     end
 
-    if bagScanReasons[reason] and self.scanCache then
+    if self.scanCache then
         local live = {}
         for _, context in ipairs(contexts) do
             live[SlotCacheKey(context.bag, context.slot)] = true

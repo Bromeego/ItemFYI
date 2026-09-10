@@ -157,6 +157,31 @@ addon:GetTooltipSnapshot(Context(100, {
     stackCount = 2,
 }))
 assert(snapshotCalls > afterFirst + 1, "invalidating the scan cache should refetch tooltips")
+
+addon:GetTooltipSnapshot(Context(200, {
+    hasLoot = true,
+    bag = 5,
+    slot = 2,
+    stackCount = 1,
+}))
+addon:InvalidateScanCacheForItem(100)
+local afterItemInvalidate = snapshotCalls
+addon:GetTooltipSnapshot(Context(100, {
+    hasLoot = true,
+    bag = 1,
+    slot = 2,
+    stackCount = 2,
+}))
+assert(snapshotCalls > afterItemInvalidate,
+    "using an item should refresh other copies of that item ID")
+addon:GetTooltipSnapshot(Context(200, {
+    hasLoot = true,
+    bag = 5,
+    slot = 2,
+    stackCount = 1,
+}))
+assert(snapshotCalls == afterItemInvalidate + 1,
+    "invalidating one item ID should keep other slot snapshots")
 C_TooltipInfo.GetBagItem = originalGetBagItem
 addon.useScanCache = nil
 tooltipText = ""

@@ -150,6 +150,12 @@ C_TooltipInfo = {
 C_MountJournal = {}
 C_ToyBox = {}
 C_PetJournal = {}
+local appearanceCollected = false
+C_TransmogCollection = {
+    PlayerHasTransmogByItemInfo = function()
+        return appearanceCollected
+    end,
+}
 Enum = {
     ItemClass = { Recipe = 9 },
     PlayerInteractionType = {
@@ -310,6 +316,15 @@ assert(addon.layoutPending and addon.layoutUseSavedPosition,
 inCombat = false
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
 assert(not addon.layoutPending, "deferred position reset should apply after combat")
+
+inCombat = true
+local combatScanGeneration = addon.scanGeneration
+addon:ScheduleScan("BAG_UPDATE")
+assert(addon.scanPending, "bag changes in combat should defer the scan")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(not addon.scanPending and addon.scanGeneration > combatScanGeneration,
+    "leaving combat should flush the deferred bag scan without doing it on the kill frame")
 
 EditModeManagerFrame.editModeActive = true
 addon:SetCandidate(nil, 0)
@@ -493,6 +508,35 @@ eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.Banker)
 assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
     "closing an inventory-routing interaction must restore appearance actions")
+
+local snapshotCalls = 0
+local originalGetBagItem = C_TooltipInfo.GetBagItem
+C_TooltipInfo.GetBagItem = function(...)
+    snapshotCalls = snapshotCalls + 1
+    return originalGetBagItem(...)
+end
+addon:InvalidateScanCache()
+addon:ScanBags("BAG_UPDATE")
+local afterBagScan = snapshotCalls
+addon:ScanBags("BAG_UPDATE")
+assert(snapshotCalls == afterBagScan,
+    "unchanged bag slots should reuse tooltip snapshots")
+addon:ScanBags("PLAYER_LOOT_SPEC_UPDATED")
+assert(snapshotCalls == afterBagScan,
+    "loot spec changes should reuse tooltip snapshots")
+addon:ScanBags("settings changed")
+assert(snapshotCalls == afterBagScan,
+    "filter-only scans should reuse tooltip snapshots")
+appearanceCollected = true
+addon:ScanBags("BAG_UPDATE")
+assert(snapshotCalls == afterBagScan,
+    "live collection checks should not refetch unchanged tooltips")
+assert(addon.current == nil,
+    "collected appearances must be dropped even when the slot snapshot is cached")
+appearanceCollected = false
+addon:ScanBags("login")
+assert(snapshotCalls > afterBagScan, "login should refetch bag tooltips")
+C_TooltipInfo.GetBagItem = originalGetBagItem
 
 local generation = addon.scanGeneration
 eventFrame.scripts.OnEvent(eventFrame, "UNIT_QUEST_LOG_CHANGED", "target")
