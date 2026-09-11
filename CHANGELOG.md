@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.15
+
+- Replaced full-bag reclassification with a dirty-bag inventory index and a
+  time-sliced work queue so routine bag, mail, vendor, and combat events no
+  longer rebuild every tooltip.
+- Kept `/ifyi scan` and the settings rescan authoritative when later bag events
+  coalesce, retried incomplete tooltips per slot, and refreshed requirement
+  colours from targeted character-state and collection events.
+
 ## 0.2.14
 
 - Stopped currency-only world quest turn-ins from reclassifying every bag

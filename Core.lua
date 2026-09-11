@@ -3,7 +3,7 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.14"
+addon.version = "0.2.15"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}
@@ -200,11 +200,18 @@ function addon:ShouldRescanForQuestLog()
 end
 
 function addon:ScheduleScan(reason, delay)
+    if self.NoteScanIntent then
+        self:NoteScanIntent(reason)
+    end
     self.scanGeneration = self.scanGeneration + 1
     local generation = self.scanGeneration
 
     if self:IsInCombat() then
         self.scanPending = true
+        return
+    end
+
+    if self.workActive then
         return
     end
 
@@ -217,7 +224,7 @@ function addon:ScheduleScan(reason, delay)
             return
         end
         addon.scanPending = false
-        addon:ScanBags(reason)
+        addon:RunScheduledInventory()
     end)
 end
 
@@ -375,6 +382,14 @@ events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
 events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
 events:RegisterEvent("QUEST_TURNED_IN")
 events:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
+events:RegisterEvent("PLAYER_LEVEL_CHANGED")
+events:RegisterEvent("SKILL_LINES_CHANGED")
+events:RegisterEvent("CHAT_MSG_SKILL")
+events:RegisterEvent("NEW_MOUNT_ADDED")
+events:RegisterEvent("NEW_TOY_ADDED")
+events:RegisterEvent("NEW_PET_ADDED")
+events:RegisterEvent("COMPANION_LEARNED")
+events:RegisterEvent("TRANSMOG_COLLECTION_UPDATED")
 
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -441,6 +456,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         local itemID, success = ...
         if addon.ShouldRescanForLoadedItem
             and addon:ShouldRescanForLoadedItem(itemID, success) then
+            addon:NoteItemRefresh(itemID)
             addon:ScheduleScan(event, GetBagScanDelay())
         end
     elseif event == "QUEST_TURNED_IN" then
@@ -449,7 +465,14 @@ events:SetScript("OnEvent", function(_, event, ...)
         local questID = ...
         if addon:IsWatchedCompletionQuest(questID) then
             addon:NoteWatchedQuestCompleted(questID)
-            addon:ScheduleScan(event, 0.15)
+            if addon.Rules then
+                for itemID, rule in pairs(addon.Rules) do
+                    if rule.completedQuestID == questID then
+                        addon:NoteItemRefresh(itemID, true)
+                    end
+                end
+            end
+            addon:ScheduleScan("quest completion", 0.15)
         end
     elseif event == "UNIT_QUEST_LOG_CHANGED" then
         local unit = ...
@@ -457,21 +480,40 @@ events:SetScript("OnEvent", function(_, event, ...)
             return
         end
         if addon:ShouldRescanForQuestLog() then
-            addon:ScheduleScan(event, 0.15)
+            if addon.WatchedQuestIDs and addon.Rules then
+                for itemID, rule in pairs(addon.Rules) do
+                    if rule.completedQuestID and addon.WatchedQuestIDs[rule.completedQuestID] then
+                        addon:NoteItemRefresh(itemID, true)
+                    end
+                end
+            end
+            addon:ScheduleScan("quest completion", 0.15)
         end
     elseif event == "BAG_UPDATE" then
         local changedBag = ...
-        local current = addon.current
-        if current and current.secureBySlot and current.bag == changedBag and not addon:IsInCombat() then
-            -- Do not leave a slot-targeted appearance action clickable while
-            -- the slot may contain a different item. BAG_UPDATE_DELAYED will
-            -- rebuild it after Blizzard finishes the bag change.
-            addon:SetCandidate(nil, 0)
+        addon:NoteDirtyBag(changedBag)
+        addon:InvalidateSecureActionForBag(changedBag)
+        if not addon.workActive then
+            addon:ScheduleScan(event, GetBagScanDelay())
         end
-        addon:ScheduleScan(event, GetBagScanDelay())
     elseif event == "BAG_UPDATE_DELAYED" then
-        addon:ScheduleScan(event, GetBagScanDelay())
-    else
-        addon:ScheduleScan(event, 0.15)
+        if not addon.workActive then
+            addon:ScheduleScan(event, GetBagScanDelay())
+        end
+    elseif event == "PLAYER_LOOT_SPEC_UPDATED"
+        or event == "PLAYER_LEVEL_CHANGED"
+        or event == "SKILL_LINES_CHANGED"
+        or event == "CHAT_MSG_SKILL" then
+        addon:ScheduleScan("character state", 0.15)
+    elseif event == "NEW_MOUNT_ADDED" then
+        addon:ScheduleScan("collection:mount", 0.15)
+    elseif event == "NEW_TOY_ADDED" then
+        addon:ScheduleScan("collection:toy", 0.15)
+    elseif event == "NEW_PET_ADDED" then
+        addon:ScheduleScan("collection:pet", 0.15)
+    elseif event == "COMPANION_LEARNED" then
+        addon:ScheduleScan("collection:companion", 0.15)
+    elseif event == "TRANSMOG_COLLECTION_UPDATED" then
+        addon:ScheduleScan("collection:transmog", 0.15)
     end
 end)

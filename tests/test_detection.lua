@@ -186,6 +186,30 @@ C_TooltipInfo.GetBagItem = originalGetBagItem
 addon.useScanCache = nil
 tooltipText = ""
 
+addon.useScanCache = true
+addon:InvalidateScanCache()
+local incompleteCalls = 0
+C_TooltipInfo.GetBagItem = function()
+    incompleteCalls = incompleteCalls + 1
+    return { lines = {} }
+end
+local incomplete = addon:GetTooltipSnapshot(Context(140, {
+    bag = 4,
+    slot = 8,
+    stackCount = 1,
+}))
+assert(incomplete.complete == false, "empty tooltip data must be marked incomplete")
+local afterIncomplete = incompleteCalls
+addon:GetTooltipSnapshot(Context(140, {
+    bag = 4,
+    slot = 8,
+    stackCount = 1,
+}))
+assert(incompleteCalls > afterIncomplete, "incomplete tooltips must not be cached as valid")
+C_TooltipInfo.GetBagItem = originalGetBagItem
+addon.useScanCache = nil
+tooltipText = ""
+
 local category = addon:ClassifyItem(Context(280732))
 assert(category == "container", "explicit Mistcrest rule failed")
 

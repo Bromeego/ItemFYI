@@ -270,7 +270,7 @@ function addon:CreateUI()
             addon:SkipCurrent(IsControlKeyDown())
         else
             if addon.current then
-                addon:InvalidateScanCacheForItem(addon.current.itemID)
+                addon:NoteItemRefresh(addon.current.itemID)
             end
             addon:ScheduleScan("item used", 0.3)
         end

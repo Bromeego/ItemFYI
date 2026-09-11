@@ -369,14 +369,34 @@ local function GetBattlePetSpeciesID(context, tooltip)
     end
 end
 
-local refreshTooltipReasons = {
-    login = true,
-    manual = true,
-    ["manual settings scan"] = true,
-}
-
 local function SlotCacheKey(bag, slot)
     return tostring(bag) .. ":" .. tostring(slot)
+end
+
+local function DefaultMetrics()
+    return {
+        slotsInspected = 0,
+        slotsChanged = 0,
+        tooltipSnapshots = 0,
+        itemsClassified = 0,
+        workTicks = 0,
+        maxWorkPerTick = 0,
+    }
+end
+
+function addon:ResetMetrics()
+    self.metrics = DefaultMetrics()
+end
+
+function addon:GetMetrics()
+    return self.metrics or DefaultMetrics()
+end
+
+function addon:NoteMetric(name, amount)
+    if not self.metrics then
+        self.metrics = DefaultMetrics()
+    end
+    self.metrics[name] = (self.metrics[name] or 0) + (amount or 1)
 end
 
 function addon:InvalidateScanCache()
@@ -410,7 +430,7 @@ function addon:GetSlotTooltipCache(context)
 end
 
 function addon:SetSlotTooltipCache(context, snapshot)
-    if not context or not snapshot then
+    if not context or not snapshot or snapshot.complete == false then
         return
     end
     self.scanCache = self.scanCache or {}
@@ -423,16 +443,22 @@ function addon:SetSlotTooltipCache(context, snapshot)
     self.scanCache[key] = entry
 end
 
+function addon:IsTooltipSnapshotComplete(snapshot)
+    return snapshot and snapshot.complete ~= false
+end
+
 function addon:GetTooltipSnapshot(context)
     if context.tooltipSnapshot then
         return context.tooltipSnapshot
     end
 
     local cached = self.useScanCache and self:GetSlotTooltipCache(context)
-    if cached then
+    if cached and cached.complete ~= false then
         context.tooltipSnapshot = cached
         return cached
     end
+
+    self:NoteMetric("tooltipSnapshots")
 
     local parts = {}
     local state = {
@@ -442,10 +468,13 @@ function addon:GetTooltipSnapshot(context)
     }
     local battlePetSpeciesID
     local skipCompanionScan = IsCompanionPetItem(context)
+    local tooltipReadFailed = false
 
     if C_TooltipInfo and C_TooltipInfo.GetBagItem then
         local ok, tooltip = pcall(C_TooltipInfo.GetBagItem, context.bag, context.slot)
-        if ok and tooltip then
+        if not ok then
+            tooltipReadFailed = true
+        elseif tooltip then
             SurfaceTooltipData(tooltip)
             skipCompanionScan = skipCompanionScan or IsBattlePetTooltipType(tooltip.type)
             battlePetSpeciesID = GetBattlePetSpeciesIDFromTooltip(tooltip)
@@ -461,6 +490,8 @@ function addon:GetTooltipSnapshot(context)
                     CollectRestrictionState(line.text, line.color or line.leftColor, state)
                 end
             end
+        else
+            tooltipReadFailed = true
         end
     end
 
@@ -498,12 +529,22 @@ function addon:GetTooltipSnapshot(context)
         end
     end
 
+    local text = string.lower(table.concat(parts, "\n"))
+    local hasText = text ~= ""
+    local missingRestrictionColor = state.sawRestrictionText and not state.sawRestrictionColor
+        and not state.unmetRequirement
+    local complete = not tooltipReadFailed
+        and (hasText or battlePetSpeciesID or skipCompanionScan)
+        and not missingRestrictionColor
+
     context.tooltipSnapshot = {
-        text = string.lower(table.concat(parts, "\n")),
+        text = text,
         unmetRequirement = state.unmetRequirement,
+        sawRestrictionText = state.sawRestrictionText == true,
         battlePetSpeciesID = battlePetSpeciesID,
+        complete = complete,
     }
-    if self.useScanCache then
+    if self.useScanCache and complete then
         self:SetSlotTooltipCache(context, context.tooltipSnapshot)
     end
     return context.tooltipSnapshot
@@ -605,6 +646,7 @@ local function IsCollectedAppearance(itemID, itemLink)
 end
 
 function addon:ClassifyItem(context)
+    self:NoteMetric("itemsClassified")
     local tooltipText = self:GetTooltipText(context)
     local alreadyKnown = ContainsAny(tooltipText, knownText)
     if alreadyKnown or IsLocked(tooltipText) then
@@ -802,94 +844,3 @@ function addon:BuildSecureUse(context, category)
     return ("/use item:%d"):format(context.itemID), false
 end
 
-function addon:ScanBags(reason)
-    if not self.db or not self.db.enabled then
-        self.candidates = {}
-        self:SetCandidate(nil, 0)
-        return
-    end
-    if self:IsInCombat() then
-        self.scanPending = true
-        return
-    end
-
-    if refreshTooltipReasons[reason] then
-        self:InvalidateScanCache()
-    end
-
-    local candidates = {}
-    local contexts = {}
-    local totalCounts = {}
-    local seen = {}
-    local lastBag = NUM_TOTAL_EQUIPPED_BAG_SLOTS or 5
-
-    for bag = 0, lastBag do
-        local slots = C_Container.GetContainerNumSlots(bag) or 0
-        for slot = 1, slots do
-            local info = C_Container.GetContainerItemInfo(bag, slot)
-            if info and not info.isLocked then
-                local context = self:BuildContext(bag, slot, info)
-                if context then
-                    contexts[#contexts + 1] = context
-                    totalCounts[context.itemID] = (totalCounts[context.itemID] or 0)
-                        + (tonumber(context.stackCount) or 0)
-                end
-            end
-        end
-    end
-
-    if self.scanCache then
-        local live = {}
-        for _, context in ipairs(contexts) do
-            live[SlotCacheKey(context.bag, context.slot)] = true
-        end
-        for key in pairs(self.scanCache) do
-            if not live[key] then
-                self.scanCache[key] = nil
-            end
-        end
-    end
-
-    self.useScanCache = true
-    for _, context in ipairs(contexts) do
-        context.totalCount = totalCounts[context.itemID]
-        local category, itemReason = self:ClassifyItem(context)
-        local key = context.uniqueKey or tostring(context.itemID)
-        if category and self:IsCategoryEnabled(category) and not seen[key]
-            and not self.db.ignored[key] and not self.sessionSkipped[key] then
-            local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
-            if not (secureBySlot and self:IsSlotActionBlocked()) then
-                seen[key] = true
-                candidates[#candidates + 1] = {
-                    key = key,
-                    itemID = context.itemID,
-                    name = context.name,
-                    link = context.link,
-                    icon = context.icon,
-                    count = context.totalCount,
-                    bag = context.bag,
-                    slot = context.slot,
-                    category = category,
-                    reason = itemReason,
-                    priority = self.CategoryPriority[category] or 100,
-                    secureMacro = secureMacro,
-                    secureBySlot = secureBySlot,
-                }
-            end
-        end
-    end
-    self.useScanCache = nil
-
-    table.sort(candidates, function(left, right)
-        if left.priority ~= right.priority then
-            return left.priority < right.priority
-        end
-        if left.itemID ~= right.itemID then
-            return left.itemID < right.itemID
-        end
-        return left.slot < right.slot
-    end)
-
-    self.candidates = candidates
-    self:SetCandidate(candidates[1], #candidates)
-end

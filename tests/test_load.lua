@@ -250,6 +250,7 @@ local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
 assert(loadfile("Detection.lua"))("ItemFYI", addon)
+assert(loadfile("Inventory.lua"))("ItemFYI", addon)
 assert(loadfile("UI.lua"))("ItemFYI", addon)
 assert(loadfile("Skinning.lua"))("ItemFYI", addon)
 assert(loadfile("EditMode.lua"))("ItemFYI", addon)
@@ -267,6 +268,16 @@ assert(eventFrame.registeredEvents.PLAYER_LOOT_SPEC_UPDATED
     and eventFrame.registeredEvents.QUEST_TURNED_IN
     and eventFrame.registeredEvents.UNIT_QUEST_LOG_CHANGED,
     "loot spec and quest completion events must be registered")
+assert(eventFrame.registeredEvents.PLAYER_LEVEL_CHANGED
+    and eventFrame.registeredEvents.SKILL_LINES_CHANGED
+    and eventFrame.registeredEvents.CHAT_MSG_SKILL,
+    "character eligibility events must be registered")
+assert(eventFrame.registeredEvents.NEW_MOUNT_ADDED
+    and eventFrame.registeredEvents.NEW_TOY_ADDED
+    and eventFrame.registeredEvents.NEW_PET_ADDED
+    and eventFrame.registeredEvents.COMPANION_LEARNED
+    and eventFrame.registeredEvents.TRANSMOG_COLLECTION_UPDATED,
+    "collection events must be registered")
 assert(eventFrame.registeredEvents.GET_ITEM_INFO_RECEIVED
     and eventFrame.registeredEvents.ITEM_DATA_LOAD_RESULT,
     "item-data load events must be registered so missing bag items can refresh")
@@ -536,7 +547,12 @@ assert(snapshotCalls == afterBagScan,
 appearanceCollected = true
 addon:ScanBags("BAG_UPDATE")
 assert(snapshotCalls == afterBagScan,
-    "live collection checks should not refetch unchanged tooltips")
+    "unchanged inventory should not refetch tooltips")
+assert(addon.current and addon.current.itemID == 789,
+    "an unrelated bag reconcile must not rebuild live eligibility")
+addon:ScanBags("collection:transmog")
+assert(snapshotCalls == afterBagScan,
+    "learning an appearance should not refetch unrelated tooltips")
 assert(addon.current == nil,
     "collected appearances must be dropped even when the slot snapshot is cached")
 appearanceCollected = false
