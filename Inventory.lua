@@ -8,7 +8,8 @@ end
 
 local EXPENSIVE_WORK_PER_TICK = 4
 local TIME_BUDGET_MS = 3
-local MAX_TOOLTIP_RETRIES = 3
+local MAX_TOOLTIP_RETRIES = 4
+local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
 
 local forceRefreshReasons = {
@@ -185,6 +186,36 @@ local function PromoteRetries(self)
     wipe(self.retryQueue)
 end
 
+local function ScheduleTooltipRetry(self, bag, slot)
+    local entry = GetEntry(self, bag, slot)
+    if not entry then
+        return
+    end
+    local itemID = entry.itemID
+    local link = entry.link
+    local stackCount = entry.stackCount
+    C_Timer.After(TOOLTIP_RETRY_DELAY, function()
+        local current = GetEntry(addon, bag, slot)
+        if not current or current.itemID ~= itemID or current.link ~= link
+            or current.stackCount ~= stackCount then
+            return
+        end
+        if current.snapshot and current.snapshot.complete ~= false then
+            return
+        end
+        current.snapshot = nil
+        if addon:IsInCombat() then
+            addon.scanPending = true
+            QueueRetry(addon, bag, slot)
+            return
+        end
+        QueueClassify(addon, bag, slot)
+        if not addon.workActive then
+            addon:RunScheduledInventory()
+        end
+    end)
+end
+
 local function QueueItemSlots(self, itemID)
     if not itemID or not self.slotIndex then
         return
@@ -268,11 +299,12 @@ function addon:NoteItemRefresh(itemID, keepTooltip)
         return
     end
     self:InvalidateScanCacheForItem(itemID)
-    for _, bagSlots in pairs(self.slotIndex) do
-        for _, entry in pairs(bagSlots) do
+    for bag, bagSlots in pairs(self.slotIndex) do
+        for slot, entry in pairs(bagSlots) do
             if entry.itemID == itemID then
                 entry.snapshot = nil
                 entry.classified = false
+                self.tooltipRetries[SlotKey(bag, slot)] = nil
             end
         end
     end
@@ -604,12 +636,18 @@ local function ClassifySlot(self, bag, slot)
     local key = SlotKey(bag, slot)
     if snapshot and snapshot.complete == false then
         local retries = (self.tooltipRetries[key] or 0) + 1
-        if retries <= MAX_TOOLTIP_RETRIES then
-            self.tooltipRetries[key] = retries
+        self.tooltipRetries[key] = retries
+        -- Item info is already available here. Asking ITEM_DATA_LOAD_RESULT to
+        -- restart the slot would reset retries and loop until the Use: line
+        -- appears. Request load once as a hint, and rely on bounded delays.
+        if retries == 1 and C_Item and C_Item.RequestLoadItemDataByID then
+            C_Item.RequestLoadItemDataByID(context.itemID)
+        end
+        if not category then
             entry.classified = false
-            QueueRetry(self, bag, slot)
-        else
-            self.tooltipRetries[key] = retries
+        end
+        if retries <= MAX_TOOLTIP_RETRIES then
+            ScheduleTooltipRetry(self, bag, slot)
         end
     else
         self.tooltipRetries[key] = nil

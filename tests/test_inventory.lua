@@ -254,8 +254,9 @@ itemData[268650] = { name = "Ascendant Voidshard" }
 itemData[789] = { name = "Warband Appearance", itemType = "Armor", itemSubType = "Cosmetic",
     equipLocation = "INVTYPE_WEAPON", classID = 4 }
 itemData[107] = { name = "Test Recipe", itemType = "Recipe", classID = 9 }
+itemData[113] = { name = "Test Curio" }
 itemData[101] = { name = "Test Mount" }
-tooltipByItem[101] = "Summons and dismisses a rideable test mount."
+tooltipByItem[101] = "Use: Teaches you how to summon this mount."
 tooltipByItem[100] = "Use: Open the satchel."
 tooltipByItem[200] = "Use: Open the crate."
 tooltipByItem[268650] = "Use: Combine 5 shards."
@@ -264,6 +265,7 @@ tooltipByItem[107] = {
     { leftText = "Use: Teaches you how to craft a test item.", leftColor = { r = 0, g = 1, b = 0 } },
     { leftText = "Requires Northrend Leatherworking (75)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
 }
+tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
 
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
@@ -426,27 +428,61 @@ assert(addon.current and addon.current.itemID == 107,
 assert(Metrics().tooltipSnapshots == 1, "only restriction items should refetch tooltips")
 
 -- Incomplete tooltips are not permanently cached, and retries are targeted and bounded.
-SetSlot(0, 1, 100, 1, { hasLoot = true })
-tooltipComplete[100] = false
+SetSlot(0, 1, 113, 1)
+SetSlot(0, 2, nil)
+SetSlot(1, 1, nil)
+SetSlot(2, 7, nil)
+tooltipComplete[113] = false
 addon.workPerTick = 1
 addon:ResetMetrics()
 addon:ScanBags("login")
 assert(Metrics().tooltipSnapshots >= 1, "the incomplete slot should be read")
 local firstIncomplete = Metrics().tooltipSnapshots
-assert(addon.retryQueue[1], "incomplete tooltips should queue a targeted retry")
-local incompleteBeforeRebuild = Metrics().tooltipSnapshots
+assert(#timers >= 1, "incomplete tooltips should queue a targeted retry")
 addon:ScanBags("settings changed")
-assert(Metrics().tooltipSnapshots > incompleteBeforeRebuild,
-    "filter-only work must still promote pending tooltip retries")
+assert(#timers >= 1, "filter-only work must not drop tooltip retries")
 FireOneTimer()
 assert(Metrics().tooltipSnapshots > firstIncomplete, "retries should reread only the waiting slot")
-assert(Metrics().tooltipSnapshots <= 4, "tooltip retries must be bounded")
-tooltipComplete[100] = nil
-while addon:HasInventoryWork() and #timers > 0 do
+assert(Metrics().tooltipSnapshots <= 5, "tooltip retries must be bounded")
+tooltipComplete[113] = nil
+while #timers > 0 do
     FireOneTimer()
 end
-assert(addon.current and addon.current.itemID == 100, "a later complete tooltip should become a candidate")
+assert(addon.current and addon.current.itemID == 113, "a later complete tooltip should become a candidate")
 addon.workPerTick = nil
+
+-- Looted curios whose Use: line arrives late must still appear.
+SetSlot(0, 1, nil)
+SetSlot(0, 2, nil)
+SetSlot(1, 1, nil)
+SetSlot(2, 7, nil)
+ScanNow("login")
+tooltipByItem[113] = "Companion Curio"
+SetSlot(0, 1, 113, 1)
+addon.pendingItemLoads = {}
+local loadRequests = 0
+C_Item.RequestLoadItemDataByID = function(itemID)
+    loadRequests = loadRequests + 1
+end
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
+FireTimers()
+assert(not addon.current or addon.current.itemID ~= 113,
+    "a curio without its Use: line must not be cached as a finished miss")
+assert(#timers >= 1, "a name-only curio tooltip should retry the same slot")
+assert(not addon.pendingItemLoads[113],
+    "a name-only curio must not wait on item-data events that restart the slot")
+assert(loadRequests == 1, "item data should be requested once as a tooltip hint")
+local curioGeneration = addon.scanGeneration
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_DATA_LOAD_RESULT", 113, true)
+assert(addon.scanGeneration == curioGeneration,
+    "item-data completion for a name-only curio must not restart inventory work")
+tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
+FireTimers()
+assert(addon.current and addon.current.itemID == 113 and addon.current.category == "curio",
+    "a looted curio should appear once its Use: text is available")
+C_Item.RequestLoadItemDataByID = Noop
 
 -- Unrelated item-data events do nothing.
 local generation = addon.scanGeneration

@@ -530,12 +530,14 @@ function addon:GetTooltipSnapshot(context)
     end
 
     local text = string.lower(table.concat(parts, "\n"))
-    local hasText = text ~= ""
+    local hasUseText = string.find(text, "use:", 1, true) ~= nil
     local missingRestrictionColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
+    -- Name-only or companion-class tooltips after loot are not enough. Curios
+    -- and similar items only match their Use: line, which can arrive later.
     local complete = not tooltipReadFailed
-        and (hasText or battlePetSpeciesID or skipCompanionScan)
         and not missingRestrictionColor
+        and (hasUseText or battlePetSpeciesID or context.hasLoot == true)
 
     context.tooltipSnapshot = {
         text = text,

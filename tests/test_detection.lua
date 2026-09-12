@@ -206,6 +206,24 @@ addon:GetTooltipSnapshot(Context(140, {
     stackCount = 1,
 }))
 assert(incompleteCalls > afterIncomplete, "incomplete tooltips must not be cached as valid")
+tooltipText = "Companion Curio"
+local nameOnlyCalls = incompleteCalls
+C_TooltipInfo.GetBagItem = function()
+    incompleteCalls = incompleteCalls + 1
+    return { lines = { { leftText = tooltipText } } }
+end
+local nameOnly = addon:GetTooltipSnapshot(Context(113, {
+    bag = 6,
+    slot = 1,
+    stackCount = 1,
+}))
+assert(nameOnly.complete == false, "name-only tooltips must wait for their Use: line")
+addon:GetTooltipSnapshot(Context(113, {
+    bag = 6,
+    slot = 1,
+    stackCount = 1,
+}))
+assert(incompleteCalls > nameOnlyCalls, "name-only tooltips must not be cached as valid")
 C_TooltipInfo.GetBagItem = originalGetBagItem
 addon.useScanCache = nil
 tooltipText = ""

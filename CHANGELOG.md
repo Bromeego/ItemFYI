@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.16
+
+- Stopped looted Companion Curios from being ignored when Blizzard first
+  returns a name-only tooltip. Those slots now retry and reload item data
+  until the Use: line is available, instead of being cached as finished.
+
 ## 0.2.15
 
 - Replaced full-bag reclassification with a dirty-bag inventory index and a
