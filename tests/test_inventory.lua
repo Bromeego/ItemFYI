@@ -369,6 +369,24 @@ assert(addon.current and addon.current.itemID == 100
 assert(not (addon.slotIndex[0] and addon.slotIndex[0][1]),
     "the vacated slot must leave the inventory index")
 
+-- Opening a cache in-place must not keep the previous item's icon.
+itemData[100].icon = 111
+itemData[200].icon = 222
+SetSlot(0, 1, 100, 1, { hasLoot = true, icon = 111 })
+SetSlot(0, 2, nil)
+SetSlot(1, 1, nil)
+ScanNow("login")
+assert(addon.current and addon.current.itemID == 100 and addon.current.icon == 111,
+    "the cache icon should appear before it is opened")
+SetSlot(0, 1, 200, 1, { hasLoot = true, icon = 222 })
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
+FireTimers()
+assert(addon.current and addon.current.itemID == 200 and addon.current.icon == 222,
+    "loot that replaces a cache in the same slot must update the button icon")
+itemData[100].icon = nil
+itemData[200].icon = nil
+
 -- Secure slot actions are invalidated immediately.
 appearanceCollected = false
 SetSlot(0, 1, nil)

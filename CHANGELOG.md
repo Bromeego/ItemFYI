@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.17
+
+- Updated the button icon when loot replaces a cache in the same bag slot,
+  instead of keeping the opened container's artwork.
+
 ## 0.2.16
 
 - Stopped looted Companion Curios from being ignored when Blizzard first

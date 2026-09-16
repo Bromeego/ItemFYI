@@ -138,6 +138,7 @@ local function Fingerprint(info, bag, slot)
         link = info.hyperlink or (C_Container.GetContainerItemLink and C_Container.GetContainerItemLink(bag, slot)),
         stackCount = tonumber(info.stackCount) or 1,
         hasLoot = info.hasLoot == true,
+        icon = info.iconFileID,
     }
 end
 
@@ -465,6 +466,7 @@ local function ReconcileBag(self, bag)
                 existing.link = fingerprint.link
                 existing.stackCount = fingerprint.stackCount
                 existing.hasLoot = fingerprint.hasLoot
+                existing.icon = fingerprint.icon
                 existing.snapshot = nil
                 existing.classified = false
                 existing.category = nil
@@ -472,10 +474,14 @@ local function ReconcileBag(self, bag)
                 existing.uniqueKey = nil
                 existing.sawRestrictionText = nil
                 existing.awaitingItemInfo = nil
+                existing.context = nil
                 existing.bag = bag
                 existing.slot = slot
                 AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
                 self.tooltipRetries[SlotKey(bag, slot)] = nil
+                if self.scanCache then
+                    self.scanCache[SlotKey(bag, slot)] = nil
+                end
                 self:NoteMetric("slotsChanged")
                 QueueClassify(self, bag, slot)
             elseif not existing.classified then
@@ -595,7 +601,7 @@ local function ClassifySlot(self, bag, slot)
     local info = {
         itemID = entry.itemID,
         hyperlink = entry.link,
-        iconFileID = entry.context and entry.context.icon,
+        iconFileID = entry.icon,
         stackCount = entry.stackCount,
         hasLoot = entry.hasLoot,
         isLocked = false,
