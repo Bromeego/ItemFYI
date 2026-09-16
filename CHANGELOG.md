@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.18
+
+- Refreshed the button tooltip when the current item changes while the cursor
+  is still hovering, instead of keeping the previous item's tooltip.
+
 ## 0.2.17
 
 - Updated the button icon when loot replaces a cache in the same bag slot,

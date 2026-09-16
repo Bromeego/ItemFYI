@@ -190,7 +190,10 @@ GameTooltip = {
         self.lines = {}
     end,
     GetOwner = function(self) return self.owner end,
-    SetBagItem = Noop,
+    SetBagItem = function(self, bag, slot)
+        self.bag = bag
+        self.slot = slot
+    end,
     AddLine = function(self, text)
         self.lines[#self.lines + 1] = text
     end,
@@ -404,6 +407,71 @@ BattlePetTooltip.shown = true
 addon.button.scripts.OnLeave(addon.button)
 assert(not BattlePetTooltip.shown, "leaving the button must hide the battle-pet companion tooltip")
 
+addon.button.scripts.OnEnter(addon.button)
+assert(GameTooltip.bag == 0 and GameTooltip.slot == 4,
+    "hovering should show the current bag item")
+
+BattlePetTooltip.shown = true
+local hideCountBeforeSwap = GameTooltip.hideCount or 0
+addon:SetCandidate({
+    key = "321",
+    itemID = 321,
+    name = "Next Container",
+    icon = 2,
+    count = 1,
+    bag = 1,
+    slot = 8,
+    reason = "Openable container — click to open",
+    secureMacro = "/use item:321",
+}, 2)
+assert(GameTooltip.owner == addon.button,
+    "a candidate swap must keep ItemFYI's tooltip")
+assert(GameTooltip.bag == 1 and GameTooltip.slot == 8,
+    "a candidate swap while hovered must refresh the bag-item tooltip")
+assert((GameTooltip.hideCount or 0) == hideCountBeforeSwap,
+    "hovered swaps should rebuild the tooltip without hiding it")
+local nextReasonFound = false
+for _, line in ipairs(GameTooltip.lines) do
+    if line == "Openable container — click to open" then
+        nextReasonFound = true
+    end
+end
+assert(nextReasonFound, "a candidate swap while hovered must refresh the reason line")
+assert(not BattlePetTooltip.shown,
+    "a candidate swap while hovered must hide leftover companion tooltips")
+
+local firstCandidate = {
+    key = "123",
+    itemID = 123,
+    name = "Test Container",
+    icon = 1,
+    count = 2,
+    bag = 0,
+    slot = 4,
+    reason = "Openable container — click to open",
+    secureMacro = "/use item:123",
+}
+addon:SetCandidate(firstCandidate, 3)
+
+local externalHoverOwner = {}
+GameTooltip.owner = externalHoverOwner
+GameTooltip.bag, GameTooltip.slot = 9, 9
+addon:SetCandidate({
+    key = "321",
+    itemID = 321,
+    name = "Next Container",
+    icon = 2,
+    count = 1,
+    bag = 1,
+    slot = 8,
+    reason = "Openable container — click to open",
+    secureMacro = "/use item:321",
+}, 1)
+assert(GameTooltip.owner == externalHoverOwner
+    and GameTooltip.bag == 9 and GameTooltip.slot == 9,
+    "candidate swaps must not rewrite a tooltip owned by another UI element")
+
+addon:SetCandidate(firstCandidate, 3)
 addon.button.scripts.OnEnter(addon.button)
 BattlePetTooltip.shown = true
 local stolenTooltipOwner = {}

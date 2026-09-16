@@ -16,6 +16,33 @@ local function HideButtonTooltip(button, hideCompanions)
     end
 end
 
+local function ShowButtonTooltip(button)
+    local candidate = addon.current
+    if not candidate or not GameTooltip then
+        return
+    end
+    GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+    GameTooltip:SetBagItem(candidate.bag, candidate.slot)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine(candidate.reason, 0.35, 0.85, 1, true)
+    GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
+    if candidate.secureBySlot and addon.merchantOpen then
+        GameTooltip:AddLine("Vendor will close before use", 1, 0.82, 0.2)
+    end
+    GameTooltip:AddLine("Right-click to skip this session", 0.9, 0.9, 0.9)
+    GameTooltip:AddLine("Ctrl-right-click to ignore", 0.9, 0.9, 0.9)
+    GameTooltip:AddLine("Alt-drag to move", 0.65, 0.65, 0.65)
+    GameTooltip:Show()
+end
+
+local function RefreshButtonTooltip(button)
+    if not (GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button) then
+        return
+    end
+    addon:HideCompanionTooltips()
+    ShowButtonTooltip(button)
+end
+
 local GLOW_SIZE_SCALE = 1.7
 
 local function FitButtonGlow(button)
@@ -174,22 +201,7 @@ function addon:CreateUI()
     button.more:SetTextColor(0.35, 0.85, 1)
 
     button:SetScript("OnEnter", function(frame)
-        local candidate = addon.current
-        if not candidate then
-            return
-        end
-        GameTooltip:SetOwner(frame, "ANCHOR_RIGHT")
-        GameTooltip:SetBagItem(candidate.bag, candidate.slot)
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(candidate.reason, 0.35, 0.85, 1, true)
-        GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
-        if candidate.secureBySlot and addon.merchantOpen then
-            GameTooltip:AddLine("Vendor will close before use", 1, 0.82, 0.2)
-        end
-        GameTooltip:AddLine("Right-click to skip this session", 0.9, 0.9, 0.9)
-        GameTooltip:AddLine("Ctrl-right-click to ignore", 0.9, 0.9, 0.9)
-        GameTooltip:AddLine("Alt-drag to move", 0.65, 0.65, 0.65)
-        GameTooltip:Show()
+        ShowButtonTooltip(frame)
     end)
 
     button:SetScript("OnLeave", function(frame)
@@ -320,4 +332,5 @@ function addon:SetCandidate(candidate, total)
     self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()
     self:ApplyButtonGlow()
+    RefreshButtonTooltip(self.button)
 end
