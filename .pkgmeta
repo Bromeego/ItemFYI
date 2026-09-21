@@ -1,0 +1,13 @@
+package-as: ItemFYI
+
+ignore:
+  - .github
+  - .gitattributes
+  - .gitignore
+  - tests
+  - tools
+  - README.md
+  - CONTRIBUTING.md
+
+manual-changelog: CHANGELOG.md
+license-output: LICENSE

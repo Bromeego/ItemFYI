@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.20
+
+- Added CurseForge packaging so tagged releases can be built automatically
+  without shipping tests, tools, or GitHub files in the addon zip.
+- Rewrote the player README and moved maintainer release notes to
+  CONTRIBUTING.md.
+- Added GitHub issue templates so bugs and suggestions can be logged in this
+  repository.
+
 ## 0.2.19
 
 - Detected Drakewatcher Manuscripts, Airship Schematics, and other Rostrum of

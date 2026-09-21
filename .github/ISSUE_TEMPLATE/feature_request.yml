@@ -1,0 +1,38 @@
+name: Suggestion
+description: Request a feature or a change to ItemFYI
+title: "[Suggestion]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting this here on GitHub. Please search existing issues first in case it is already logged.
+
+  - type: checkboxes
+    id: existing
+    attributes:
+      label: Existing issues
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem?
+      description: What is awkward, missing, or easy to miss today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What would you like ItemFYI to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra details
+      description: Examples, item names, or screenshots. You can drag images into this field.

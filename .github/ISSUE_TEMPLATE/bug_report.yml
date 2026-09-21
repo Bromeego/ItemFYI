@@ -1,0 +1,82 @@
+name: Bug report
+description: Something in ItemFYI is not working as expected
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this here on GitHub. Please search existing issues first in case it is already logged.
+
+  - type: checkboxes
+    id: existing
+    attributes:
+      label: Existing issues
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem in a few sentences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What can we do to see the same problem?
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: input
+    id: item
+    attributes:
+      label: Item (if relevant)
+      description: Item name and item ID, if the problem is about a specific bag item.
+      placeholder: "Tiny Dragon Goblet (item ID if known)"
+
+  - type: input
+    id: addon-version
+    attributes:
+      label: ItemFYI version
+      description: Shown in the addon list, or as `## Version:` in ItemFYI.toc.
+      placeholder: "0.2.20"
+    validations:
+      required: true
+
+  - type: input
+    id: wow-version
+    attributes:
+      label: WoW version
+      description: Retail version from the login screen or Game Menu → Support.
+      placeholder: "12.0.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-addons
+    attributes:
+      label: Other addons
+      description: Especially bag, skin, or UI addons such as ElvUI or EllesmereUI.
+      placeholder: ElvUI, Bag addon name, etc.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra details
+      description: Screenshots, error text, or anything else that might help. You can drag images into this field.
