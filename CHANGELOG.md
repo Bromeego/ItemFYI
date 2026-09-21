@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.19
+
+- Detected Drakewatcher Manuscripts, Airship Schematics, and other Rostrum of
+  Transformation customizations from item type or use text, covering every
+  dragonriding mount rather than a single drake.
+- Detected Pepe costume unlocks such as A Tiny Dragon Goblet from their
+  "when summoned, Pepe will sometimes be dressed" use text.
+
 ## 0.2.18
 
 - Refreshed the button tooltip when the current item changes while the cursor

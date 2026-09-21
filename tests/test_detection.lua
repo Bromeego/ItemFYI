@@ -525,6 +525,83 @@ tooltipText = "Use: Learn to infuse a weapon with power."
 category = addon:ClassifyItem(Context(122))
 assert(category == nil, "unrelated infusion actions must not be treated as visual unlocks")
 
+tooltipText = "Drakewatcher Manuscript\nUnique\nUse: Unlocks this customization option for the Highland Drake at the Rostrum of Transformation."
+local reason
+category, reason = addon:ClassifyItem(Context(197118))
+assert(category == "transmog", "Drakewatcher Manuscripts should be learnable")
+assert(reason == "Mount customization — click to learn",
+    "Drakewatcher Manuscripts should use the mount-customization reason")
+
+tooltipText = "Use: Unlocks this customization option for the Renewed Proto-Drake at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(197357))
+assert(category == "transmog", "Renewed Proto-Drake manuscripts should be learnable")
+
+tooltipText = "Use: Unlocks this customization option for the Algarian Stormrider at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(210432))
+assert(category == "transmog", "Algarian Stormrider manuscripts should be learnable")
+
+tooltipText = "Use: Unlocks this customization option for the Cliffside Wylderdrake, Renewed Proto-Drake, Highland Drake, Windborne Velocidrake, and Winding Slitherdrake at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(198579))
+assert(category == "transmog", "multi-drake Rostrum manuscripts should still be learnable")
+
+tooltipText = "Airship Schematic\nUnique\nUse: Unlocks this customization option for the Delver's Dirigible at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(225542))
+assert(category == "transmog", "Delver's Dirigible schematics should be learnable")
+
+tooltipText = "Airship Schematic\nUnique\nUse: Unlocks this customization option for the Gob-Trotter at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(230218))
+assert(category == "transmog", "Gob-Trotter schematics should be learnable")
+
+tooltipText = "Use: Learn this dragonriding look."
+category = addon:ClassifyItem(Context(197403, { itemSubType = "Drakewatcher Manuscript" }))
+assert(category == "transmog", "Drakewatcher Manuscripts should match from item type")
+
+tooltipText = "Flourishing Whimsydrake: Night Lights\nDrakewatcher Manuscript\nUnique\nUse: Learn this dragonriding look."
+category = addon:ClassifyItem(Context(210482))
+assert(category == "transmog", "Drakewatcher Manuscripts should match from the tooltip type line")
+
+tooltipText = "Already known\nUse: Unlocks this customization option for the Highland Drake at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(197119))
+assert(category == nil, "an already-known mount customization should remain hidden")
+
+itemUsable = false
+tooltipText = "Use: Unlocks this customization option for the Highland Drake at the Rostrum of Transformation."
+category = addon:ClassifyItem(Context(197118))
+assert(category == nil, "an unusable mount customization should remain hidden")
+itemUsable = true
+
+tooltipText = "A manuscript describing a customization option for the Highland Drake."
+category = addon:ClassifyItem(Context(197120))
+assert(category == nil, "flavour text mentioning customization must not become a learn action")
+
+tooltipText = "Use: Teaches you how to craft a Drakewatcher Manuscript."
+category = addon:ClassifyItem(Context(198599, { itemType = "Recipe", classID = 9 }))
+assert(category == "recipe", "manuscript-crafting recipes must stay recipes")
+
+tooltipText = "Unique\nUse: When summoned, Pepe will sometimes be dressed like a dragon. (1 Sec Cooldown)"
+category, reason = addon:ClassifyItem(Context(213181))
+assert(category == "transmog", "Pepe costume unlocks should be learnable")
+assert(reason == "Pepe costume — click to learn",
+    "Pepe costumes should use the Pepe-costume reason")
+
+tooltipText = "Unique\nUse: When summoned, Pepe will sometimes be dressed like a viking."
+category = addon:ClassifyItem(Context(127865))
+assert(category == "transmog", "all Pepe costumes should be learnable, not only the dragon outfit")
+
+tooltipText = "Already known\nUse: When summoned, Pepe will sometimes be dressed like a dragon."
+category = addon:ClassifyItem(Context(213182))
+assert(category == nil, "an already-known Pepe costume should remain hidden")
+
+itemUsable = false
+tooltipText = "Use: When summoned, Pepe will sometimes be dressed like a dragon."
+category = addon:ClassifyItem(Context(213181))
+assert(category == nil, "an unusable Pepe costume should remain hidden")
+itemUsable = true
+
+tooltipText = "A tiny goblet that reminds you of Pepe dressed like a dragon."
+category = addon:ClassifyItem(Context(213183))
+assert(category == nil, "flavour text mentioning Pepe must not become a costume unlock")
+
 tooltipText = "Use: Create a class set item appropriate for your loot specialization (Balance).\n"
     .. "Classes: Rogue, Death Knight, Mage, Druid\nRequires Level 30"
 category = addon:ClassifyItem(Context(45661))

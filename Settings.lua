@@ -2,7 +2,7 @@ local _, addon = ...
 
 local categoryOptions = {
     { key = "container", label = "Openables & stack combines" },
-    { key = "transmog", label = "Transmog & visual unlocks" },
+    { key = "transmog", label = "Transmog, visuals & customizations" },
     { key = "decor", label = "Housing decor" },
     { key = "mount", label = "Mounts" },
     { key = "toy", label = "Toys" },

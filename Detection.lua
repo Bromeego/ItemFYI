@@ -21,6 +21,36 @@ local function IsVisualEffectUnlock(text)
         and string.find(text, "unlocking additional visual effects", 1, true) ~= nil
 end
 
+local customizationItemTypes = {
+    ["drakewatcher manuscript"] = true,
+    ["airship schematic"] = true,
+}
+
+local function HasTooltipTypeLine(text, typeName)
+    return string.find("\n" .. text .. "\n", "\n" .. typeName .. "\n", 1, true) ~= nil
+end
+
+local function IsCustomizationItem(context, text)
+    local itemType = string.lower(context and context.itemType or "")
+    local itemSubType = string.lower(context and context.itemSubType or "")
+    if customizationItemTypes[itemType] or customizationItemTypes[itemSubType] then
+        return true
+    end
+    return HasTooltipTypeLine(text, "drakewatcher manuscript")
+        or HasTooltipTypeLine(text, "airship schematic")
+end
+
+local function IsCustomizationUnlock(text)
+    -- Drakewatcher Manuscripts, Airship Schematics, Gob-Trotter parts, and
+    -- other Rostrum of Transformation unlocks. Match the family, not one drake.
+    return string.find(text, "use:%s+unlocks [^\n]-customization") ~= nil
+        or string.find(text, "use:[^\n]*rostrum of transformation") ~= nil
+end
+
+local function IsPepeCostumeUnlock(text)
+    return string.find(text, "use:%s+when summoned, pepe will sometimes be dressed") ~= nil
+end
+
 local function IsTierTokenAction(text)
     -- Legacy: "Use: Create a class set item appropriate for your loot specialization"
     -- 12.1: "Use: Create a soulbound set leg item appropriate for your class."
@@ -750,6 +780,16 @@ function addon:ClassifyItem(context)
     if IsVisualEffectUnlock(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "transmog", "Visual effect unlock — click to learn"
+    end
+
+    if (IsCustomizationUnlock(tooltipText) or IsCustomizationItem(context, tooltipText))
+        and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
+        return "transmog", "Mount customization — click to learn"
+    end
+
+    if IsPepeCostumeUnlock(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Pepe costume — click to learn"
     end
 
     if ContainsAny(tooltipText, transmogText) then

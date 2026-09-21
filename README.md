@@ -5,7 +5,7 @@ items already sitting in your bags. It shows one secure button and never opens
 or learns anything automatically.
 
 It looks for uncollected mounts, pets, companion curios, toys, housing decor,
-transmog tokens, recipes, profession knowledge, garrison items, reputation
+transmog tokens, mount customizations, Pepe costumes, recipes, profession knowledge, garrison items, reputation
 tokens, and ordinary containers — one item at a time, with a `+N` count when
 more are waiting.
 
