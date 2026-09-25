@@ -116,5 +116,6 @@ addon.CategoryPriority = {
     profession = 16,
     recipe = 17,
     progress = 18,
+    quest = 19,
     container = 50,
 }

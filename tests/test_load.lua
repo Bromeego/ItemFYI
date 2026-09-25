@@ -295,6 +295,7 @@ assert(addon.settingsCategory, "settings category was not registered")
 assert(addon.settingsPanel.categoryChecks.curio, "settings must include a companion Curio toggle")
 assert(addon.settingsPanel.categoryChecks.profession, "settings must include a profession progress item toggle")
 assert(addon.settingsPanel.categoryChecks.progress, "settings must include a garrison and reputation toggle")
+assert(addon.settingsPanel.categoryChecks.quest, "settings must include a quest starter toggle")
 SlashCmdList.ITEMFYI("")
 assert(openedCategory == "ItemFYI", "bare /ifyi should open the settings category")
 openedCategory = nil

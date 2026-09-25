@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.21
+
+- Detected bag items that begin a quest from the "This Item Begins a Quest"
+  line or an explicit begin or start action, and added a Quests category so
+  those items can be shown or hidden on their own.
+
 ## 0.2.20
 
 - Added CurseForge packaging so tagged releases can be built automatically

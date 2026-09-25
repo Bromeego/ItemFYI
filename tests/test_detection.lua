@@ -494,6 +494,24 @@ category = addon:ClassifyItem(Context(152956))
 assert(category == nil, "unusable reputation tokens should remain hidden")
 itemUsable = true
 
+tooltipText = "Weathered Summons\nQuest\nThis Item Begins a Quest\nUse: Begin a quest to deliver the summons."
+local questCategory, questReason = addon:ClassifyItem(Context(140))
+assert(questCategory == "quest" and questReason == "Quest starter — click to begin",
+    "items that begin a quest should be actionable")
+
+tooltipText = "Use: Starts a quest to investigate the camp."
+category = addon:ClassifyItem(Context(141))
+assert(category == "quest", "explicit start-a-quest actions should be actionable")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(140))
+assert(category == nil, "unusable quest starters should remain hidden")
+itemUsable = true
+
+tooltipText = "Quest Item\nBinds when picked up\n\"Return this to the quartermaster.\""
+category = addon:ClassifyItem(Context(142))
+assert(category == nil, "quest turn-in items should not be treated as quest starters")
+
 tooltipText = "A badge of the Army of the Light.\nReputation with this faction is earned through Argus world quests."
 category = addon:ClassifyItem(Context(133))
 assert(category == nil, "flavour text mentioning reputation must not become a reputation token")

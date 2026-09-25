@@ -8,6 +8,7 @@ It checks your bags for supported items such as:
 - Containers and other items that can be opened
 - Items that teach you something, such as toys, pets, mounts, recipes, or
   appearances
+- Items that begin a quest
 
 When ItemFYI finds something, it shows a small notification so you can decide
 what to do with it.

@@ -69,6 +69,7 @@ local defaults = {
         profession = true,
         recipe = true,
         progress = true,
+        quest = true,
     },
 }
 

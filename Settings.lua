@@ -11,6 +11,7 @@ local categoryOptions = {
     { key = "profession", label = "Profession progress & processing" },
     { key = "recipe", label = "Recipes" },
     { key = "progress", label = "Garrison & reputation" },
+    { key = "quest", label = "Quests" },
 }
 
 local function CreateLabel(parent, text, template, x, y)

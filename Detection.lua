@@ -159,6 +159,14 @@ local function IsReputationGrantAction(text)
         or string.find(text, "use:%s+increases? your reputation with") ~= nil
 end
 
+local function IsQuestStartAction(text)
+    -- Blizzard's yellow "This Item Begins a Quest" line, or an explicit use
+    -- action. Turn-in quest items do not carry either phrase.
+    return string.find(text, "this item begins a quest", 1, true) ~= nil
+        or string.find(text, "use:%s+[^\n]*begins? a quest") ~= nil
+        or string.find(text, "use:%s+[^\n]*starts? a quest") ~= nil
+end
+
 local function HasReachedProfessionCap(skillName, maximum)
     if not (skillName and maximum and GetProfessions and GetProfessionInfo) then
         return false
@@ -757,6 +765,11 @@ function addon:ClassifyItem(context)
     if IsReputationGrantAction(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "progress", "Reputation token — click to use"
+    end
+
+    if IsQuestStartAction(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "quest", "Quest starter — click to begin"
     end
 
     local itemType = string.lower(context.itemType or "")
