@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.24
+
+- Moved the button size slider below the category list so the Quests checkbox
+  no longer sits on top of it.
+
 ## 0.2.23
 
 - Detected reputation tokens whose amount uses a thousands separator, such as

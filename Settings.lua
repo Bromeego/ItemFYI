@@ -107,6 +107,8 @@ function addon:RegisterSettings()
         addon:ApplyButtonGlow()
     end)
 
+    local categoryRowHeight = 30
+    local categoryOriginY = -130
     CreateLabel(panel, "Item categories", "GameFontNormal", 16, -108)
     for index, option in ipairs(categoryOptions) do
         local categoryKey = option.key
@@ -114,7 +116,7 @@ function addon:RegisterSettings()
         panel.categoryChecks[categoryKey] = checkbox
         local column = (index - 1) % 2
         local row = math.floor((index - 1) / 2)
-        checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 12 + column * 220, -130 - row * 30)
+        checkbox:SetPoint("TOPLEFT", panel, "TOPLEFT", 12 + column * 260, categoryOriginY - row * categoryRowHeight)
         checkbox.text = checkbox:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
         checkbox.text:SetPoint("LEFT", checkbox, "RIGHT", 4, 0)
         checkbox.text:SetText(option.label)
@@ -127,10 +129,12 @@ function addon:RegisterSettings()
         end)
     end
 
-    CreateLabel(panel, "Button size", "GameFontNormal", 16, -290)
+    local categoryRows = math.ceil(#categoryOptions / 2)
+    local belowCategories = categoryOriginY - categoryRows * categoryRowHeight - 16
+    CreateLabel(panel, "Button size", "GameFontNormal", 16, belowCategories)
     local sizeSlider = CreateSizeSlider(panel)
     panel.sizeSlider = sizeSlider
-    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -328)
+    sizeSlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, belowCategories - 38)
     sizeSlider:SetSize(220, 17)
     sizeSlider:SetOrientation("HORIZONTAL")
     sizeSlider:SetMinMaxValues(32, 64)
@@ -161,15 +165,15 @@ function addon:RegisterSettings()
     end)
 
     local resetPosition = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 280, -322)
+    resetPosition:SetPoint("TOPLEFT", panel, "TOPLEFT", 320, belowCategories - 32)
     resetPosition:SetSize(150, 24)
     resetPosition:SetText("Reset position")
     resetPosition:SetScript("OnClick", function()
         addon:ResetPosition()
     end)
 
-    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, -380)
-    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, -406)
+    CreateLabel(panel, "Dismissed items", "GameFontNormal", 16, belowCategories - 90)
+    panel.ignoredStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, belowCategories - 116)
     panel.ignoredStatus:SetWidth(540)
     panel.ignoredStatus:SetJustifyH("LEFT")
     if panel.ignoredStatus.SetWordWrap then
@@ -177,7 +181,7 @@ function addon:RegisterSettings()
     end
 
     local clearSkips = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -452)
+    clearSkips:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, belowCategories - 162)
     clearSkips:SetSize(150, 24)
     clearSkips:SetText("Clear session skips")
     clearSkips:SetScript("OnClick", function()
