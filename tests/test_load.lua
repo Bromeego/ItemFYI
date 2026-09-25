@@ -472,6 +472,28 @@ assert(GameTooltip.owner == externalHoverOwner
     and GameTooltip.bag == 9 and GameTooltip.slot == 9,
     "candidate swaps must not rewrite a tooltip owned by another UI element")
 
+addon.candidates = {
+    firstCandidate,
+    { name = "Weathered Summons", reason = "Quest starter — click to begin", count = 1 },
+    { name = "Dawncrest Satchel", reason = "Openable container — click to open", count = 4 },
+}
+addon:SetCandidate(firstCandidate, 3)
+assert(addon.button.moreHit and addon.button.moreHit:IsShown(),
+    "the +N corner should accept hover when other items are waiting")
+addon.button.moreHit.scripts.OnEnter(addon.button.moreHit)
+assert(GameTooltip.owner == addon.button.moreHit, "hovering +N should own the queue tooltip")
+local queueText = table.concat(GameTooltip.lines, "\n")
+assert(string.find(queueText, "Weathered Summons", 1, true)
+    and string.find(queueText, "Dawncrest Satchel x4", 1, true)
+    and string.find(queueText, "Quest starter — click to begin", 1, true),
+    "hovering +N should list the other waiting items")
+assert(not string.find(queueText, "Test Container", 1, true),
+    "the queue tooltip should not repeat the current item")
+addon.button.moreHit.scripts.OnLeave(addon.button.moreHit)
+assert(GameTooltip.owner == nil, "leaving +N should hide the queue tooltip")
+addon:SetCandidate(firstCandidate, 1)
+assert(not addon.button.moreHit:IsShown(), "a single item should not keep the +N hover target")
+
 addon:SetCandidate(firstCandidate, 3)
 addon.button.scripts.OnEnter(addon.button)
 BattlePetTooltip.shown = true

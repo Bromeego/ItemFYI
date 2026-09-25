@@ -6,14 +6,54 @@ local function CreateText(parent, template, point, x, y)
     return text
 end
 
+local function TooltipIsOwnedBy(button)
+    if not (GameTooltip and GameTooltip.GetOwner) then
+        return false
+    end
+    local owner = GameTooltip:GetOwner()
+    return owner == button or (button.moreHit and owner == button.moreHit)
+end
+
 local function HideButtonTooltip(button, hideCompanions)
-    if GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button then
+    if TooltipIsOwnedBy(button) then
         GameTooltip:Hide()
         hideCompanions = true
     end
     if hideCompanions then
         addon:HideCompanionTooltips()
     end
+end
+
+local QUEUE_TOOLTIP_LIMIT = 8
+
+local function ShowQueueTooltip(owner)
+    local candidates = addon.candidates
+    if not (owner and GameTooltip and candidates and #candidates > 1) then
+        return
+    end
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Also waiting", 1, 0.82, 0)
+    local shown = 0
+    for index = 2, #candidates do
+        if shown >= QUEUE_TOOLTIP_LIMIT then
+            break
+        end
+        local candidate = candidates[index]
+        local label = candidate.link or candidate.name or "Unknown item"
+        if candidate.count and candidate.count > 1 then
+            label = label .. " x" .. candidate.count
+        end
+        GameTooltip:AddLine(label, 1, 1, 1, true)
+        if candidate.reason then
+            GameTooltip:AddLine(candidate.reason, 0.35, 0.85, 1, true)
+        end
+        shown = shown + 1
+    end
+    local extra = #candidates - 1 - shown
+    if extra > 0 then
+        GameTooltip:AddLine(("+%d more"):format(extra), 0.65, 0.65, 0.65)
+    end
+    GameTooltip:Show()
 end
 
 local function ShowButtonTooltip(button)
@@ -36,11 +76,21 @@ local function ShowButtonTooltip(button)
 end
 
 local function RefreshButtonTooltip(button)
-    if not (GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button) then
+    if not (GameTooltip and GameTooltip.GetOwner) then
         return
     end
-    addon:HideCompanionTooltips()
-    ShowButtonTooltip(button)
+    local owner = GameTooltip:GetOwner()
+    if owner == button then
+        addon:HideCompanionTooltips()
+        ShowButtonTooltip(button)
+    elseif button.moreHit and owner == button.moreHit then
+        addon:HideCompanionTooltips()
+        if button.moreHit:IsShown() then
+            ShowQueueTooltip(button.moreHit)
+        else
+            GameTooltip:Hide()
+        end
+    end
 end
 
 local GLOW_SIZE_SCALE = 1.7
@@ -200,6 +250,26 @@ function addon:CreateUI()
     button.more = CreateText(button.badge, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
     button.more:SetTextColor(0.35, 0.85, 1)
 
+    -- FontStrings do not receive hover. This corner frame lists the rest of
+    -- the queue. Clicks pass through so the secure use still fires.
+    button.moreHit = CreateFrame("Frame", nil, button.badge)
+    button.moreHit:SetPoint("TOPRIGHT", button.more, "TOPRIGHT", 4, 4)
+    button.moreHit:SetPoint("BOTTOMLEFT", button.more, "BOTTOMLEFT", -8, -4)
+    button.moreHit:EnableMouse(true)
+    if button.moreHit.SetPropagateMouseClicks then
+        button.moreHit:SetPropagateMouseClicks(true)
+    end
+    button.moreHit:Hide()
+    button.moreHit:SetScript("OnEnter", function(frame)
+        ShowQueueTooltip(frame)
+    end)
+    button.moreHit:SetScript("OnLeave", function()
+        if GameTooltip and GameTooltip.GetOwner and GameTooltip:GetOwner() == button.moreHit then
+            GameTooltip:Hide()
+            addon:HideCompanionTooltips()
+        end
+    end)
+
     button:SetScript("OnEnter", function(frame)
         ShowButtonTooltip(frame)
     end)
@@ -314,12 +384,14 @@ function addon:SetCandidate(candidate, total)
             self.button.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
             self.button.count:SetText("")
             self.button.more:SetText("")
+            self.button.moreHit:Hide()
             self.button:SetAlpha(0.65)
             self.button:Show()
         else
             self.button:SetAlpha(1)
             self.button:Hide()
         end
+        self.button.moreHit:Hide()
         HideButtonTooltip(self.button)
         return
     end
@@ -328,6 +400,11 @@ function addon:SetCandidate(candidate, total)
     self.button.icon:SetTexture(candidate.icon or 134400)
     self.button.count:SetText(candidate.count and candidate.count > 1 and candidate.count or "")
     self.button.more:SetText(total > 1 and ("+%d"):format(total - 1) or "")
+    if total > 1 then
+        self.button.moreHit:Show()
+    else
+        self.button.moreHit:Hide()
+    end
     self.button:SetAttribute("type1", "macro")
     self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()

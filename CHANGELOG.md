@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.22
+
+- Hovering the +N count lists the other waiting items, including each item's
+  reason, while clicks on that corner still use the current item.
+
 ## 0.2.21
 
 - Detected bag items that begin a quest from the "This Item Begins a Quest"
