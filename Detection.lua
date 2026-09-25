@@ -154,9 +154,14 @@ local function GetGarrisonActionReason(text, context)
 end
 
 local function IsReputationGrantAction(text)
-    return string.find(text, "use:%s+grants?%s+%d+%s+reputation with") ~= nil
-        or string.find(text, "use:%s+awards?%s+%d+%s+reputation with") ~= nil
-        or string.find(text, "use:%s+increases? your reputation with") ~= nil
+    -- The client inserts a thousands separator, so "1000" appears as "1,000"
+    -- or "2.500". The amount stays on the Use: line.
+    local amount = "%d[%d,%.]*"
+    return string.find(text, "use:%s+grants?%s+" .. amount .. "%s+reputation with") ~= nil
+        or string.find(text, "use:%s+awards?%s+" .. amount .. "%s+reputation with") ~= nil
+        or string.find(text, "use:%s+increases?%s+your%s+[^\n]-reputation%s+by%s+" .. amount) ~= nil
+        or string.find(text, "use:%s+increases?%s+reputation%s+with%s+[^\n]-%sby%s+" .. amount) ~= nil
+        or string.find(text, "use:%s+increases?%s+your%s+reputation with") ~= nil
 end
 
 local function IsQuestStartAction(text)

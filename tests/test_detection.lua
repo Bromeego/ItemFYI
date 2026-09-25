@@ -489,6 +489,30 @@ tooltipText = "Use: Grants 2000 reputation with the Army of the Light. (2 Sec Co
 category = addon:ClassifyItem(Context(152957))
 assert(category == "progress", "numeric reputation grants should be detected generically")
 
+tooltipText = "Use: Grants 1,000 reputation with the Klaxxi. (2 Sec Cooldown)\nProvides reputation with 'The Klaxxi'"
+category = addon:ClassifyItem(Context(94226))
+assert(category == "progress", "reputation amounts with a thousands separator should be actionable")
+
+tooltipText = "Use: Grants 2,500 reputation with the Dragonscale Expedition. (2 Sec Cooldown)"
+category = addon:ClassifyItem(Context(202091))
+assert(category == "progress", "grouped reputation amounts above one thousand should be actionable")
+
+tooltipText = "Use: Grants 250 reputation with the Court of Farondis, up to Exalted reputation."
+category = addon:ClassifyItem(Context(141340))
+assert(category == "progress", "capped reputation grants should remain actionable")
+
+tooltipText = "Use: Increases your Argent Crusade reputation by 520."
+category = addon:ClassifyItem(Context(44711))
+assert(category == "progress", "commendation badges should be actionable")
+
+tooltipText = "Use: Increases reputation with the denizens of Pandaria by 1,000. (7 Days Cooldown)"
+category = addon:ClassifyItem(Context(86592))
+assert(category == "progress", "reputation increases that name the faction before the amount should be actionable")
+
+tooltipText = "Use: Increase reputation with the Nightfallen by 100."
+category = addon:ClassifyItem(Context(147416))
+assert(category == "progress", "singular increase-reputation actions should be actionable")
+
 itemUsable = false
 category = addon:ClassifyItem(Context(152956))
 assert(category == nil, "unusable reputation tokens should remain hidden")

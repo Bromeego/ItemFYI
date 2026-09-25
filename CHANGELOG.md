@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.23
+
+- Detected reputation tokens whose amount uses a thousands separator, such as
+  Grants 1,000 reputation, and the older commendation lines that put the
+  faction name or the amount in a different place.
+
 ## 0.2.22
 
 - Hovering the +N count lists the other waiting items, including each item's
