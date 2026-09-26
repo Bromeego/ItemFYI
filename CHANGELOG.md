@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.25
+
+- Detected weapon illusion items, such as Illusion: Mongoose, from their
+  "Collect the weapon enchantment appearance" use text.
+
 ## 0.2.24
 
 - Moved the button size slider below the category list so the Quests checkbox

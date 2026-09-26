@@ -644,6 +644,39 @@ tooltipText = "A tiny goblet that reminds you of Pepe dressed like a dragon."
 category = addon:ClassifyItem(Context(213183))
 assert(category == nil, "flavour text mentioning Pepe must not become a costume unlock")
 
+tooltipText = "Soulbound\nUse: Collect the weapon enchantment appearance of Mongoose."
+category, reason = addon:ClassifyItem(Context(138796))
+assert(category == "transmog", "weapon illusions should be learnable")
+assert(reason == "Weapon illusion — click to learn",
+    "weapon illusions should use the weapon-illusion reason")
+
+tooltipText = "Use: Collect the weapon enchantment appearance of Mending."
+category = addon:ClassifyItem(Context(138798))
+assert(category == "transmog", "other weapon illusions should use the same detector")
+
+tooltipText = "Already known\nUse: Collect the weapon enchantment appearance of Mongoose."
+category = addon:ClassifyItem(Context(138797))
+assert(category == nil, "an already-known weapon illusion should remain hidden")
+
+itemUsable = false
+tooltipText = "Use: Collect the weapon enchantment appearance of Mongoose."
+category = addon:ClassifyItem(Context(138796))
+assert(category == nil, "an unusable weapon illusion should remain hidden")
+itemUsable = true
+
+tooltipText = "Use: Collect the weapon enchantment appearance of Mending.\nRequires Guardians of Hyjal - Revered"
+tooltipLines = {
+    { leftText = "Use: Collect the weapon enchantment appearance of Mending.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Guardians of Hyjal - Revered", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(138798))
+assert(category == nil, "a weapon illusion with an unmet requirement should remain hidden")
+tooltipLines = nil
+
+tooltipText = "The weapon enchantment appearance of Mongoose still shimmers on the blade."
+category = addon:ClassifyItem(Context(138799))
+assert(category == nil, "flavour text mentioning a weapon enchantment appearance must not become a learn action")
+
 tooltipText = "Use: Create a class set item appropriate for your loot specialization (Balance).\n"
     .. "Classes: Rogue, Death Knight, Mage, Druid\nRequires Level 30"
 category = addon:ClassifyItem(Context(45661))

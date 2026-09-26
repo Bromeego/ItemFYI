@@ -51,6 +51,11 @@ local function IsPepeCostumeUnlock(text)
     return string.find(text, "use:%s+when summoned, pepe will sometimes be dressed") ~= nil
 end
 
+local function IsWeaponIllusionUnlock(text)
+    -- Illusion: Mongoose and the rest of the weapon-enchantment collection.
+    return string.find(text, "use: collect the weapon enchantment appearance", 1, true) ~= nil
+end
+
 local function IsTierTokenAction(text)
     -- Legacy: "Use: Create a class set item appropriate for your loot specialization"
     -- 12.1: "Use: Create a soulbound set leg item appropriate for your class."
@@ -808,6 +813,11 @@ function addon:ClassifyItem(context)
     if IsPepeCostumeUnlock(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "transmog", "Pepe costume — click to learn"
+    end
+
+    if IsWeaponIllusionUnlock(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Weapon illusion — click to learn"
     end
 
     if ContainsAny(tooltipText, transmogText) then
