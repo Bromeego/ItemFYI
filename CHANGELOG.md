@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.27
+
+- Hid quest starters whose quest is already completed, such as Direbrew's Dire
+  Brew and Pit Fighter. Unfinished starters such as Celestial Invitation still
+  show.
+
 ## 0.2.26
 
 - Detected quest starters that have no Use spell, such as Celestial Invitation.

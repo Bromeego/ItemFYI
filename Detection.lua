@@ -177,6 +177,30 @@ local function IsQuestStartAction(text)
         or string.find(text, "use:%s+[^\n]*starts? a quest") ~= nil
 end
 
+local function IsCompletedQuestTooltip(text)
+    -- Finished starters such as Direbrew's Dire Brew keep the begins-a-quest
+    -- line and add a separate "Quest completed" status line.
+    return string.find("\n" .. text .. "\n", "\nquest completed%f[%A]") ~= nil
+end
+
+local function StartQuestID(context)
+    if not (context and C_Container and C_Container.GetContainerItemQuestInfo
+        and context.bag ~= nil and context.slot ~= nil) then
+        return nil
+    end
+    local ok, _, questID = pcall(C_Container.GetContainerItemQuestInfo, context.bag, context.slot)
+    questID = ok and tonumber(questID) or nil
+    if questID and questID > 0 then
+        return questID
+    end
+end
+
+local function IsStartQuestCompleted(context)
+    local questID = StartQuestID(context)
+    return questID ~= nil and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
+        and C_QuestLog.IsQuestFlaggedCompleted(questID) == true
+end
+
 local function HasReachedProfessionCap(skillName, maximum)
     if not (skillName and maximum and GetProfessions and GetProfessionInfo) then
         return false
@@ -779,7 +803,8 @@ function addon:ClassifyItem(context)
         return "progress", "Reputation token — click to use"
     end
 
-    if IsQuestStartAction(tooltipText) and not self:HasUnmetRequirement(context) then
+    if IsQuestStartAction(tooltipText) and not IsCompletedQuestTooltip(tooltipText)
+        and not IsStartQuestCompleted(context) and not self:HasUnmetRequirement(context) then
         -- Some starters, such as Celestial Invitation, have no spell and no
         -- Use: line. IsUsableItem is false for those, but clicking still opens
         -- the quest. A real Use: line still has to pass the usable-item check.

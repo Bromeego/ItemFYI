@@ -20,9 +20,16 @@ C_Item = {
     RequestLoadItemDataByID = function() end,
 }
 
+local containerQuestID
 C_Container = {
     GetContainerItemID = function() return nil end,
     GetContainerItemLink = function(_, _, itemID) return itemID and ("item:" .. itemID) end,
+    GetContainerItemQuestInfo = function()
+        if not containerQuestID then
+            return false, nil, false
+        end
+        return true, containerQuestID, false
+    end,
 }
 
 C_TooltipInfo = {
@@ -556,6 +563,33 @@ tooltipLines = {
 category = addon:ClassifyItem(Context(142210))
 assert(category == nil, "spell-less quest starters with a failed requirement should remain hidden")
 tooltipLines = nil
+
+tooltipText = "Direbrew's Dire Brew\nSoulbound\nUnique\nThis Item Begins a Quest\n"
+    .. "Direbrew's Dire Brew\nQuest completed\n"
+    .. "Give Direbrew's Dire Brew to Ipfelkofer Ironkeg at the Brewfest camp near Ironforge."
+itemUsable = false
+category = addon:ClassifyItem(Context(38281))
+assert(category == nil, "completed spell-less quest starters should remain hidden")
+itemUsable = true
+
+tooltipText = "Pit Fighter\nSoulbound\nThis Item Begins a Quest\nTrinket\n"
+    .. "Equip: Your melee attacks have a chance to grant 17 mastery for 20 sec.\n"
+    .. "Pit Fighter\nQuest completed\n"
+    .. "Speak with Korgol Crushskull at the Darkmoon Faire."
+category = addon:ClassifyItem(Context(71336))
+assert(category == nil, "completed equippable quest starters should remain hidden")
+
+tooltipText = "Celestial Invitation\nItem Level 1\nBinds when picked up\nUnique\n"
+    .. "This Item Begins a Quest\nA Celestial Invitation\n"
+    .. "Defeat Algalon the Observer in a pet battle."
+containerQuestID = 44767
+completedQuests[44767] = true
+category = addon:ClassifyItem(Context(142210))
+assert(category == nil, "a flagged-completed start quest should remain hidden")
+completedQuests[44767] = nil
+category = addon:ClassifyItem(Context(142210))
+assert(category == "quest", "an unfinished start quest should stay actionable")
+containerQuestID = nil
 
 tooltipText = "Quest Item\nBinds when picked up\n\"Return this to the quartermaster.\""
 category = addon:ClassifyItem(Context(142))
