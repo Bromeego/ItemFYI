@@ -583,9 +583,11 @@ function addon:GetTooltipSnapshot(context)
         and not state.unmetRequirement
     -- Name-only or companion-class tooltips after loot are not enough. Curios
     -- and similar items only match their Use: line, which can arrive later.
+    -- Spell-less quest starters never grow a Use: line. "This Item Begins a
+    -- Quest" is the finished tooltip.
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
-        and (hasUseText or battlePetSpeciesID or context.hasLoot == true)
+        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID or context.hasLoot == true)
 
     context.tooltipSnapshot = {
         text = text,
@@ -777,9 +779,14 @@ function addon:ClassifyItem(context)
         return "progress", "Reputation token — click to use"
     end
 
-    if IsQuestStartAction(tooltipText) and IsItemUsable(context.itemID)
-        and not self:HasUnmetRequirement(context) then
-        return "quest", "Quest starter — click to begin"
+    if IsQuestStartAction(tooltipText) and not self:HasUnmetRequirement(context) then
+        -- Some starters, such as Celestial Invitation, have no spell and no
+        -- Use: line. IsUsableItem is false for those, but clicking still opens
+        -- the quest. A real Use: line still has to pass the usable-item check.
+        local hasUseText = string.find(tooltipText, "use:", 1, true) ~= nil
+        if not hasUseText or IsItemUsable(context.itemID) then
+            return "quest", "Quest starter — click to begin"
+        end
     end
 
     local itemType = string.lower(context.itemType or "")

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.26
+
+- Detected quest starters that have no Use spell, such as Celestial Invitation.
+  Those items only say "This Item Begins a Quest", so the usable-item check was
+  hiding them and the tooltip never finished loading.
+
 ## 0.2.25
 
 - Detected weapon illusion items, such as Illusion: Mongoose, from their

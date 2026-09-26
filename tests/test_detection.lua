@@ -532,6 +532,31 @@ category = addon:ClassifyItem(Context(140))
 assert(category == nil, "unusable quest starters should remain hidden")
 itemUsable = true
 
+tooltipText = "Celestial Invitation\nItem Level 1\nBinds when picked up\nUnique\n"
+    .. "This Item Begins a Quest\nA Celestial Invitation\n"
+    .. "Defeat Algalon the Observer in a pet battle."
+itemUsable = false
+category = addon:ClassifyItem(Context(142210))
+assert(category == "quest",
+    "spell-less quest starters should stay actionable when IsUsableItem is false")
+local questSnapshot = addon:GetTooltipSnapshot(Context(142210, {
+    bag = 2,
+    slot = 4,
+    stackCount = 1,
+}))
+assert(questSnapshot.complete == true,
+    "a begins-a-quest tooltip with no Use: line is complete")
+itemUsable = true
+
+tooltipLines = {
+    { leftText = "Celestial Invitation" },
+    { leftText = "This Item Begins a Quest" },
+    { leftText = "Requires Level 90", leftColor = { r = 1, g = 0.1, b = 0.1 } },
+}
+category = addon:ClassifyItem(Context(142210))
+assert(category == nil, "spell-less quest starters with a failed requirement should remain hidden")
+tooltipLines = nil
+
 tooltipText = "Quest Item\nBinds when picked up\n\"Return this to the quartermaster.\""
 category = addon:ClassifyItem(Context(142))
 assert(category == nil, "quest turn-in items should not be treated as quest starters")
