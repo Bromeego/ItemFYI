@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.30
+
+- Detected the Delve-O-Bot 7001 software update chip. It is a miscellaneous
+  Airship Schematic with a Use line and no spell, so the usable-item check
+  was hiding it.
+
 ## 0.2.29
 
 - The +N list now counts each caged battle pet on its own. Those cages share

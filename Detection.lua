@@ -47,6 +47,14 @@ local function IsCustomizationUnlock(text)
         or string.find(text, "use:[^\n]*rostrum of transformation") ~= nil
 end
 
+local function IsDelveBotUpgrade(text)
+    -- Miscellaneous Airship Schematic whose left-side type line is
+    -- "Airship Schematic", but whose action is a toy update rather than a
+    -- Rostrum unlock. The Midnight software chip has this Use line and no
+    -- spell, so IsUsableItem stays false while clicking still consumes it.
+    return string.find(text, "use:%s+update your delve%-o%-bot") ~= nil
+end
+
 local function IsPepeCostumeUnlock(text)
     return string.find(text, "use:%s+when summoned, pepe will sometimes be dressed") ~= nil
 end
@@ -886,6 +894,10 @@ function addon:ClassifyItem(context)
     if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true))
         and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
         return "decor", "Housing decor — click to add"
+    end
+
+    if IsDelveBotUpgrade(tooltipText) and not self:HasUnmetRequirement(context) then
+        return "toy", "Delve-O-Bot upgrade — click to apply"
     end
 
     if IsTierTokenAction(tooltipText) and IsItemUsable(context.itemID)

@@ -700,6 +700,33 @@ tooltipText = "Airship Schematic\nUnique\nUse: Unlocks this customization option
 category = addon:ClassifyItem(Context(230218))
 assert(category == "transmog", "Gob-Trotter schematics should be learnable")
 
+tooltipText = "Delve-O-Bot 7001: Midnight Software Update Chip\nAirship Schematic\nSoulbound\n"
+    .. "Use: Update your Delve-O-Bot 7001, adding Midnight delves to its destination matrix."
+itemUsable = false
+category, reason = addon:ClassifyItem(Context(275936, { itemType = "Miscellaneous", itemSubType = "Other" }))
+assert(category == "toy", "a spell-less Delve-O-Bot software chip should be usable")
+assert(reason == "Delve-O-Bot upgrade — click to apply",
+    "the Delve-O-Bot chip should use the upgrade reason")
+itemUsable = true
+category = addon:ClassifyItem(Context(275936, { itemType = "Miscellaneous", itemSubType = "Airship Schematic" }))
+assert(category == "toy", "a usable Delve-O-Bot chip should stay an upgrade, not a mount customization")
+
+tooltipLines = {
+    { leftText = "Airship Schematic" },
+    { leftText = "Use: Update your Delve-O-Bot 7001, adding Midnight delves to its destination matrix.",
+        leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Delver's Journey (7)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+itemUsable = false
+category = addon:ClassifyItem(Context(275936))
+assert(category == nil, "a Delve-O-Bot chip with an unmet requirement should remain hidden")
+tooltipLines = nil
+itemUsable = true
+
+tooltipText = "Use: Update your notes about the delve."
+category = addon:ClassifyItem(Context(275937))
+assert(category == nil, "unrelated update text must not become a Delve-O-Bot upgrade")
+
 tooltipText = "Use: Learn this dragonriding look."
 category = addon:ClassifyItem(Context(197403, { itemSubType = "Drakewatcher Manuscript" }))
 assert(category == "transmog", "Drakewatcher Manuscripts should match from item type")
