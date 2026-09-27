@@ -542,7 +542,17 @@ end
 function addon:RebuildCandidates()
     local candidates = {}
     local seen = {}
+    local countsByKey = {}
     if self.db and self.db.enabled and self.slotIndex then
+        for _, bagSlots in pairs(self.slotIndex) do
+            for _, entry in pairs(bagSlots) do
+                local key = entry.uniqueKey or (entry.itemID and tostring(entry.itemID))
+                if entry.category and key then
+                    -- Pet cages share item 82800. Count the species, not every cage.
+                    countsByKey[key] = (countsByKey[key] or 0) + (tonumber(entry.stackCount) or 1)
+                end
+            end
+        end
         for bag, bagSlots in pairs(self.slotIndex) do
             for slot, entry in pairs(bagSlots) do
                 local category = entry.category
@@ -561,7 +571,7 @@ function addon:RebuildCandidates()
                                 name = context.name,
                                 link = context.link,
                                 icon = context.icon,
-                                count = self.itemTotals[entry.itemID] or entry.stackCount,
+                                count = countsByKey[key] or entry.stackCount,
                                 bag = bag,
                                 slot = slot,
                                 category = category,

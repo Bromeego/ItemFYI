@@ -606,4 +606,44 @@ addon.db.enabled = true
 ScanNow("settings changed")
 assert(addon.current == nil, "re-enabling must not revive stale candidates")
 
+local function PetCage(species, name, slot, stack)
+    return {
+        itemID = 82800,
+        uniqueKey = "pet:" .. species,
+        category = "pet",
+        stackCount = stack or 1,
+        link = ("|Hbattlepet:%d|h[%s]|h"):format(species, name),
+        icon = species,
+        reason = "Collectible battle pet — click to learn",
+        context = {
+            itemID = 82800,
+            name = name,
+            link = ("|Hbattlepet:%d|h[%s]|h"):format(species, name),
+            icon = species,
+            bag = 0,
+            slot = slot,
+        },
+    }
+end
+addon.slotIndex = {
+    [0] = {
+        [1] = PetCage(1, "Lumpy", 1, 1),
+        [2] = PetCage(2, "Sea Pony", 2, 1),
+        [3] = PetCage(1, "Lumpy", 3, 1),
+        [4] = PetCage(3, "Spring Rabbit", 4, 2),
+    },
+}
+addon.itemTotals = { [82800] = 8 }
+addon.db.enabled = true
+addon:RebuildCandidates()
+local countsByName = {}
+for _, candidate in ipairs(addon.candidates) do
+    countsByName[candidate.name] = candidate.count
+end
+assert(countsByName["Lumpy"] == 2, "duplicate pet cages should count that species only")
+assert(countsByName["Sea Pony"] == 1, "one caged pet should not inherit the shared cage total")
+assert(countsByName["Spring Rabbit"] == 2, "a stacked pet cage should keep its own stack count")
+assert(countsByName["Lumpy"] ~= 8 and countsByName["Sea Pony"] ~= 8,
+    "pet cage totals must not be copied onto every species")
+
 print("inventory processing tests passed")

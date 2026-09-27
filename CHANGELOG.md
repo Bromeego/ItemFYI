@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.29
+
+- The +N list now counts each caged battle pet on its own. Those cages share
+  one item, so every pet was showing the total number of cages.
+
 ## 0.2.28
 
 - Hid quest starters you have already accepted or completed, such as Eye of
