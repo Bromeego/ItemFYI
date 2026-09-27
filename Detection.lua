@@ -183,22 +183,54 @@ local function IsCompletedQuestTooltip(text)
     return string.find("\n" .. text .. "\n", "\nquest completed%f[%A]") ~= nil
 end
 
-local function StartQuestID(context)
+local function QuestIsTaken(questID)
+    questID = tonumber(questID)
+    if not (questID and questID > 0 and C_QuestLog) then
+        return false
+    end
+    if C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(questID) == true then
+        return true
+    end
+    if C_QuestLog.IsOnQuest and C_QuestLog.IsOnQuest(questID) == true then
+        return true
+    end
+    return false
+end
+
+local function ContainerStartQuest(context)
     if not (context and C_Container and C_Container.GetContainerItemQuestInfo
         and context.bag ~= nil and context.slot ~= nil) then
         return nil
     end
-    local ok, _, questID = pcall(C_Container.GetContainerItemQuestInfo, context.bag, context.slot)
-    questID = ok and tonumber(questID) or nil
-    if questID and questID > 0 then
-        return questID
+    -- Retail returns one ItemQuestInfo table. Older callers returned
+    -- isQuestItem, questID, isActive.
+    local ok, info, questID, isActive = pcall(C_Container.GetContainerItemQuestInfo, context.bag, context.slot)
+    if not ok or info == nil then
+        return nil
     end
+    if type(info) ~= "table" then
+        info = { questID = questID, isActive = isActive }
+    end
+    return info
 end
 
-local function IsStartQuestCompleted(context)
-    local questID = StartQuestID(context)
-    return questID ~= nil and C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted
-        and C_QuestLog.IsQuestFlaggedCompleted(questID) == true
+local function IsStartQuestUnavailable(context)
+    local info = ContainerStartQuest(context)
+    if info and (info.isActive == true or info.isActive == 1 or QuestIsTaken(info.questID)) then
+        return true
+    end
+
+    local snapshot = addon:GetTooltipSnapshot(context)
+    local questIDs = snapshot and snapshot.questIDs
+    if not questIDs then
+        return false
+    end
+    for index = 1, #questIDs do
+        if QuestIsTaken(questIDs[index]) then
+            return true
+        end
+    end
+    return false
 end
 
 local function HasReachedProfessionCap(skillName, maximum)
@@ -361,6 +393,31 @@ local function SpeciesFromTooltipArgs(args)
         if type(arg) == "table" and arg.field == "battlePetSpeciesID" then
             return tonumber(arg.intVal or arg.floatVal or arg.stringVal)
         end
+    end
+end
+
+local function NoteQuestID(questIDs, seen, value)
+    value = tonumber(value)
+    if not (value and value > 0) or seen[value] then
+        return
+    end
+    seen[value] = true
+    questIDs[#questIDs + 1] = value
+end
+
+local function NoteQuestLine(line, questIDs, seen)
+    if type(line) ~= "table" then
+        return
+    end
+    local lineTypes = Enum and Enum.TooltipDataLineType
+    local questTitle = lineTypes and lineTypes.QuestTitle or 17
+    local nestedBlock = lineTypes and lineTypes.NestedBlock or 19
+    local questTooltip = Enum and Enum.TooltipDataType and Enum.TooltipDataType.Quest or 23
+    if line.type == questTitle then
+        NoteQuestID(questIDs, seen, line.id)
+        NoteQuestID(questIDs, seen, line.tooltipID)
+    elseif line.type == nestedBlock and line.tooltipType == questTooltip then
+        NoteQuestID(questIDs, seen, line.tooltipID or line.id)
     end
 end
 
@@ -539,6 +596,8 @@ function addon:GetTooltipSnapshot(context)
         sawRestrictionColor = false,
     }
     local battlePetSpeciesID
+    local questIDs = {}
+    local seenQuestIDs = {}
     local skipCompanionScan = IsCompanionPetItem(context)
     local tooltipReadFailed = false
 
@@ -557,6 +616,7 @@ function addon:GetTooltipSnapshot(context)
                     AppendTooltipValue(parts, line.rightText)
                     AppendTooltipValue(parts, line.text)
                     AppendTooltipValue(parts, line.args)
+                    NoteQuestLine(line, questIDs, seenQuestIDs)
                     CollectRestrictionState(line.leftText, line.leftColor, state)
                     CollectRestrictionState(line.rightText, line.rightColor, state)
                     CollectRestrictionState(line.text, line.color or line.leftColor, state)
@@ -618,6 +678,7 @@ function addon:GetTooltipSnapshot(context)
         unmetRequirement = state.unmetRequirement,
         sawRestrictionText = state.sawRestrictionText == true,
         battlePetSpeciesID = battlePetSpeciesID,
+        questIDs = questIDs[1] and questIDs or nil,
         complete = complete,
     }
     if self.useScanCache and complete then
@@ -804,7 +865,7 @@ function addon:ClassifyItem(context)
     end
 
     if IsQuestStartAction(tooltipText) and not IsCompletedQuestTooltip(tooltipText)
-        and not IsStartQuestCompleted(context) and not self:HasUnmetRequirement(context) then
+        and not IsStartQuestUnavailable(context) and not self:HasUnmetRequirement(context) then
         -- Some starters, such as Celestial Invitation, have no spell and no
         -- Use: line. IsUsableItem is false for those, but clicking still opens
         -- the quest. A real Use: line still has to pass the usable-item check.

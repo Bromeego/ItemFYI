@@ -21,10 +21,14 @@ C_Item = {
 }
 
 local containerQuestID
+local containerQuestInfo
 C_Container = {
     GetContainerItemID = function() return nil end,
     GetContainerItemLink = function(_, _, itemID) return itemID and ("item:" .. itemID) end,
     GetContainerItemQuestInfo = function()
+        if containerQuestInfo ~= nil then
+            return containerQuestInfo
+        end
         if not containerQuestID then
             return false, nil, false
         end
@@ -66,9 +70,13 @@ C_PetJournal = {
 }
 
 local completedQuests = {}
+local activeQuests = {}
 C_QuestLog = {
     IsQuestFlaggedCompleted = function(questID)
         return completedQuests[questID] == true
+    end,
+    IsOnQuest = function(questID)
+        return activeQuests[questID] == true
     end,
 }
 
@@ -590,6 +598,45 @@ completedQuests[44767] = nil
 category = addon:ClassifyItem(Context(142210))
 assert(category == "quest", "an unfinished start quest should stay actionable")
 containerQuestID = nil
+
+tooltipText = "Eye of C'Thun\nSoulbound\nThis Item Begins a Quest\nEye of C'Thun"
+containerQuestInfo = { questID = 3961, isActive = true }
+category = addon:ClassifyItem(Context(21710))
+assert(category == nil, "a quest starter already in the log should remain hidden")
+containerQuestInfo = { questID = 44767, isActive = false }
+tooltipText = "Celestial Invitation\nItem Level 1\nBinds when picked up\nUnique\n"
+    .. "This Item Begins a Quest\nA Celestial Invitation\n"
+    .. "Defeat Algalon the Observer in a pet battle."
+category = addon:ClassifyItem(Context(142210))
+assert(category == "quest", "an available quest info table should stay actionable")
+containerQuestInfo = nil
+
+tooltipLines = {
+    { leftText = "Blood of the Unmaker" },
+    { leftText = "This Item Begins a Quest" },
+    { type = 17, leftText = "Blood of the Unmaker", id = 32519 },
+}
+activeQuests[32519] = true
+category = addon:ClassifyItem(Context(71035))
+assert(category == nil, "an in-progress quest title on the tooltip should remain hidden")
+activeQuests[32519] = nil
+tooltipLines = {
+    { leftText = "Nal'hadar Battery Core" },
+    { leftText = "This Item Begins a Quest" },
+    { type = 19, tooltipType = 23, tooltipID = 12491 },
+}
+completedQuests[12491] = true
+category = addon:ClassifyItem(Context(38281))
+assert(category == nil, "a completed nested quest tooltip should remain hidden")
+completedQuests[12491] = nil
+tooltipLines = {
+    { leftText = "Celestial Invitation" },
+    { leftText = "This Item Begins a Quest" },
+    { type = 17, leftText = "A Celestial Invitation", id = 44767 },
+}
+category = addon:ClassifyItem(Context(142210))
+assert(category == "quest", "a quest title for an available quest should stay actionable")
+tooltipLines = nil
 
 tooltipText = "Quest Item\nBinds when picked up\n\"Return this to the quartermaster.\""
 category = addon:ClassifyItem(Context(142))

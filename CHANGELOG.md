@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.28
+
+- Hid quest starters you have already accepted or completed, such as Eye of
+  C'Thun, Direbrew's Dire Brew, Blood of the Unmaker, and Nal'hadar Battery
+  Core. Starters you have not begun still show.
+
 ## 0.2.27
 
 - Hid quest starters whose quest is already completed, such as Direbrew's Dire
