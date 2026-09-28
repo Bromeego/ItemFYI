@@ -468,8 +468,8 @@ category = addon:ClassifyItem(Context(131))
 assert(category == "container", "explicit open actions should remain containers")
 
 tooltipText = "Encoded Message\nSoulbound\nUse: Decode the message.\nSell Price: 35"
-category, reason = addon:ClassifyItem(Context(114002))
-assert(category == "container" and reason == "Blingtron message — click to decode",
+local encodedCategory, encodedReason = addon:ClassifyItem(Context(114002))
+assert(encodedCategory == "container" and encodedReason == "Blingtron message — click to decode",
     "Blingtron encoded messages should be decoded")
 
 tooltipText = "Encrypted Message\nSoulbound\nUse: Decrypt the message."
@@ -489,6 +489,15 @@ tooltipLines = {
 category = addon:ClassifyItem(Context(114002))
 assert(category == nil, "an encoded message with an unmet requirement should remain hidden")
 tooltipLines = nil
+
+tooltipText = "Jeweled Arakkoa Effigy\nSoulbound\nUse: Pry out the eyes of the statue."
+category = addon:ClassifyItem(Context(127413))
+assert(category == "container", "the Jeweled Arakkoa Effigy should be actionable")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(127413))
+assert(category == nil, "an unusable Jeweled Arakkoa Effigy should remain hidden")
+itemUsable = true
 
 tooltipText = "Use: Decode the messenger's cipher."
 category = addon:ClassifyItem(Context(114003))

@@ -25,6 +25,13 @@ addon.Rules = {
     [280734] = { category = "container", reason = "Warbound Champion Mistcrest pack — click to open" },
     [280732] = { category = "container", reason = "Warbound Hero Mistcrest pack — click to open" },
 
+    -- Tanaan Jungle treasure: "Use: Pry out the eyes of the statue."
+    [127413] = {
+        category = "container",
+        requireUsable = true,
+        reason = "Jeweled effigy — click to pry out the eyes",
+    },
+
     -- Stack-based item conversions
     [268650] = {
         category = "container",

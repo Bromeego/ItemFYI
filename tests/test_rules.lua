@@ -47,5 +47,9 @@ for itemID, rule in pairs(addon.Rules) do
     count = count + 1
 end
 
-assert(count == 64, ("expected 64 explicit rules, found %d"):format(count))
+assert(addon.Rules[127413] and addon.Rules[127413].category == "container"
+    and addon.Rules[127413].requireUsable == true,
+    "Jeweled Arakkoa Effigy must be a usable openable")
+
+assert(count == 65, ("expected 65 explicit rules, found %d"):format(count))
 print(("rule tests passed (%d rules)"):format(count))

@@ -5,6 +5,8 @@
 - Detected Blingtron messages such as Encoded Message. Their Use line says
   "Decode the message" or "Decrypt the message", so the openable check was
   missing them.
+- Detected the Jeweled Arakkoa Effigy from Tanaan Jungle. Using it pries out
+  the three Arakkoa eyes, but its Use line does not say "open".
 
 ## 0.2.31
 
