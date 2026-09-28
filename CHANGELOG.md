@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.33
+
+- Detected loot-specialization gear tokens such as Baleful Armament. Their
+  Use line creates a soulbound item for your loot specialization, so the
+  tier-token check was missing them.
+
 ## 0.2.32
 
 - Detected Blingtron messages such as Encoded Message. Their Use line says

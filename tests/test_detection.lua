@@ -872,6 +872,42 @@ tooltipText = "Use: Create a soulbound mystery item appropriate for your class."
 category = addon:ClassifyItem(Context(280003))
 assert(category == nil, "non-set creations must not be treated as tier tokens")
 
+tooltipText = "Baleful Armament\nItem Level 16\nBinds when picked up\n"
+    .. "Use: Create a soulbound item appropriate for your loot specialization (Fury).\n"
+    .. "Sell Price: 1"
+category, reason = addon:ClassifyItem(Context(124562))
+assert(category == "transmog", "Baleful Armament should be detected")
+assert(reason == "Gear token — click to create item",
+    "loot-specialization gear tokens should use the gear-token reason")
+
+tooltipText = "Use: Create a soulbound item appropriate for your loot specialization."
+category = addon:ClassifyItem(Context(124561))
+assert(category == "transmog", "other loot-specialization tokens should use the same detector")
+
+tooltipText = "Use: Create a soulbound item appropriate for your class."
+category = addon:ClassifyItem(Context(280005))
+assert(category == nil, "a soulbound item for your class is not a loot-specialization token")
+
+itemUsable = false
+tooltipText = "Use: Create a soulbound item appropriate for your loot specialization (Fury)."
+category = addon:ClassifyItem(Context(124562))
+assert(category == nil, "an unusable loot-specialization token should remain hidden")
+itemUsable = true
+
+tooltipLines = {
+    {
+        leftText = "Use: Create a soulbound item appropriate for your loot specialization (Fury).",
+        leftColor = { r = 0, g = 1, b = 0 },
+    },
+    {
+        leftText = "Requires Level 40",
+        leftColor = { r = 1, g = 0.125, b = 0.125 },
+    },
+}
+category = addon:ClassifyItem(Context(124554))
+assert(category == nil, "a loot-specialization token with an unmet requirement should remain hidden")
+tooltipLines = nil
+
 macro, secureBySlot = addon:BuildSecureUse(Context(45661, { bag = 1, slot = 4 }), "transmog")
 assert(macro == "/use item:45661" and not secureBySlot,
     "non-equippable tier tokens must use a stable item-ID action")

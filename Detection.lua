@@ -74,6 +74,14 @@ local function IsTierTokenAction(text)
             "use:%s+create a [^\n]-%f[%a]tier%s+%d+%s+[^\n]-item appropriate for your") ~= nil
 end
 
+local function IsLootSpecGearToken(text)
+    -- Baleful Armament, Timeless tokens, Munificent Trinket, and other
+    -- catch-up tokens. The client may append the current spec:
+    -- "Use: Create a soulbound item appropriate for your loot specialization (Fury)."
+    return string.find(text,
+        "use:%s+create a soulbound item appropriate for your loot specialization") ~= nil
+end
+
 local decorText = {
     "use: add this decor",
     "use: adds this decor",
@@ -909,6 +917,11 @@ function addon:ClassifyItem(context)
 
     if IsDelveBotUpgrade(tooltipText) and not self:HasUnmetRequirement(context) then
         return "toy", "Delve-O-Bot upgrade — click to apply"
+    end
+
+    if IsLootSpecGearToken(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Gear token — click to create item"
     end
 
     if IsTierTokenAction(tooltipText) and IsItemUsable(context.itemID)
