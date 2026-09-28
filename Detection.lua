@@ -67,8 +67,11 @@ end
 local function IsTierTokenAction(text)
     -- Legacy: "Use: Create a class set item appropriate for your loot specialization"
     -- 12.1: "Use: Create a soulbound set leg item appropriate for your class."
+    -- Warlords: "Use: Create a soulbound Tier 17 item appropriate for your class."
     return string.find(text,
         "use:%s+create a [^\n]-%f[%a]set%f[%A] [^\n]-item appropriate for your") ~= nil
+        or string.find(text,
+            "use:%s+create a [^\n]-%f[%a]tier%s+%d+%s+[^\n]-item appropriate for your") ~= nil
 end
 
 local decorText = {
@@ -265,6 +268,14 @@ end
 local function IsOpenAction(text)
     -- Require a non-letter after "open" so "Use: Opens a portal" is excluded.
     return string.find(text, "use: open%f[%A]") ~= nil
+end
+
+local function IsBlingtronMessageAction(text)
+    -- Gift-package scraps such as Encoded Message ("Use: Decode the message.")
+    -- and Encrypted Message ("Use: Decrypt the message."). Using one consumes
+    -- it and creates a collectible decoded or decrypted message.
+    return string.find(text, "use:%s+decode the message%f[%A]") ~= nil
+        or string.find(text, "use:%s+decrypt the message%f[%A]") ~= nil
 end
 
 local function ContainsAny(text, needles)
@@ -945,6 +956,11 @@ function addon:ClassifyItem(context)
     if combineMinimum and availableCount >= combineMinimum and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "container", ("Stack of %d ready — click to combine"):format(combineMinimum)
+    end
+
+    if IsBlingtronMessageAction(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "container", "Blingtron message — click to decode"
     end
 
     if context.hasLoot or IsOpenAction(tooltipText) then

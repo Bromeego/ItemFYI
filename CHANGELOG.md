@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.32
+
+- Detected Blingtron messages such as Encoded Message. Their Use line says
+  "Decode the message" or "Decrypt the message", so the openable check was
+  missing them.
+
+## 0.2.31
+
+- Detected Warlords tier tokens such as Shoulders of the Iron Vanquisher. Their
+  Use line creates a "Tier 17 item" rather than a "set item", so the tier-token
+  check was missing them.
+
 ## 0.2.30
 
 - Detected the Delve-O-Bot 7001 software update chip. It is a miscellaneous

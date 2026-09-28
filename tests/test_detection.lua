@@ -467,6 +467,33 @@ tooltipText = "Use: Open the satchel."
 category = addon:ClassifyItem(Context(131))
 assert(category == "container", "explicit open actions should remain containers")
 
+tooltipText = "Encoded Message\nSoulbound\nUse: Decode the message.\nSell Price: 35"
+category, reason = addon:ClassifyItem(Context(114002))
+assert(category == "container" and reason == "Blingtron message — click to decode",
+    "Blingtron encoded messages should be decoded")
+
+tooltipText = "Encrypted Message\nSoulbound\nUse: Decrypt the message."
+category = addon:ClassifyItem(Context(170060))
+assert(category == "container", "Blingtron encrypted messages should be decoded")
+
+itemUsable = false
+tooltipText = "Use: Decode the message."
+category = addon:ClassifyItem(Context(114002))
+assert(category == nil, "an unusable encoded message should remain hidden")
+itemUsable = true
+
+tooltipLines = {
+    { leftText = "Use: Decode the message.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Level 10", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(114002))
+assert(category == nil, "an encoded message with an unmet requirement should remain hidden")
+tooltipLines = nil
+
+tooltipText = "Use: Decode the messenger's cipher."
+category = addon:ClassifyItem(Context(114003))
+assert(category == nil, "decoding something other than the message must stay hidden")
+
 tooltipText = "Naval Equipment\nSoulbound\nUse: Equip a ship with a Trained Shark Tank.\nCounters: Minelayer"
 category = addon:ClassifyItem(Context(127892, { itemSubType = "Naval Equipment" }))
 assert(category == "progress", "WoD naval equipment should be actionable")
@@ -822,6 +849,15 @@ assert(category == "transmog", "12.1 soulbound set-slot tokens should be detecte
 tooltipText = "Use: Create a soulbound set helm item appropriate for your class."
 category = addon:ClassifyItem(Context(280002))
 assert(category == "transmog", "12.1 helm set tokens should use the same detector")
+
+tooltipText = "Use: Create a soulbound Tier 17 item appropriate for your class.\n"
+    .. "Classes: Rogue, Death Knight, Mage, Druid"
+category = addon:ClassifyItem(Context(119323))
+assert(category == "transmog", "Warlords numbered-tier tokens should be detected")
+
+tooltipText = "Use: Create a soulbound tiered item appropriate for your class."
+category = addon:ClassifyItem(Context(280004))
+assert(category == nil, "tier tokens need a numbered tier, not any word starting with tier")
 
 tooltipText = "Use: Create a soulbound mystery item appropriate for your class."
 category = addon:ClassifyItem(Context(280003))
