@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Automatically refresh quest-starter FYIs on quest acceptance and abandonment
+  even when the item stays in the same bag slot. Re-evaluate only remembered
+  starters and their tooltips; no full inventory scan is needed.
+- Limit retries for unresolved name-only tooltips to two follow-up reads instead
+  of four. Completely empty or failed tooltip reads retain their existing
+  recovery limit, and delayed actionable Curios remain eligible for retries.
+
 - Recognized Draenor consumables with a `Use: Gain N Garrison Resources`
   tooltip (including Pile of Frostfire Turnips and Icemother Milk) as
   actionable progression items, without adding item-specific rules.
