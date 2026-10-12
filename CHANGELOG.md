@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-- Reduced reload/login frame hitches by classifying fewer inventory items per
-  frame, removing repeated queue compaction and front-of-queue shifts, and
-  rebuilding the notification list only after a scan batch finishes.
+- Reduced reload/login frame hitches by time-slicing bag-slot indexing as
+  well as tooltip classification, removing repeated queue compaction and
+  front-of-queue shifts, and rebuilding the notification list only after a
+  scan batch finishes.
+- Retained fresh cross-bag stack totals before classifying and safely revisited
+  bags that changed midway through a sliced scan.
 
 ## 0.2.33
 
