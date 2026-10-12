@@ -725,6 +725,7 @@ local function ClassifySlot(self, bag, slot)
             entry.classified = false
         end
         if retries <= MAX_TOOLTIP_RETRIES then
+            self:NoteMetric("tooltipRetriesScheduled")
             ScheduleTooltipRetry(self, bag, slot)
         end
     else
