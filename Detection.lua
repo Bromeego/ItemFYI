@@ -2,6 +2,21 @@ local _, addon = ...
 
 local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 
+-- Ahn'Qiraj scarab turn-in materials have a name-only tooltip and no bag
+-- use/learn action. Don't mistake their legitimate tooltip for unloaded data.
+-- Keep this exception exact so actual learnable Curios with a late Use: line
+-- retain their bounded retries.
+local inertNameOnlyItemIDs = {
+    [20858] = true, -- Stone Scarab
+    [20859] = true, -- Gold Scarab
+    [20860] = true, -- Silver Scarab
+    [20861] = true, -- Bronze Scarab
+    [20862] = true, -- Crystal Scarab
+    [20863] = true, -- Clay Scarab
+    [20864] = true, -- Bone Scarab
+    [20865] = true, -- Ivory Scarab
+}
+
 local knownText = {
     "already known",
     "already collected",
@@ -709,7 +724,8 @@ function addon:GetTooltipSnapshot(context)
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
         and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
-            or context.hasLoot == true or not looksPartial)
+            or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
+            or not looksPartial)
     if not complete then
         self:NoteMetric("incompleteTooltipReads")
     end
