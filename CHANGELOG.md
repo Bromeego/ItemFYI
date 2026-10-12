@@ -12,6 +12,9 @@
   tooltip reads to one item every 40ms. Manual scans remain immediate.
 - Added `/ifyi perf` to report scan progress, tooltip reads, retries, and
   peak work-tick time when diagnosing reload frame hitches.
+- Added `/ifyi perfitems` to identify the remaining items with incomplete
+  tooltips, including item ID, bag/slot, read attempts, and sampled text,
+  without rescanning the inventory.
 - Stopped treating every normal item without a Use: line as incomplete. Fully
   populated crafting-reagent and equipment tooltips are cached after one read
   instead of receiving repeated scheduled retries, while short/name-only
