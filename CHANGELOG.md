@@ -19,6 +19,9 @@
   populated crafting-reagent and equipment tooltips are cached after one read
   instead of receiving repeated scheduled retries, while short/name-only
   tooltips still retry for late-arriving Curio and similar Use: lines.
+- Recognized all eight Ahn'Qiraj scarabs (20858–20865) as inert title-only
+  turn-in materials, eliminating four unnecessary delayed tooltip retries per
+  scarab without skipping legitimate incomplete learnable tooltips.
 
 ## 0.2.33
 
