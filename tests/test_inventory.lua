@@ -570,6 +570,48 @@ assert(rebuilds == 1, "a multi-tick login scan should rebuild candidates only on
 addon.RebuildCandidates = originalRebuild
 addon.workPerTick = nil
 
+-- A large inventory must yield during slot indexing, before tooltip work.
+-- A bag event during an in-progress reconciliation must not leave stale slots.
+addon:ClearInventoryState()
+for slot = 1, 25 do
+    SetSlot(4, slot, 100, 1, { hasLoot = true })
+end
+addon.reconcileSlotsPerTick = 3
+addon.workPerTick = 1
+addon:ResetMetrics()
+addon:ScanBags("login")
+assert(Metrics().slotsInspected == 3,
+    "login bag indexing must stop at its per-tick slot budget")
+assert(Metrics().itemsClassified == 0,
+    "classification must wait until all dirty bag totals are reconciled")
+assert(addon:HasInventoryWork(), "unfinished bag indexing must remain scheduled")
+
+local reconcileGuard = 0
+while addon.reconcileBag ~= 4 and reconcileGuard < 50 do
+    FireOneTimer()
+    reconcileGuard = reconcileGuard + 1
+end
+assert(addon.reconcileBag == 4, "the large bag must be reconciled across frames")
+SetSlot(4, 1, 200, 1, { hasLoot = true })
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 4)
+while (addon:HasInventoryWork() or #timers > 0) and reconcileGuard < 250 do
+    FireOneTimer()
+    reconcileGuard = reconcileGuard + 1
+end
+assert(reconcileGuard < 250, "mid-reconciliation bag updates must not loop indefinitely")
+assert(addon.slotIndex[4][1].itemID == 200,
+    "a mid-reconciliation bag update must be revisited before classification")
+assert(Metrics().maxWorkPerTick <= 1,
+    "bag indexing must not violate the later tooltip budget")
+addon.reconcileSlotsPerTick = nil
+addon.workPerTick = nil
+for slot = 1, 25 do
+    SetSlot(4, slot, nil)
+end
+bagSlotCounts[4] = 0
+addon:ClearInventoryState()
+ScanNow("login")
+
 -- Entering combat pauses appropriate work safely.
 SetSlot(0, 1, 100, 1, { hasLoot = true })
 SetSlot(0, 2, 200, 1, { hasLoot = true })
