@@ -537,6 +537,9 @@ local function DefaultMetrics()
         itemsClassified = 0,
         workTicks = 0,
         maxWorkPerTick = 0,
+        fallbackTooltips = 0,
+        maxTickMs = 0,
+        totalTickMs = 0,
     }
 end
 
@@ -666,6 +669,7 @@ function addon:GetTooltipSnapshot(context)
     if (needScanForText or needScanForColor) and not battlePetSpeciesID and not skipCompanionScan then
         local scanTooltip = EnsureScanTooltip(self)
         if scanTooltip then
+            self:NoteMetric("fallbackTooltips")
             local companionShown = BattlePetTooltip and BattlePetTooltip.IsShown
                 and BattlePetTooltip:IsShown()
             scanTooltip:ClearLines()
