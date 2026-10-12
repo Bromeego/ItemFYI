@@ -267,6 +267,7 @@ itemData[789] = { name = "Warband Appearance", itemType = "Armor", itemSubType =
 itemData[107] = { name = "Test Recipe", itemType = "Recipe", classID = 9 }
 itemData[113] = { name = "Test Curio" }
 itemData[1200] = { name = "Plain Crafting Reagent" }
+itemData[6600] = { name = "Unknown Legacy Turn-in" }
 itemData[18945] = { name = "Dark Iron Residue", itemType = "Quest", classID = 12 }
 itemData[142210] = { name = "Celestial Invitation", itemType = "Quest", classID = 12 }
 itemData[101] = { name = "Test Mount" }
@@ -281,6 +282,7 @@ tooltipByItem[107] = {
 }
 tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
 tooltipByItem[1200] = "Plain Crafting Reagent\nCrafting Reagent"
+tooltipByItem[6600] = "Unknown Legacy Turn-in"
 tooltipByItem[18945] = "Dark Iron Residue"
 tooltipByItem[142210] = "Celestial Invitation\nThis Item Begins a Quest"
 
@@ -596,6 +598,29 @@ bagSlotCounts[0] = 2
 addon:ClearInventoryState()
 timers = {}
 
+-- A previously unknown name-only legacy item must stop retrying after
+-- two follow-ups. This is generic: no item ID was added to the exemption list.
+addon:ClearInventoryState()
+timers = {}
+SetSlot(0, 1, 6600, 1)
+addon:ResetMetrics()
+addon:ScanBags("login")
+local unknownGuard = 0
+while (addon:HasInventoryWork() or #timers > 0) and unknownGuard < 50 do
+    FireOneTimer()
+    unknownGuard = unknownGuard + 1
+end
+assert(unknownGuard < 50, "a stable name-only item should finish its bounded scan")
+assert(Metrics().tooltipSnapshots == 3 and Metrics().tooltipRetriesScheduled == 2,
+    "new name-only items should get two follow-ups, not four")
+assert(Metrics().incompleteTooltipReads == 3,
+    "a still-name-only item must remain marked incomplete")
+assert(addon.current == nil and #addon:GetIncompleteTooltipRows() == 1,
+    "a name-only item must not be classified actionable without evidence")
+SetSlot(0, 1, nil)
+addon:ClearInventoryState()
+timers = {}
+
 -- Incomplete tooltips are not permanently cached, and retries are targeted and bounded.
 SetSlot(0, 1, 113, 1)
 SetSlot(0, 2, nil)
@@ -633,7 +658,7 @@ SetSlot(0, 2, nil)
 SetSlot(1, 1, nil)
 SetSlot(2, 7, nil)
 ScanNow("login")
-tooltipByItem[113] = "Companion Curio"
+tooltipByItem[113] = "Test Curio"
 SetSlot(0, 1, 113, 1)
 addon.pendingItemLoads = {}
 local loadRequests = 0
@@ -650,10 +675,15 @@ assert(#timers >= 1, "a name-only curio tooltip should retry the same slot")
 assert(not addon.pendingItemLoads[113],
     "a name-only curio must not wait on item-data events that restart the slot")
 assert(loadRequests == 1, "item data should be requested once as a tooltip hint")
+assert(addon.slotIndex[0][1].snapshot.nameOnly == true,
+    "a name-only Curio must use the generic bounded retry path")
 local curioGeneration = addon.scanGeneration
 eventFrame.scripts.OnEvent(eventFrame, "ITEM_DATA_LOAD_RESULT", 113, true)
 assert(addon.scanGeneration == curioGeneration,
     "item-data completion for a name-only curio must not restart inventory work")
+FireOneTimer()
+assert(addon.current == nil and #timers >= 1,
+    "a name-only Curio should still get its second delayed check")
 tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
 FireTimers()
 assert(addon.current and addon.current.itemID == 113 and addon.current.category == "curio",
