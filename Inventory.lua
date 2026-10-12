@@ -463,10 +463,17 @@ local function QueueEligibility(self, kind)
                     shouldQueue = true
                 end
             elseif kind == "quest" then
-                -- Include starters that were previously suppressed because
-                -- their quest was already active, so abandoning restores them.
-                shouldQueue = entry.category == "quest"
-                    or (entry.snapshot and entry.snapshot.questStarter == true)
+                -- Only revisit known quest starters. Quest acceptance can
+                -- update the tooltip without changing the bag fingerprint.
+                -- Remember starters even if the active-quest tooltip changes,
+                -- so abandoning can restore them.
+                shouldQueue = entry.category == "quest" or entry.questStarterKnown == true
+                if shouldQueue then
+                    entry.snapshot = nil
+                    if self.scanCache then
+                        self.scanCache[SlotKey(bag, slot)] = nil
+                    end
+                end
             elseif entry.category == kind then
                 shouldQueue = true
             end
@@ -543,6 +550,7 @@ local function ReconcileSlot(self, bag, slot)
         existing.category = nil
         existing.reason = nil
         existing.uniqueKey = nil
+        existing.questStarterKnown = nil
         existing.sawRestrictionText = nil
         existing.awaitingItemInfo = nil
         existing.context = nil
@@ -721,6 +729,7 @@ local function ClassifySlot(self, bag, slot)
     self.useScanCache = nil
 
     entry.snapshot = snapshot
+    entry.questStarterKnown = entry.questStarterKnown or (snapshot and snapshot.questStarter == true)
     entry.sawRestrictionText = snapshot and snapshot.sawRestrictionText
     entry.uniqueKey = context.uniqueKey
     entry.classified = true
