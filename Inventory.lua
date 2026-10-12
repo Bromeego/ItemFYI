@@ -6,8 +6,8 @@ local wipe = wipe or function(target)
     end
 end
 
-local EXPENSIVE_WORK_PER_TICK = 4
-local TIME_BUDGET_MS = 3
+local EXPENSIVE_WORK_PER_TICK = 2
+local TIME_BUDGET_MS = 2
 local MAX_TOOLTIP_RETRIES = 4
 local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
@@ -74,6 +74,9 @@ local function EnsureState(self)
     end
     if not self.classifyQueue then
         self.classifyQueue = {}
+    end
+    if not self.classifyHead then
+        self.classifyHead = 1
     end
     if not self.classifyQueued then
         self.classifyQueued = {}
@@ -257,6 +260,7 @@ function addon:ClearInventoryState()
     self.eligibilityKinds = {}
     self.pendingItemIDs = {}
     self.classifyQueue = {}
+    self.classifyHead = 1
     self.classifyQueued = {}
     self.retryQueue = {}
     self.retryQueued = {}
@@ -322,7 +326,7 @@ function addon:HasInventoryWork()
     if self.pendingItemIDs and next(self.pendingItemIDs) then
         return true
     end
-    if self.classifyQueue and self.classifyQueue[1] then
+    if self.classifyQueue and self.classifyQueue[self.classifyHead or 1] then
         return true
     end
     if self.retryQueue and self.retryQueue[1] then
@@ -523,21 +527,8 @@ local function ReconcileDirtyBags(self)
     end
 end
 
-local function CompactClassifyQueue(self)
-    local source = self.classifyQueue
-    local compact = {}
-    local queued = {}
-    for index = 1, #source do
-        local job = source[index]
-        local key = SlotKey(job.bag, job.slot)
-        if self.classifyQueued[key] and not queued[key] and GetEntry(self, job.bag, job.slot) then
-            queued[key] = true
-            compact[#compact + 1] = job
-        end
-    end
-    self.classifyQueue = compact
-    self.classifyQueued = queued
-end
+-- Cancelled or replaced jobs remain in the array until their turn, but are
+-- skipped when dequeued. This avoids walking the full queue on every frame.
 
 function addon:RebuildCandidates()
     local candidates = {}
@@ -671,14 +662,26 @@ local function ClassifySlot(self, bag, slot)
 end
 
 local function DequeueClassify(self)
+    -- A front-removal shifts every queued job; use an index so each dequeue is O(1).
+    -- Reset the array when drained to avoid keeping processed jobs indefinitely.
     while true do
-        local job = table.remove(self.classifyQueue, 1)
+        local head = self.classifyHead or 1
+        local job = self.classifyQueue[head]
         if not job then
+            self.classifyQueue = {}
+            self.classifyHead = 1
             return
         end
+
+        self.classifyHead = head + 1
+        if self.classifyHead > #self.classifyQueue then
+            self.classifyQueue = {}
+            self.classifyHead = 1
+        end
+
         local key = SlotKey(job.bag, job.slot)
-        self.classifyQueued[key] = nil
-        if GetEntry(self, job.bag, job.slot) then
+        if self.classifyQueued[key] and GetEntry(self, job.bag, job.slot) then
+            self.classifyQueued[key] = nil
             return job
         end
     end
@@ -721,7 +724,6 @@ function addon:ProcessInventoryTick(maxExpensive)
         wipe(self.eligibilityKinds)
     end
     QueuePendingItemIDs(self)
-    CompactClassifyQueue(self)
 
     while expensive < expensiveLimit do
         if started and (TimeNow() - started) >= TIME_BUDGET_MS then
@@ -739,7 +741,11 @@ function addon:ProcessInventoryTick(maxExpensive)
         self.metrics.maxWorkPerTick = expensive
     end
 
-    if self.rebuildNeeded or self.rebuildOnly then
+    -- Rebuilding candidates traverses the full slot index and updates the UI.
+    -- Doing it after every two classified items makes a full login scan hitch.
+    -- Commit a coherent candidate list once this batch has drained instead.
+    if (self.rebuildNeeded or self.rebuildOnly)
+        and not self.classifyQueue[self.classifyHead or 1] then
         self:RebuildCandidates()
         self.rebuildOnly = false
     end
@@ -779,7 +785,7 @@ function addon:RunScheduledInventory()
 
     if self.rebuildOnly and not self.forceRefresh and not self.allBagsDirty
         and not next(self.dirtyBags) and not next(self.pendingItemIDs)
-        and not next(self.eligibilityKinds) and not self.classifyQueue[1]
+        and not next(self.eligibilityKinds) and not self.classifyQueue[self.classifyHead or 1]
         and not (self.retryQueue and self.retryQueue[1]) then
         self:RebuildCandidates()
         self.rebuildOnly = false
@@ -802,7 +808,7 @@ function addon:ScanBags(reason)
     if not self.forceRefresh and not self.rebuildOnly
         and not next(self.eligibilityKinds)
         and not self.allBagsDirty and not next(self.dirtyBags)
-        and not next(self.pendingItemIDs) and not self.classifyQueue[1]
+        and not next(self.pendingItemIDs) and not self.classifyQueue[self.classifyHead or 1]
         and not (self.retryQueue and self.retryQueue[1]) then
         self.allBagsDirty = true
     end
