@@ -743,6 +743,7 @@ function addon:GetTooltipSnapshot(context)
         sawRestrictionText = state.sawRestrictionText == true,
         battlePetSpeciesID = battlePetSpeciesID,
         questIDs = questIDs[1] and questIDs or nil,
+        questStarter = IsQuestStartAction(text),
         complete = complete,
     }
     if self.useScanCache and complete then
