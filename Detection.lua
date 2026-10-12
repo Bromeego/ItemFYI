@@ -534,6 +534,8 @@ local function DefaultMetrics()
         slotsInspected = 0,
         slotsChanged = 0,
         tooltipSnapshots = 0,
+        incompleteTooltipReads = 0,
+        tooltipRetriesScheduled = 0,
         itemsClassified = 0,
         workTicks = 0,
         maxWorkPerTick = 0,
@@ -696,13 +698,21 @@ function addon:GetTooltipSnapshot(context)
     local hasUseText = string.find(text, "use:", 1, true) ~= nil
     local missingRestrictionColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
-    -- Name-only or companion-class tooltips after loot are not enough. Curios
-    -- and similar items only match their Use: line, which can arrive later.
-    -- Spell-less quest starters never grow a Use: line. "This Item Begins a
-    -- Quest" is the finished tooltip.
+    -- A fully loaded item can legitimately have NO Use: line: crafting
+    -- reagents, equipment, ordinary materials, etc. Treating all such items
+    -- as incomplete made each of them retry several times after every reload.
+    -- Keep retrying genuinely suspicious short/name-only tooltips, since a
+    -- Curio or another learnable may receive its Use: line asynchronously.
+    -- Quest starters can be finished without any Use: line.
+    local looksPartial = text == "" or not string.find(text, "\n", 1, true)
+        or (context.name and text == string.lower(context.name))
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
-        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID or context.hasLoot == true)
+        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
+            or context.hasLoot == true or not looksPartial)
+    if not complete then
+        self:NoteMetric("incompleteTooltipReads")
+    end
 
     context.tooltipSnapshot = {
         text = text,
