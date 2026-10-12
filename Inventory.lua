@@ -12,6 +12,8 @@ local TIME_BUDGET_MS = 2
 local MAX_TOOLTIP_RETRIES = 4
 local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
+-- Spread the initial login scan out: inventory FYIs are not time-critical.
+local LOGIN_CLASSIFY_TICK_DELAY = 0.04
 
 local forceRefreshReasons = {
     login = true,
@@ -283,6 +285,7 @@ function addon:ClearInventoryState()
     self.tooltipRetries = {}
     self.changedTotals = {}
     self.workActive = false
+    self.initialScanActive = false
     self.rebuildNeeded = false
     self.scanCache = {}
     self.pendingItemLoads = {}
@@ -361,6 +364,11 @@ function addon:NoteScanIntent(reason)
     reason = reason or ""
 
     if forceRefreshReasons[reason] then
+        if reason == "login" then
+            self.initialScanActive = true
+        elseif reason == "manual" then
+            self.initialScanActive = false
+        end
         self.forceRefresh = true
         self.allBagsDirty = true
         self.rebuildOnly = false
@@ -765,9 +773,20 @@ function addon:ProcessInventoryTick(maxExpensive)
         return false
     end
 
-    local expensiveLimit = maxExpensive or self.workPerTick or EXPENSIVE_WORK_PER_TICK
+    local expensiveLimit = maxExpensive or self.workPerTick
+        or (self.initialScanActive and 1) or EXPENSIVE_WORK_PER_TICK
     local started = TimeNow()
     local expensive = 0
+    local function RecordTick()
+        if started then
+            local elapsed = TimeNow() - started
+            if elapsed >= 0 then
+                local metrics = self.metrics
+                metrics.totalTickMs = (metrics.totalTickMs or 0) + elapsed
+                metrics.maxTickMs = math.max(metrics.maxTickMs or 0, elapsed)
+            end
+        end
+    end
 
     if self.forceRefresh then
         self.forceRefresh = false
@@ -779,6 +798,7 @@ function addon:ProcessInventoryTick(maxExpensive)
     -- need correct totals from every equipped bag, not partial per-frame totals.
     if ProcessReconcileTick(self, started) then
         self.workActive = true
+        RecordTick()
         return true
     end
 
@@ -826,12 +846,20 @@ function addon:ProcessInventoryTick(maxExpensive)
 
     local remaining = self:HasInventoryWork()
     self.workActive = remaining
+    RecordTick()
+    if not remaining then
+        self.initialScanActive = false
+    end
     return remaining
 end
 
 function addon:FlushInventoryWork()
     while self:ProcessInventoryTick(self.workPerTick or EXPENSIVE_WORK_PER_TICK) do
     end
+end
+
+local function NextInventoryTickDelay()
+    return addon.initialScanActive and LOGIN_CLASSIFY_TICK_DELAY or WORK_TICK_DELAY
 end
 
 local function ContinueInventoryWork()
@@ -842,7 +870,7 @@ local function ContinueInventoryWork()
     end
     local remaining = addon:ProcessInventoryTick()
     if remaining then
-        C_Timer.After(WORK_TICK_DELAY, ContinueInventoryWork)
+        C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
 end
 
@@ -870,7 +898,7 @@ function addon:RunScheduledInventory()
     self.workActive = true
     local remaining = self:ProcessInventoryTick()
     if remaining then
-        C_Timer.After(WORK_TICK_DELAY, ContinueInventoryWork)
+        C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
 end
 
