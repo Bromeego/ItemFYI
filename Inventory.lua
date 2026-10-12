@@ -388,6 +388,14 @@ function addon:NoteScanIntent(reason)
         return
     end
 
+    if reason == "quest state" then
+        -- Quest acceptance/abandonment changes usefulness without moving the
+        -- item. Re-evaluate only known starters using cached tooltip snapshots.
+        self.eligibilityKinds.quest = true
+        self.rebuildOnly = false
+        return
+    end
+
     if reason == "quest completion" then
         self.rebuildOnly = false
         return
@@ -450,6 +458,11 @@ local function QueueEligibility(self, kind)
                 elseif entry.category == "profession" then
                     shouldQueue = true
                 end
+            elseif kind == "quest" then
+                -- Include starters that were previously suppressed because
+                -- their quest was already active, so abandoning restores them.
+                shouldQueue = entry.category == "quest"
+                    or (entry.snapshot and entry.snapshot.questStarter == true)
             elseif entry.category == kind then
                 shouldQueue = true
             end
