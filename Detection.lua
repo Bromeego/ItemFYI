@@ -171,6 +171,12 @@ local function GetPermanentSkillIncrease(text)
 end
 
 local function GetGarrisonActionReason(text, context)
+    -- Draenor caches, turn-in rewards, and similar consumables commonly use
+    -- "Use: Gain 25 Garrison Resources." Detect the action, not individual IDs.
+    -- Keep the match on a Use: line; flavour text alone is not actionable.
+    if string.find(text, "use:%s+gain%s+%d[%d,%.]*%s+garrison resources%f[%A]") then
+        return "Garrison Resources — click to collect"
+    end
     local itemSubType = string.lower(context and context.itemSubType or "")
     if itemSubType == "naval equipment"
         or string.find(text, "use:%s+equip a ship with") then
