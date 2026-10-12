@@ -726,8 +726,10 @@ function addon:GetTooltipSnapshot(context)
     -- Keep retrying genuinely suspicious short/name-only tooltips, since a
     -- Curio or another learnable may receive its Use: line asynchronously.
     -- Quest starters can be finished without any Use: line.
+    local nameOnly = text ~= "" and context.name ~= nil
+        and text == string.lower(context.name)
     local looksPartial = text == "" or not string.find(text, "\n", 1, true)
-        or (context.name and text == string.lower(context.name))
+        or nameOnly
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
         and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
@@ -744,6 +746,7 @@ function addon:GetTooltipSnapshot(context)
         battlePetSpeciesID = battlePetSpeciesID,
         questIDs = questIDs[1] and questIDs or nil,
         questStarter = IsQuestStartAction(text),
+        nameOnly = nameOnly == true,
         complete = complete,
     }
     if self.useScanCache and complete then
