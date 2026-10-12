@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Reduced reload/login frame hitches by classifying fewer inventory items per
+  frame, removing repeated queue compaction and front-of-queue shifts, and
+  rebuilding the notification list only after a scan batch finishes.
+
 ## 0.2.33
 
 - Detected loot-specialization gear tokens such as Baleful Armament. Their
