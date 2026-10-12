@@ -548,11 +548,17 @@ SetSlot(0, 2, 200, 1, { hasLoot = true })
 SetSlot(1, 1, 268650, 5)
 addon.workPerTick = 1
 addon:ResetMetrics()
+local rebuilds = 0
+local originalRebuild = addon.RebuildCandidates
+addon.RebuildCandidates = function(self, ...)
+    rebuilds = rebuilds + 1
+    return originalRebuild(self, ...)
+end
 addon:ScanBags("login")
 assert(Metrics().workTicks == 1, "login classification should start with one tick")
 assert(Metrics().itemsClassified == 1, "a tick budget of one should classify one item")
 assert(addon:HasInventoryWork(), "remaining slots should stay queued")
-assert(addon.current, "the first valid candidate may appear before the scan finishes")
+assert(rebuilds == 0, "a partial login scan should not rebuild the entire candidate UI")
 FireOneTimer()
 assert(Metrics().workTicks == 2, "queued work should continue on a later tick")
 assert(Metrics().maxWorkPerTick == 1, "no tick should exceed the expensive-work budget")
@@ -560,6 +566,8 @@ while addon:HasInventoryWork() and #timers > 0 do
     FireOneTimer()
 end
 assert(addon.current, "the yielded scan should finish with a candidate")
+assert(rebuilds == 1, "a multi-tick login scan should rebuild candidates only once")
+addon.RebuildCandidates = originalRebuild
 addon.workPerTick = nil
 
 -- Entering combat pauses appropriate work safely.
