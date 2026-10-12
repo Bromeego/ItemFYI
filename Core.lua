@@ -448,6 +448,8 @@ events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
 events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
 events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
 events:RegisterEvent("QUEST_TURNED_IN")
+events:RegisterEvent("QUEST_ACCEPTED")
+events:RegisterEvent("QUEST_REMOVED")
 events:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
 events:RegisterEvent("PLAYER_LEVEL_CHANGED")
 events:RegisterEvent("SKILL_LINES_CHANGED")
@@ -528,6 +530,11 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:NoteItemRefresh(itemID)
             addon:ScheduleScan(event, GetBagScanDelay())
         end
+    elseif event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" then
+        -- A quest starter may remain in the bag after its quest is accepted.
+        -- Quest state changes need only a cached eligibility recheck, not a
+        -- full inventory or tooltip scan. The delay lets the log settle.
+        addon:ScheduleScan("quest state", 0.25)
     elseif event == "QUEST_TURNED_IN" then
         -- World quests and other turn-ins fire this even when the reward is
         -- only currency. Rescan bags only for weekly treatise quests.
