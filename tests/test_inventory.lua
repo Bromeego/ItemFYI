@@ -477,6 +477,8 @@ assert(Metrics().tooltipSnapshots == 1,
     "complete non-actionable reagents must not repeatedly request tooltip info")
 assert(Metrics().incompleteTooltipReads == 0 and Metrics().tooltipRetriesScheduled == 0,
     "a normal no-Use tooltip must be cached as complete")
+assert(#addon:GetIncompleteTooltipRows() == 0,
+    "regular reagents must not appear in unresolved tooltip diagnostics")
 
 -- Incomplete tooltips are not permanently cached, and retries are targeted and bounded.
 SetSlot(0, 1, 113, 1)
@@ -490,6 +492,11 @@ addon:ScanBags("login")
 assert(Metrics().tooltipSnapshots >= 1, "the incomplete slot should be read")
 local firstIncomplete = Metrics().tooltipSnapshots
 assert(#timers >= 1, "incomplete tooltips should queue a targeted retry")
+local incompleteRows = addon:GetIncompleteTooltipRows()
+assert(#incompleteRows == 1 and incompleteRows[1].itemID == 113
+    and incompleteRows[1].reads == 1,
+    "performance diagnostics should identify the actual incomplete item and read count")
+SlashCmdList.ITEMFYI("perfitems")
 addon:ScanBags("settings changed")
 assert(#timers >= 1, "filter-only work must not drop tooltip retries")
 FireOneTimer()
@@ -500,6 +507,8 @@ while #timers > 0 do
     FireOneTimer()
 end
 assert(addon.current and addon.current.itemID == 113, "a later complete tooltip should become a candidate")
+assert(#addon:GetIncompleteTooltipRows() == 0,
+    "resolved item tooltips must disappear from the diagnostics")
 addon.workPerTick = nil
 
 -- Looted curios whose Use: line arrives late must still appear.
