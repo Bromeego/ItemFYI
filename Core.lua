@@ -121,6 +121,8 @@ end
 
 local BAG_SCAN_DELAY = 0.3
 local BUSY_BAG_SCAN_DELAY = 0.45
+-- Defer automatic login scans until UI/item loading has settled.
+local INITIAL_SCAN_GRACE = 2.5
 
 local function GetBagScanDelay()
     -- Mail take-all, vendor auto-sell, and similar bursts fire many bag events.
@@ -204,6 +206,12 @@ function addon:ScheduleScan(reason, delay)
     if self.NoteScanIntent then
         self:NoteScanIntent(reason)
     end
+    if self.startupScanPending and reason ~= "manual" then
+        -- Startup BAG_UPDATE bursts must not bypass the initial delay.
+        delay = math.max(delay or 0.15, INITIAL_SCAN_GRACE)
+    elseif reason == "manual" then
+        self.startupScanPending = false
+    end
     self.scanGeneration = self.scanGeneration + 1
     local generation = self.scanGeneration
 
@@ -225,6 +233,7 @@ function addon:ScheduleScan(reason, delay)
             return
         end
         addon.scanPending = false
+        addon.startupScanPending = false
         addon:RunScheduledInventory()
     end)
 end
@@ -329,12 +338,20 @@ function addon:HandleSlash(input)
     if command == "" then
         self:OpenSettings()
     elseif command == "help" then
-        self:Print("/ifyi opens settings. Commands: scan, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
+        self:Print("/ifyi opens settings. Commands: scan, perf, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
     elseif command == "scan" then
         self.sessionSkipped = {}
         self:ScheduleScan("manual", 0)
     elseif command == "list" then
         self:ListCandidates()
+    elseif command == "perf" then
+        local m = self:GetMetrics()
+        local state = (self.startupScanPending and "waiting")
+            or (self.workActive and "scanning") or "idle"
+        self:Print(("Scan %s | slots %d | classified %d | tooltips %d (fallback %d) | ticks %d | max tick %.2fms, total %.1fms"):format(
+            state, m.slotsInspected or 0, m.itemsClassified or 0,
+            m.tooltipSnapshots or 0, m.fallbackTooltips or 0,
+            m.workTicks or 0, m.maxTickMs or 0, m.totalTickMs or 0))
     elseif command == "skip" then
         self:SkipCurrent(false)
     elseif command == "ignore" then
@@ -418,7 +435,9 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:RegisterSkinning()
         addon:RegisterEditMode()
         addon:SnapshotWatchedQuests()
-        addon:ScheduleScan("login", 0.4)
+        addon:ResetMetrics()
+        addon.startupScanPending = true
+        addon:ScheduleScan("login", INITIAL_SCAN_GRACE)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if addon.layoutPending then
             local useSavedPosition = addon.layoutUseSavedPosition
