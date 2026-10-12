@@ -10,6 +10,10 @@ local EXPENSIVE_WORK_PER_TICK = 2
 local RECONCILE_SLOTS_PER_TICK = 12
 local TIME_BUDGET_MS = 2
 local MAX_TOOLTIP_RETRIES = 4
+-- A real item may have a complete, name-only tooltip. Two follow-up reads
+-- are enough to catch normal delayed Use: lines without polling indefinitely.
+-- Empty/error tooltips still get the longer recovery window above.
+local MAX_NAME_ONLY_RETRIES = 2
 local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
 -- Spread the initial login scan out: inventory FYIs are not time-critical.
@@ -737,7 +741,8 @@ local function ClassifySlot(self, bag, slot)
         if not category then
             entry.classified = false
         end
-        if retries <= MAX_TOOLTIP_RETRIES then
+        local maxRetries = snapshot.nameOnly and MAX_NAME_ONLY_RETRIES or MAX_TOOLTIP_RETRIES
+        if retries <= maxRetries then
             self:NoteMetric("tooltipRetriesScheduled")
             ScheduleTooltipRetry(self, bag, slot)
         end
