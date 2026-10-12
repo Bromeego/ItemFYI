@@ -680,8 +680,9 @@ local function DequeueClassify(self)
         end
 
         local key = SlotKey(job.bag, job.slot)
-        if self.classifyQueued[key] and GetEntry(self, job.bag, job.slot) then
-            self.classifyQueued[key] = nil
+        local queued = self.classifyQueued[key]
+        self.classifyQueued[key] = nil
+        if queued and GetEntry(self, job.bag, job.slot) then
             return job
         end
     end
