@@ -256,6 +256,7 @@ itemData[789] = { name = "Warband Appearance", itemType = "Armor", itemSubType =
 itemData[107] = { name = "Test Recipe", itemType = "Recipe", classID = 9 }
 itemData[113] = { name = "Test Curio" }
 itemData[1200] = { name = "Plain Crafting Reagent" }
+itemData[18945] = { name = "Dark Iron Residue", itemType = "Quest", classID = 12 }
 itemData[101] = { name = "Test Mount" }
 tooltipByItem[101] = "Use: Teaches you how to summon this mount."
 tooltipByItem[100] = "Use: Open the satchel."
@@ -268,6 +269,7 @@ tooltipByItem[107] = {
 }
 tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
 tooltipByItem[1200] = "Plain Crafting Reagent\nCrafting Reagent"
+tooltipByItem[18945] = "Dark Iron Residue"
 
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
@@ -517,6 +519,31 @@ for slot = 1, 8 do
 end
 -- Restore the smaller bag size expected by the following single-tick
 -- incomplete-tooltip test; otherwise the empty test slots require two ticks.
+bagSlotCounts[0] = 2
+addon:ClearInventoryState()
+timers = {}
+
+-- Quest turn-in material Dark Iron Residue (18945) is name-only too.
+-- No Use: line is expected; no duplicate classification or retries.
+addon:ClearInventoryState()
+timers = {}
+SetSlot(0, 1, 18945, 10)
+bagSlotCounts[0] = 1
+addon:ResetMetrics()
+addon:ScanBags("login")
+local residueGuard = 0
+while (addon:HasInventoryWork() or #timers > 0) and residueGuard < 50 do
+    FireOneTimer()
+    residueGuard = residueGuard + 1
+end
+assert(residueGuard < 50, "name-only quest material scan should finish promptly")
+assert(Metrics().tooltipSnapshots == 1 and Metrics().itemsClassified == 1,
+    "Dark Iron Residue should only be read and classified once")
+assert(Metrics().incompleteTooltipReads == 0 and Metrics().tooltipRetriesScheduled == 0,
+    "Dark Iron Residue must not cause false missing-tooltip retries")
+assert(#addon:GetIncompleteTooltipRows() == 0 and addon.current == nil,
+    "Dark Iron Residue must be neither unresolved nor an actionable FYI")
+SetSlot(0, 1, nil)
 bagSlotCounts[0] = 2
 addon:ClearInventoryState()
 timers = {}
