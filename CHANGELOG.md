@@ -10,8 +10,12 @@
   bags that changed midway through a sliced scan.
 - Deferred automatic login scans until the UI has settled, then paced startup
   tooltip reads to one item every 40ms. Manual scans remain immediate.
-- Added `/ifyi perf` to report scan progress, tooltip reads, and peak work-tick
-  time when diagnosing reload frame hitches.
+- Added `/ifyi perf` to report scan progress, tooltip reads, retries, and
+  peak work-tick time when diagnosing reload frame hitches.
+- Stopped treating every normal item without a Use: line as incomplete. Fully
+  populated crafting-reagent and equipment tooltips are cached after one read
+  instead of receiving repeated scheduled retries, while short/name-only
+  tooltips still retry for late-arriving Curio and similar Use: lines.
 
 ## 0.2.33
 
