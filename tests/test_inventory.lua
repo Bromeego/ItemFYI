@@ -480,6 +480,44 @@ assert(Metrics().incompleteTooltipReads == 0 and Metrics().tooltipRetriesSchedul
 assert(#addon:GetIncompleteTooltipRows() == 0,
     "regular reagents must not appear in unresolved tooltip diagnostics")
 
+-- AQ scarabs are deliberately name-only: they are turn-in materials, not
+-- bag-use items. All eight should get exactly one tooltip read at login
+-- without weakening the Curio retry path that follows this test.
+local scarabs = {
+    [20858] = "Stone Scarab", [20859] = "Gold Scarab",
+    [20860] = "Silver Scarab", [20861] = "Bronze Scarab",
+    [20862] = "Crystal Scarab", [20863] = "Clay Scarab",
+    [20864] = "Bone Scarab", [20865] = "Ivory Scarab",
+}
+addon:ClearInventoryState()
+timers = {}
+local scarabSlot = 0
+for itemID, name in pairs(scarabs) do
+    scarabSlot = scarabSlot + 1
+    itemData[itemID] = { name = name }
+    tooltipByItem[itemID] = name
+    SetSlot(0, scarabSlot, itemID, 1)
+end
+addon:ResetMetrics()
+addon:ScanBags("login")
+local scarabGuard = 0
+while (addon:HasInventoryWork() or #timers > 0) and scarabGuard < 100 do
+    FireOneTimer()
+    scarabGuard = scarabGuard + 1
+end
+assert(scarabGuard < 100, "eight name-only scarabs must complete the scan")
+assert(Metrics().tooltipSnapshots == 8,
+    "the eight scarabs should each require exactly one tooltip request")
+assert(Metrics().incompleteTooltipReads == 0 and Metrics().tooltipRetriesScheduled == 0,
+    "name-only AQ scarabs must not be treated as delayed tooltips")
+assert(#addon:GetIncompleteTooltipRows() == 0 and addon.current == nil,
+    "AQ scarabs must be absent from incomplete diagnostics and actionable FYIs")
+for slot = 1, 8 do
+    SetSlot(0, slot, nil)
+end
+addon:ClearInventoryState()
+timers = {}
+
 -- Incomplete tooltips are not permanently cached, and retries are targeted and bounded.
 SetSlot(0, 1, 113, 1)
 SetSlot(0, 2, nil)
