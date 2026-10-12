@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Recognized Draenor consumables with a `Use: Gain N Garrison Resources`
+  tooltip (including Pile of Frostfire Turnips and Icemother Milk) as
+  actionable progression items, without adding item-specific rules.
+
 - Reduced reload/login frame hitches by time-slicing bag-slot indexing as
   well as tooltip classification, removing repeated queue compaction and
   front-of-queue shifts, and rebuilding the notification list only after a
