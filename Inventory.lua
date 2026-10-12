@@ -6,7 +6,7 @@ local wipe = wipe or function(target)
     end
 end
 
-local EXPENSIVE_WORK_PER_TICK = 1
+local EXPENSIVE_WORK_PER_TICK = 2
 local RECONCILE_SLOTS_PER_TICK = 12
 local TIME_BUDGET_MS = 2
 local MAX_TOOLTIP_RETRIES = 4
