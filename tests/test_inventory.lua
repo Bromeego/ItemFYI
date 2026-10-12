@@ -515,6 +515,9 @@ assert(#addon:GetIncompleteTooltipRows() == 0 and addon.current == nil,
 for slot = 1, 8 do
     SetSlot(0, slot, nil)
 end
+-- Restore the smaller bag size expected by the following single-tick
+-- incomplete-tooltip test; otherwise the empty test slots require two ticks.
+bagSlotCounts[0] = 2
 addon:ClearInventoryState()
 timers = {}
 
