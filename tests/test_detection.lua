@@ -532,6 +532,34 @@ tooltipText = "Use: Provides the plans needed to upgrade your Barn to Level 2."
 category = addon:ClassifyItem(Context(111929))
 assert(category == "progress", "garrison building blueprints should be actionable")
 
+-- Real Draenor treasures: detect the Use: wording, not hardcoded item IDs.
+tooltipText = "Pile of Frostfire Turnips\nSoulbound\nUse: Gain 25 Garrison Resources."
+local garrisonCategory, garrisonReason = addon:ClassifyItem(Context(111543))
+assert(garrisonCategory == "progress" and garrisonReason == "Garrison Resources — click to collect",
+    "Pile of Frostfire Turnips should be offered as a Garrison Resource consumable")
+
+tooltipText = "Icemother Milk\nSoulbound\nUse: Gain 25 Garrison Resources. (5 Sec Cooldown)"
+category = addon:ClassifyItem(Context(101436))
+assert(category == "progress", "Icemother Milk should be detected despite its cooldown text")
+
+tooltipText = "Use: Gain 1,000 Garrison Resources."
+category = addon:ClassifyItem(Context(135))
+assert(category == "progress", "grouped Garrison Resource amounts should match the same rule")
+
+itemUsable = false
+tooltipText = "Use: Gain 25 Garrison Resources."
+category = addon:ClassifyItem(Context(111543))
+assert(category == nil, "unusable Garrison Resource items should stay hidden")
+itemUsable = true
+
+tooltipText = "This item once granted 25 Garrison Resources to its owner."
+category = addon:ClassifyItem(Context(136))
+assert(category == nil, "flavour text mentioning Garrison Resources must not trigger an FYI")
+
+tooltipText = "Use: Gain 25 Artifact Power."
+category = addon:ClassifyItem(Context(137))
+assert(category == nil, "unrelated currency gain effects must not become Garrison Resource items")
+
 tooltipText = "Use: Grants 750 reputation with the Army of the Light. (2 Sec Cooldown)\nCurrent: Paragon (250/10,000)"
 category = addon:ClassifyItem(Context(152956))
 assert(category == "progress", "Legion reputation insignias should be actionable at Paragon")
