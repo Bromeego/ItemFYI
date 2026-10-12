@@ -255,6 +255,7 @@ itemData[789] = { name = "Warband Appearance", itemType = "Armor", itemSubType =
     equipLocation = "INVTYPE_WEAPON", classID = 4 }
 itemData[107] = { name = "Test Recipe", itemType = "Recipe", classID = 9 }
 itemData[113] = { name = "Test Curio" }
+itemData[1200] = { name = "Plain Crafting Reagent" }
 itemData[101] = { name = "Test Mount" }
 tooltipByItem[101] = "Use: Teaches you how to summon this mount."
 tooltipByItem[100] = "Use: Open the satchel."
@@ -266,6 +267,7 @@ tooltipByItem[107] = {
     { leftText = "Requires Northrend Leatherworking (75)", leftColor = { r = 1, g = 0.125, b = 0.125 } },
 }
 tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
+tooltipByItem[1200] = "Plain Crafting Reagent\nCrafting Reagent"
 
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
@@ -455,6 +457,26 @@ FireTimers()
 assert(addon.current and addon.current.itemID == 107,
     "character-state changes must recheck restriction tooltips")
 assert(Metrics().tooltipSnapshots == 1, "only restriction items should refetch tooltips")
+
+-- A fully populated non-actionable tooltip with no Use: line must not retry.
+SetSlot(0, 1, 1200, 1)
+SetSlot(0, 2, nil)
+SetSlot(1, 1, nil)
+SetSlot(2, 7, nil)
+addon:ClearInventoryState()
+timers = {}
+addon:ResetMetrics()
+addon:ScanBags("login")
+local reagentGuard = 0
+while (addon:HasInventoryWork() or #timers > 0) and reagentGuard < 50 do
+    FireOneTimer()
+    reagentGuard = reagentGuard + 1
+end
+assert(reagentGuard < 50, "normal reagent scan should finish quickly")
+assert(Metrics().tooltipSnapshots == 1,
+    "complete non-actionable reagents must not repeatedly request tooltip info")
+assert(Metrics().incompleteTooltipReads == 0 and Metrics().tooltipRetriesScheduled == 0,
+    "a normal no-Use tooltip must be cached as complete")
 
 -- Incomplete tooltips are not permanently cached, and retries are targeted and bounded.
 SetSlot(0, 1, 113, 1)
