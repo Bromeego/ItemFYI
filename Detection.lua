@@ -2,11 +2,12 @@ local _, addon = ...
 
 local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 
--- Ahn'Qiraj scarab turn-in materials have a name-only tooltip and no bag
--- use/learn action. Don't mistake their legitimate tooltip for unloaded data.
--- Keep this exception exact so actual learnable Curios with a late Use: line
--- retain their bounded retries.
+-- Some legacy quest turn-in materials have a complete Blizzard tooltip
+-- consisting only of their name. They have no bag use/learn action and need
+-- no delayed retries. Keep these exceptions exact: learnable Curios can also
+-- initially return a name-only tooltip before their Use: line arrives.
 local inertNameOnlyItemIDs = {
+    [18945] = true, -- Dark Iron Residue (Thorium Brotherhood turn-in)
     [20858] = true, -- Stone Scarab
     [20859] = true, -- Gold Scarab
     [20860] = true, -- Silver Scarab
