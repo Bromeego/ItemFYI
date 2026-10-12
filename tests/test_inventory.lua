@@ -296,6 +296,17 @@ local function ScanNow(reason)
     timers = {}
 end
 
+-- Startup bag events must respect the login grace instead of starting early.
+addon.startupScanPending = true
+addon:ScheduleScan("login", 2.5)
+assert(timers[#timers].delay >= 2.5, "login scan should be deferred")
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+assert(timers[#timers].delay >= 2.5,
+    "startup BAG_UPDATE must not bypass the loading grace")
+FireTimers()
+assert(not addon.startupScanPending, "starting the scan must clear the grace flag")
+timers = {}
+
 -- Burst of bag events produces one reconciliation.
 SetSlot(0, 1, 100, 1, { hasLoot = true })
 addon:ResetMetrics()
@@ -569,6 +580,31 @@ assert(addon.current, "the yielded scan should finish with a candidate")
 assert(rebuilds == 1, "a multi-tick login scan should rebuild candidates only once")
 addon.RebuildCandidates = originalRebuild
 addon.workPerTick = nil
+
+-- Automatic login classification runs at one item per paced work tick.
+addon:ClearInventoryState()
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+SetSlot(0, 2, 200, 1, { hasLoot = true })
+SetSlot(1, 1, 268650, 5)
+timers = {}
+addon:ResetMetrics()
+addon:ScanBags("login")
+assert(addon.initialScanActive, "login scan must use low-impact startup pacing")
+assert(#timers > 0 and timers[#timers].delay == 0.04,
+    "login scan should space continuation work rather than running every frame")
+assert(Metrics().itemsClassified <= 1,
+    "the first login tick should classify at most one expensive item")
+local pacedGuard = 0
+while (addon:HasInventoryWork() or #timers > 0) and pacedGuard < 100 do
+    FireOneTimer()
+    pacedGuard = pacedGuard + 1
+end
+assert(pacedGuard < 100 and addon.current,
+    "a paced initial scan should still discover actionable items")
+assert(not addon.initialScanActive,
+    "startup throttling must stop once the scan finishes")
+addon:ClearInventoryState()
+timers = {}
 
 -- A large inventory must yield during slot indexing, before tooltip work.
 -- A bag event during an in-progress reconciliation must not leave stale slots.
