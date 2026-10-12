@@ -129,6 +129,7 @@ local tooltipComplete = {}
 local appearanceCollected = false
 local mountCollected = false
 local itemUsable = true
+local activeQuests = {}
 
 local function SetSlot(bag, slot, itemID, stackCount, extra)
     bags[bag] = bags[bag] or {}
@@ -176,6 +177,13 @@ C_Container = {
         local info = bags[bag] and bags[bag][slot]
         return info and info.hyperlink
     end,
+    GetContainerItemQuestInfo = function(bag, slot)
+        local info = bags[bag] and bags[bag][slot]
+        if info and info.itemID == 142210 then
+            return { questID = 44767, isActive = activeQuests[44767] == true }
+        end
+        return nil
+    end,
 }
 C_TooltipInfo = {
     GetBagItem = function(bag, slot)
@@ -203,7 +211,10 @@ C_MountJournal = {
 }
 C_ToyBox = {}
 C_PetJournal = {}
-C_QuestLog = { IsQuestFlaggedCompleted = function() return false end }
+C_QuestLog = {
+    IsQuestFlaggedCompleted = function() return false end,
+    IsOnQuest = function(questID) return activeQuests[questID] == true end,
+}
 C_TransmogCollection = {
     PlayerHasTransmogByItemInfo = function()
         return appearanceCollected
@@ -257,6 +268,7 @@ itemData[107] = { name = "Test Recipe", itemType = "Recipe", classID = 9 }
 itemData[113] = { name = "Test Curio" }
 itemData[1200] = { name = "Plain Crafting Reagent" }
 itemData[18945] = { name = "Dark Iron Residue", itemType = "Quest", classID = 12 }
+itemData[142210] = { name = "Celestial Invitation", itemType = "Quest", classID = 12 }
 itemData[101] = { name = "Test Mount" }
 tooltipByItem[101] = "Use: Teaches you how to summon this mount."
 tooltipByItem[100] = "Use: Open the satchel."
@@ -270,6 +282,7 @@ tooltipByItem[107] = {
 tooltipByItem[113] = "Rank 2/4\nUse: Add this Curio to your companion's collection."
 tooltipByItem[1200] = "Plain Crafting Reagent\nCrafting Reagent"
 tooltipByItem[18945] = "Dark Iron Residue"
+tooltipByItem[142210] = "Celestial Invitation\nThis Item Begins a Quest"
 
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
@@ -446,6 +459,41 @@ assert(addon.current and addon.current.itemID == 100,
 mountCollected = false
 appearanceCollected = false
 SetSlot(0, 2, nil)
+
+-- Accepting a quest updates an FYI even when the quest starter remains
+-- in the same bag slot. Both accept and abandon reuse its cached tooltip.
+addon:ClearInventoryState()
+SetSlot(0, 1, 142210, 1)
+SetSlot(0, 2, nil)
+SetSlot(1, 1, nil)
+SetSlot(2, 7, nil)
+ScanNow("login")
+assert(addon.current and addon.current.itemID == 142210,
+    "an available quest starter should initially appear")
+assert(addon.slotIndex[0][1].snapshot.questStarter == true,
+    "the initial tooltip must retain quest-starter detection")
+addon:ResetMetrics()
+activeQuests[44767] = true
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_ACCEPTED", 44767)
+FireTimers()
+assert(addon.current == nil,
+    "accepting the quest must clear the FYI without using the item a second time")
+assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
+    "quest acceptance must not read tooltips or scan unchanged bags")
+assert(addon.slotIndex[0][1].snapshot.questStarter == true,
+    "a hidden quest starter must remain eligible for a later abandonment")
+addon:ResetMetrics()
+activeQuests[44767] = nil
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_REMOVED", 44767)
+FireTimers()
+assert(addon.current and addon.current.itemID == 142210,
+    "abandoning an accepted quest must restore the still-held quest starter")
+assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
+    "quest abandonment must also reuse cached item metadata")
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+addon:ClearInventoryState()
+timers = {}
+ScanNow("login")
 
 -- Dynamic unmet requirements can become satisfied without changing the item.
 SetSlot(0, 1, 107, 1)
