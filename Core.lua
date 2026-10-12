@@ -348,9 +348,10 @@ function addon:HandleSlash(input)
         local m = self:GetMetrics()
         local state = (self.startupScanPending and "waiting")
             or (self.workActive and "scanning") or "idle"
-        self:Print(("Scan %s | slots %d | classified %d | tooltips %d (fallback %d) | ticks %d | max tick %.2fms, total %.1fms"):format(
+        self:Print(("Scan %s | slots %d | classified %d | tooltips %d (fallback %d, incomplete %d, retries %d) | ticks %d | max tick %.2fms, total %.1fms"):format(
             state, m.slotsInspected or 0, m.itemsClassified or 0,
             m.tooltipSnapshots or 0, m.fallbackTooltips or 0,
+            m.incompleteTooltipReads or 0, m.tooltipRetriesScheduled or 0,
             m.workTicks or 0, m.maxTickMs or 0, m.totalTickMs or 0))
     elseif command == "skip" then
         self:SkipCurrent(false)
