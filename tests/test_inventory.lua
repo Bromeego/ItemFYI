@@ -463,7 +463,7 @@ appearanceCollected = false
 SetSlot(0, 2, nil)
 
 -- Accepting a quest updates an FYI even when the quest starter remains
--- in the same bag slot. Both accept and abandon reuse its cached tooltip.
+-- in the same bag slot. Refresh only the affected tooltip, not every bag.
 addon:ClearInventoryState()
 SetSlot(0, 1, 142210, 1)
 SetSlot(0, 2, nil)
@@ -480,9 +480,9 @@ eventFrame.scripts.OnEvent(eventFrame, "QUEST_ACCEPTED", 44767)
 FireTimers()
 assert(addon.current == nil,
     "accepting the quest must clear the FYI without using the item a second time")
-assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
-    "quest acceptance must not read tooltips or scan unchanged bags")
-assert(addon.slotIndex[0][1].snapshot.questStarter == true,
+assert(Metrics().tooltipSnapshots == 1 and Metrics().slotsInspected == 0,
+    "quest acceptance must only reread the quest item's tooltip, not scan bags")
+assert(addon.slotIndex[0][1].questStarterKnown == true,
     "a hidden quest starter must remain eligible for a later abandonment")
 addon:ResetMetrics()
 activeQuests[44767] = nil
@@ -490,8 +490,29 @@ eventFrame.scripts.OnEvent(eventFrame, "QUEST_REMOVED", 44767)
 FireTimers()
 assert(addon.current and addon.current.itemID == 142210,
     "abandoning an accepted quest must restore the still-held quest starter")
-assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
-    "quest abandonment must also reuse cached item metadata")
+assert(Metrics().tooltipSnapshots == 1 and Metrics().slotsInspected == 0,
+    "quest abandonment must refresh just the starter tooltip, not inventory")
+
+-- Some active-quest tooltips lose their quest-starter line entirely. The
+-- remembered starter must still be reconsidered after the quest is abandoned.
+tooltipByItem[142210] = "Celestial Invitation\nQuest already accepted"
+activeQuests[44767] = true
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_ACCEPTED", 44767)
+FireTimers()
+assert(addon.current == nil and addon.slotIndex[0][1].questStarterKnown == true
+    and addon.slotIndex[0][1].snapshot.questStarter == false,
+    "a changed active-quest tooltip must not lose the original starter identity")
+tooltipByItem[142210] = "Celestial Invitation\nThis Item Begins a Quest"
+activeQuests[44767] = nil
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "QUEST_REMOVED", 44767)
+FireTimers()
+assert(addon.current and addon.current.itemID == 142210,
+    "abandoning a quest must restore a starter whose tooltip changed while active")
+assert(Metrics().slotsInspected == 0 and Metrics().tooltipSnapshots == 1,
+    "restoring after a changed tooltip must remain targeted")
+
 SetSlot(0, 1, 100, 1, { hasLoot = true })
 addon:ClearInventoryState()
 timers = {}
