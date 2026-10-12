@@ -331,6 +331,52 @@ function addon:ResetPosition()
     self:Print("Button position reset.")
 end
 
+-- Report unresolved tooltips without requiring an expensive new inventory scan.
+-- The last incomplete snapshots persist after the bounded retry attempts end.
+function addon:GetIncompleteTooltipRows()
+    local rows = {}
+    for bag, bagSlots in pairs(self.slotIndex or {}) do
+        for slot, entry in pairs(bagSlots) do
+            local snapshot = entry.snapshot
+            if snapshot and snapshot.complete == false then
+                local retryKey = tostring(bag) .. ":" .. tostring(slot)
+                rows[#rows + 1] = {
+                    bag = bag,
+                    slot = slot,
+                    itemID = entry.itemID,
+                    name = (entry.context and entry.context.name) or "Unknown item",
+                    reads = self.tooltipRetries and self.tooltipRetries[retryKey] or 0,
+                    text = (snapshot.text or ""):gsub("[\r\n]+", " / "):sub(1, 80),
+                }
+            end
+        end
+    end
+    table.sort(rows, function(left, right)
+        if left.reads ~= right.reads then
+            return left.reads > right.reads
+        end
+        if left.bag ~= right.bag then
+            return left.bag < right.bag
+        end
+        return left.slot < right.slot
+    end)
+    return rows
+end
+
+function addon:PrintIncompleteTooltips()
+    local rows = self:GetIncompleteTooltipRows()
+    self:Print(("Unresolved item tooltips: %d"):format(#rows))
+    for index = 1, math.min(#rows, 15) do
+        local row = rows[index]
+        self:Print(("%s (%s) bag %d slot %d | reads %d | text: %s"):format(
+            row.name, tostring(row.itemID or "?"), row.bag, row.slot,
+            row.reads, row.text ~= "" and row.text or "(empty)"))
+    end
+    if #rows > 15 then
+        self:Print(("...and %d more unresolved tooltips"):format(#rows - 15))
+    end
+end
+
 function addon:HandleSlash(input)
     local command, argument = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     command = string.lower(command or "")
@@ -338,7 +384,7 @@ function addon:HandleSlash(input)
     if command == "" then
         self:OpenSettings()
     elseif command == "help" then
-        self:Print("/ifyi opens settings. Commands: scan, perf, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
+        self:Print("/ifyi opens settings. Commands: scan, perf, perfitems, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
     elseif command == "scan" then
         self.sessionSkipped = {}
         self:ScheduleScan("manual", 0)
@@ -353,6 +399,8 @@ function addon:HandleSlash(input)
             m.tooltipSnapshots or 0, m.fallbackTooltips or 0,
             m.incompleteTooltipReads or 0, m.tooltipRetriesScheduled or 0,
             m.workTicks or 0, m.maxTickMs or 0, m.totalTickMs or 0))
+    elseif command == "perfitems" then
+        self:PrintIncompleteTooltips()
     elseif command == "skip" then
         self:SkipCurrent(false)
     elseif command == "ignore" then
