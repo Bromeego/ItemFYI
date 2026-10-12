@@ -8,6 +8,10 @@
   scan batch finishes.
 - Retained fresh cross-bag stack totals before classifying and safely revisited
   bags that changed midway through a sliced scan.
+- Deferred automatic login scans until the UI has settled, then paced startup
+  tooltip reads to one item every 40ms. Manual scans remain immediate.
+- Added `/ifyi perf` to report scan progress, tooltip reads, and peak work-tick
+  time when diagnosing reload frame hitches.
 
 ## 0.2.33
 
