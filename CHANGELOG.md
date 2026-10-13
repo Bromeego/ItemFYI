@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.35
+
+- Updated the Retail TOC interface version to 12.1.5 (`120105`).
+  No addon functionality has changed in this release.
+
 ## 0.2.34
 
 - Automatically refresh quest-starter FYIs on quest acceptance and abandonment
