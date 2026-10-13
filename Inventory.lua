@@ -6,11 +6,18 @@ local wipe = wipe or function(target)
     end
 end
 
-local EXPENSIVE_WORK_PER_TICK = 4
-local TIME_BUDGET_MS = 3
+local EXPENSIVE_WORK_PER_TICK = 2
+local RECONCILE_SLOTS_PER_TICK = 12
+local TIME_BUDGET_MS = 2
 local MAX_TOOLTIP_RETRIES = 4
+-- A real item may have a complete, name-only tooltip. Two follow-up reads
+-- are enough to catch normal delayed Use: lines without polling indefinitely.
+-- Empty/error tooltips still get the longer recovery window above.
+local MAX_NAME_ONLY_RETRIES = 2
 local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
+-- Spread the initial login scan out: inventory FYIs are not time-critical.
+local LOGIN_CLASSIFY_TICK_DELAY = 0.04
 
 local forceRefreshReasons = {
     login = true,
@@ -69,11 +76,23 @@ local function EnsureState(self)
     if not self.dirtyBags then
         self.dirtyBags = {}
     end
+    if not self.reconcileQueue then
+        self.reconcileQueue = {}
+    end
+    if not self.reconcileHead then
+        self.reconcileHead = 1
+    end
+    if not self.reconcileQueued then
+        self.reconcileQueued = {}
+    end
     if not self.pendingItemIDs then
         self.pendingItemIDs = {}
     end
     if not self.classifyQueue then
         self.classifyQueue = {}
+    end
+    if not self.classifyHead then
+        self.classifyHead = 1
     end
     if not self.classifyQueued then
         self.classifyQueued = {}
@@ -251,18 +270,26 @@ function addon:ClearInventoryState()
     self.slotIndex = {}
     self.itemTotals = {}
     self.dirtyBags = {}
+    self.reconcileQueue = {}
+    self.reconcileHead = 1
+    self.reconcileQueued = {}
+    self.reconcileBag = nil
+    self.reconcileSlot = nil
+    self.reconcileSlotCount = nil
     self.allBagsDirty = false
     self.forceRefresh = false
     self.rebuildOnly = false
     self.eligibilityKinds = {}
     self.pendingItemIDs = {}
     self.classifyQueue = {}
+    self.classifyHead = 1
     self.classifyQueued = {}
     self.retryQueue = {}
     self.retryQueued = {}
     self.tooltipRetries = {}
     self.changedTotals = {}
     self.workActive = false
+    self.initialScanActive = false
     self.rebuildNeeded = false
     self.scanCache = {}
     self.pendingItemLoads = {}
@@ -312,7 +339,9 @@ function addon:NoteItemRefresh(itemID, keepTooltip)
 end
 
 function addon:HasInventoryWork()
-    if self.allBagsDirty or (self.dirtyBags and next(self.dirtyBags)) then
+    if self.allBagsDirty or (self.dirtyBags and next(self.dirtyBags))
+        or self.reconcileBag ~= nil
+        or (self.reconcileQueue and self.reconcileQueue[self.reconcileHead or 1] ~= nil) then
         return true
     end
     if self.forceRefresh or self.rebuildOnly
@@ -322,7 +351,7 @@ function addon:HasInventoryWork()
     if self.pendingItemIDs and next(self.pendingItemIDs) then
         return true
     end
-    if self.classifyQueue and self.classifyQueue[1] then
+    if self.classifyQueue and self.classifyQueue[self.classifyHead or 1] then
         return true
     end
     if self.retryQueue and self.retryQueue[1] then
@@ -339,6 +368,11 @@ function addon:NoteScanIntent(reason)
     reason = reason or ""
 
     if forceRefreshReasons[reason] then
+        if reason == "login" then
+            self.initialScanActive = true
+        elseif reason == "manual" then
+            self.initialScanActive = false
+        end
         self.forceRefresh = true
         self.allBagsDirty = true
         self.rebuildOnly = false
@@ -354,6 +388,14 @@ function addon:NoteScanIntent(reason)
     local collectionCategory = collectionCategories[reason]
     if collectionCategory then
         self.eligibilityKinds[collectionCategory] = true
+        self.rebuildOnly = false
+        return
+    end
+
+    if reason == "quest state" then
+        -- Quest acceptance/abandonment changes usefulness without moving the
+        -- item. Re-evaluate only known starters using cached tooltip snapshots.
+        self.eligibilityKinds.quest = true
         self.rebuildOnly = false
         return
     end
@@ -420,6 +462,18 @@ local function QueueEligibility(self, kind)
                 elseif entry.category == "profession" then
                     shouldQueue = true
                 end
+            elseif kind == "quest" then
+                -- Only revisit known quest starters. Quest acceptance can
+                -- update the tooltip without changing the bag fingerprint.
+                -- Remember starters even if the active-quest tooltip changes,
+                -- so abandoning can restore them.
+                shouldQueue = entry.category == "quest" or entry.questStarterKnown == true
+                if shouldQueue then
+                    entry.snapshot = nil
+                    if self.scanCache then
+                        self.scanCache[SlotKey(bag, slot)] = nil
+                    end
+                end
             elseif entry.category == kind then
                 shouldQueue = true
             end
@@ -440,104 +494,137 @@ local function QueuePendingItemIDs(self)
     self.pendingItemIDs = {}
 end
 
-local function ReconcileBag(self, bag)
-    local slotCount = C_Container.GetContainerNumSlots(bag) or 0
-    local seen = {}
-    for slot = 1, slotCount do
-        self:NoteMetric("slotsInspected")
-        local info = C_Container.GetContainerItemInfo(bag, slot)
-        local fingerprint = Fingerprint(info, bag, slot)
-        local existing = GetEntry(self, bag, slot)
-        if not fingerprint then
-            if existing then
-                RemoveSlot(self, bag, slot)
-            end
-        else
-            seen[slot] = true
-            local changed = not existing or not FingerprintsEqual(existing, fingerprint)
-            if changed then
-                if existing then
-                    AdjustTotal(self, existing.itemID, -(existing.stackCount or 0))
-                else
-                    existing = {}
-                    SetEntry(self, bag, slot, existing)
-                end
-                existing.itemID = fingerprint.itemID
-                existing.link = fingerprint.link
-                existing.stackCount = fingerprint.stackCount
-                existing.hasLoot = fingerprint.hasLoot
-                existing.icon = fingerprint.icon
-                existing.snapshot = nil
-                existing.classified = false
-                existing.category = nil
-                existing.reason = nil
-                existing.uniqueKey = nil
-                existing.sawRestrictionText = nil
-                existing.awaitingItemInfo = nil
-                existing.context = nil
-                existing.bag = bag
-                existing.slot = slot
-                AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
-                self.tooltipRetries[SlotKey(bag, slot)] = nil
-                if self.scanCache then
-                    self.scanCache[SlotKey(bag, slot)] = nil
-                end
-                self:NoteMetric("slotsChanged")
-                QueueClassify(self, bag, slot)
-            elseif not existing.classified then
-                QueueClassify(self, bag, slot)
-            end
-        end
+-- Inventory indexing used to traverse every equipped bag synchronously before
+-- the sliced tooltip queue could start. Slice the index pass too so a login
+-- with hundreds of occupied slots doesn't consume one long frame.
+local function QueueBagReconcile(self, bag)
+    if self.reconcileQueued[bag] then
+        return
     end
-
-    local bagSlots = self.slotIndex[bag]
-    if bagSlots then
-        for slot in pairs(bagSlots) do
-            if not seen[slot] then
-                RemoveSlot(self, bag, slot)
-            end
-        end
-    end
+    self.reconcileQueued[bag] = true
+    self.reconcileQueue[#self.reconcileQueue + 1] = bag
 end
 
-local function ReconcileDirtyBags(self)
-    local lastBag = EquippedBagCount()
+local function QueueDirtyBagReconciles(self)
     if self.allBagsDirty then
-        for bag = 0, lastBag do
-            ReconcileBag(self, bag)
+        for bag = 0, EquippedBagCount() do
+            QueueBagReconcile(self, bag)
         end
         self.allBagsDirty = false
         wipe(self.dirtyBags)
     else
         for bag in pairs(self.dirtyBags) do
-            ReconcileBag(self, bag)
+            QueueBagReconcile(self, bag)
         end
         wipe(self.dirtyBags)
     end
+end
 
-    if next(self.changedTotals) then
-        for itemID in pairs(self.changedTotals) do
-            QueueItemSlots(self, itemID)
+local function ReconcileSlot(self, bag, slot)
+    self:NoteMetric("slotsInspected")
+    local info = C_Container.GetContainerItemInfo(bag, slot)
+    local fingerprint = Fingerprint(info, bag, slot)
+    local existing = GetEntry(self, bag, slot)
+    if not fingerprint then
+        if existing then
+            RemoveSlot(self, bag, slot)
         end
-        wipe(self.changedTotals)
+        return
+    end
+
+    local changed = not existing or not FingerprintsEqual(existing, fingerprint)
+    if changed then
+        if existing then
+            AdjustTotal(self, existing.itemID, -(existing.stackCount or 0))
+        else
+            existing = {}
+            SetEntry(self, bag, slot, existing)
+        end
+        existing.itemID = fingerprint.itemID
+        existing.link = fingerprint.link
+        existing.stackCount = fingerprint.stackCount
+        existing.hasLoot = fingerprint.hasLoot
+        existing.icon = fingerprint.icon
+        existing.snapshot = nil
+        existing.classified = false
+        existing.category = nil
+        existing.reason = nil
+        existing.uniqueKey = nil
+        existing.questStarterKnown = nil
+        existing.sawRestrictionText = nil
+        existing.awaitingItemInfo = nil
+        existing.context = nil
+        existing.bag = bag
+        existing.slot = slot
+        AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
+        self.tooltipRetries[SlotKey(bag, slot)] = nil
+        if self.scanCache then
+            self.scanCache[SlotKey(bag, slot)] = nil
+        end
+        self:NoteMetric("slotsChanged")
+        QueueClassify(self, bag, slot)
+    elseif not existing.classified then
+        QueueClassify(self, bag, slot)
     end
 end
 
-local function CompactClassifyQueue(self)
-    local source = self.classifyQueue
-    local compact = {}
-    local queued = {}
-    for index = 1, #source do
-        local job = source[index]
-        local key = SlotKey(job.bag, job.slot)
-        if self.classifyQueued[key] and not queued[key] and GetEntry(self, job.bag, job.slot) then
-            queued[key] = true
-            compact[#compact + 1] = job
+local function FinishReconcileBag(self, bag, slotCount)
+    -- Every slot <= slotCount was inspected, including empty/locked slots.
+    -- Only entries beyond the current bag size can still be stale.
+    local bagSlots = self.slotIndex[bag]
+    if bagSlots then
+        for slot in pairs(bagSlots) do
+            if slot > slotCount then
+                RemoveSlot(self, bag, slot)
+            end
         end
     end
-    self.classifyQueue = compact
-    self.classifyQueued = queued
+    self.reconcileBag = nil
+    self.reconcileSlot = nil
+    self.reconcileSlotCount = nil
 end
+
+local function ProcessReconcileTick(self, started)
+    QueueDirtyBagReconciles(self)
+    local inspected = 0
+    local limit = self.reconcileSlotsPerTick or RECONCILE_SLOTS_PER_TICK
+
+    while inspected < limit do
+        if started and (TimeNow() - started) >= TIME_BUDGET_MS then
+            break
+        end
+
+        local bag = self.reconcileBag
+        if bag == nil then
+            local head = self.reconcileHead or 1
+            bag = self.reconcileQueue[head]
+            if bag == nil then
+                self.reconcileQueue = {}
+                self.reconcileHead = 1
+                return false
+            end
+            self.reconcileHead = head + 1
+            self.reconcileQueued[bag] = nil
+            self.reconcileBag = bag
+            self.reconcileSlot = 1
+            self.reconcileSlotCount = C_Container.GetContainerNumSlots(bag) or 0
+        end
+
+        local slot = self.reconcileSlot
+        if slot > self.reconcileSlotCount then
+            FinishReconcileBag(self, bag, self.reconcileSlotCount)
+        else
+            ReconcileSlot(self, bag, slot)
+            self.reconcileSlot = slot + 1
+            inspected = inspected + 1
+        end
+    end
+
+    return true
+end
+
+-- Cancelled or replaced jobs remain in the array until their turn, but are
+-- skipped when dequeued. This avoids walking the full queue on every frame.
 
 function addon:RebuildCandidates()
     local candidates = {}
@@ -642,6 +729,7 @@ local function ClassifySlot(self, bag, slot)
     self.useScanCache = nil
 
     entry.snapshot = snapshot
+    entry.questStarterKnown = entry.questStarterKnown or (snapshot and snapshot.questStarter == true)
     entry.sawRestrictionText = snapshot and snapshot.sawRestrictionText
     entry.uniqueKey = context.uniqueKey
     entry.classified = true
@@ -662,7 +750,9 @@ local function ClassifySlot(self, bag, slot)
         if not category then
             entry.classified = false
         end
-        if retries <= MAX_TOOLTIP_RETRIES then
+        local maxRetries = snapshot.nameOnly and MAX_NAME_ONLY_RETRIES or MAX_TOOLTIP_RETRIES
+        if retries <= maxRetries then
+            self:NoteMetric("tooltipRetriesScheduled")
             ScheduleTooltipRetry(self, bag, slot)
         end
     else
@@ -671,14 +761,27 @@ local function ClassifySlot(self, bag, slot)
 end
 
 local function DequeueClassify(self)
+    -- A front-removal shifts every queued job; use an index so each dequeue is O(1).
+    -- Reset the array when drained to avoid keeping processed jobs indefinitely.
     while true do
-        local job = table.remove(self.classifyQueue, 1)
+        local head = self.classifyHead or 1
+        local job = self.classifyQueue[head]
         if not job then
+            self.classifyQueue = {}
+            self.classifyHead = 1
             return
         end
+
+        self.classifyHead = head + 1
+        if self.classifyHead > #self.classifyQueue then
+            self.classifyQueue = {}
+            self.classifyHead = 1
+        end
+
         local key = SlotKey(job.bag, job.slot)
+        local queued = self.classifyQueued[key]
         self.classifyQueued[key] = nil
-        if GetEntry(self, job.bag, job.slot) then
+        if queued and GetEntry(self, job.bag, job.slot) then
             return job
         end
     end
@@ -698,9 +801,20 @@ function addon:ProcessInventoryTick(maxExpensive)
         return false
     end
 
-    local expensiveLimit = maxExpensive or self.workPerTick or EXPENSIVE_WORK_PER_TICK
+    local expensiveLimit = maxExpensive or self.workPerTick
+        or (self.initialScanActive and 1) or EXPENSIVE_WORK_PER_TICK
     local started = TimeNow()
     local expensive = 0
+    local function RecordTick()
+        if started then
+            local elapsed = TimeNow() - started
+            if elapsed >= 0 then
+                local metrics = self.metrics
+                metrics.totalTickMs = (metrics.totalTickMs or 0) + elapsed
+                metrics.maxTickMs = math.max(metrics.maxTickMs or 0, elapsed)
+            end
+        end
+    end
 
     if self.forceRefresh then
         self.forceRefresh = false
@@ -708,8 +822,19 @@ function addon:ProcessInventoryTick(maxExpensive)
         ClearSnapshots(self)
     end
 
-    if self.allBagsDirty or next(self.dirtyBags) then
-        ReconcileDirtyBags(self)
+    -- Finish indexing all dirty bags before classifying: split-stack thresholds
+    -- need correct totals from every equipped bag, not partial per-frame totals.
+    if ProcessReconcileTick(self, started) then
+        self.workActive = true
+        RecordTick()
+        return true
+    end
+
+    if next(self.changedTotals) then
+        for itemID in pairs(self.changedTotals) do
+            QueueItemSlots(self, itemID)
+        end
+        wipe(self.changedTotals)
     end
 
     PromoteRetries(self)
@@ -721,7 +846,6 @@ function addon:ProcessInventoryTick(maxExpensive)
         wipe(self.eligibilityKinds)
     end
     QueuePendingItemIDs(self)
-    CompactClassifyQueue(self)
 
     while expensive < expensiveLimit do
         if started and (TimeNow() - started) >= TIME_BUDGET_MS then
@@ -739,19 +863,31 @@ function addon:ProcessInventoryTick(maxExpensive)
         self.metrics.maxWorkPerTick = expensive
     end
 
-    if self.rebuildNeeded or self.rebuildOnly then
+    -- Rebuilding candidates traverses the full slot index and updates the UI.
+    -- Doing it after every two classified items makes a full login scan hitch.
+    -- Commit a coherent candidate list once this batch has drained instead.
+    if (self.rebuildNeeded or self.rebuildOnly)
+        and not self.classifyQueue[self.classifyHead or 1] then
         self:RebuildCandidates()
         self.rebuildOnly = false
     end
 
     local remaining = self:HasInventoryWork()
     self.workActive = remaining
+    RecordTick()
+    if not remaining then
+        self.initialScanActive = false
+    end
     return remaining
 end
 
 function addon:FlushInventoryWork()
     while self:ProcessInventoryTick(self.workPerTick or EXPENSIVE_WORK_PER_TICK) do
     end
+end
+
+local function NextInventoryTickDelay()
+    return addon.initialScanActive and LOGIN_CLASSIFY_TICK_DELAY or WORK_TICK_DELAY
 end
 
 local function ContinueInventoryWork()
@@ -762,7 +898,7 @@ local function ContinueInventoryWork()
     end
     local remaining = addon:ProcessInventoryTick()
     if remaining then
-        C_Timer.After(WORK_TICK_DELAY, ContinueInventoryWork)
+        C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
 end
 
@@ -779,7 +915,7 @@ function addon:RunScheduledInventory()
 
     if self.rebuildOnly and not self.forceRefresh and not self.allBagsDirty
         and not next(self.dirtyBags) and not next(self.pendingItemIDs)
-        and not next(self.eligibilityKinds) and not self.classifyQueue[1]
+        and not next(self.eligibilityKinds) and not self.classifyQueue[self.classifyHead or 1]
         and not (self.retryQueue and self.retryQueue[1]) then
         self:RebuildCandidates()
         self.rebuildOnly = false
@@ -790,7 +926,7 @@ function addon:RunScheduledInventory()
     self.workActive = true
     local remaining = self:ProcessInventoryTick()
     if remaining then
-        C_Timer.After(WORK_TICK_DELAY, ContinueInventoryWork)
+        C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
 end
 
@@ -802,7 +938,7 @@ function addon:ScanBags(reason)
     if not self.forceRefresh and not self.rebuildOnly
         and not next(self.eligibilityKinds)
         and not self.allBagsDirty and not next(self.dirtyBags)
-        and not next(self.pendingItemIDs) and not self.classifyQueue[1]
+        and not next(self.pendingItemIDs) and not self.classifyQueue[self.classifyHead or 1]
         and not (self.retryQueue and self.retryQueue[1]) then
         self.allBagsDirty = true
     end

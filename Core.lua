@@ -121,6 +121,8 @@ end
 
 local BAG_SCAN_DELAY = 0.3
 local BUSY_BAG_SCAN_DELAY = 0.45
+-- Defer automatic login scans until UI/item loading has settled.
+local INITIAL_SCAN_GRACE = 2.5
 
 local function GetBagScanDelay()
     -- Mail take-all, vendor auto-sell, and similar bursts fire many bag events.
@@ -204,6 +206,12 @@ function addon:ScheduleScan(reason, delay)
     if self.NoteScanIntent then
         self:NoteScanIntent(reason)
     end
+    if self.startupScanPending and reason ~= "manual" then
+        -- Startup BAG_UPDATE bursts must not bypass the initial delay.
+        delay = math.max(delay or 0.15, INITIAL_SCAN_GRACE)
+    elseif reason == "manual" then
+        self.startupScanPending = false
+    end
     self.scanGeneration = self.scanGeneration + 1
     local generation = self.scanGeneration
 
@@ -225,6 +233,7 @@ function addon:ScheduleScan(reason, delay)
             return
         end
         addon.scanPending = false
+        addon.startupScanPending = false
         addon:RunScheduledInventory()
     end)
 end
@@ -322,6 +331,52 @@ function addon:ResetPosition()
     self:Print("Button position reset.")
 end
 
+-- Report unresolved tooltips without requiring an expensive new inventory scan.
+-- The last incomplete snapshots persist after the bounded retry attempts end.
+function addon:GetIncompleteTooltipRows()
+    local rows = {}
+    for bag, bagSlots in pairs(self.slotIndex or {}) do
+        for slot, entry in pairs(bagSlots) do
+            local snapshot = entry.snapshot
+            if snapshot and snapshot.complete == false then
+                local retryKey = tostring(bag) .. ":" .. tostring(slot)
+                rows[#rows + 1] = {
+                    bag = bag,
+                    slot = slot,
+                    itemID = entry.itemID,
+                    name = (entry.context and entry.context.name) or "Unknown item",
+                    reads = self.tooltipRetries and self.tooltipRetries[retryKey] or 0,
+                    text = (snapshot.text or ""):gsub("[\r\n]+", " / "):sub(1, 80),
+                }
+            end
+        end
+    end
+    table.sort(rows, function(left, right)
+        if left.reads ~= right.reads then
+            return left.reads > right.reads
+        end
+        if left.bag ~= right.bag then
+            return left.bag < right.bag
+        end
+        return left.slot < right.slot
+    end)
+    return rows
+end
+
+function addon:PrintIncompleteTooltips()
+    local rows = self:GetIncompleteTooltipRows()
+    self:Print(("Unresolved item tooltips: %d"):format(#rows))
+    for index = 1, math.min(#rows, 15) do
+        local row = rows[index]
+        self:Print(("%s (%s) bag %d slot %d | reads %d | text: %s"):format(
+            row.name, tostring(row.itemID or "?"), row.bag, row.slot,
+            row.reads, row.text ~= "" and row.text or "(empty)"))
+    end
+    if #rows > 15 then
+        self:Print(("...and %d more unresolved tooltips"):format(#rows - 15))
+    end
+end
+
 function addon:HandleSlash(input)
     local command, argument = (input or ""):match("^%s*(%S*)%s*(.-)%s*$")
     command = string.lower(command or "")
@@ -329,12 +384,23 @@ function addon:HandleSlash(input)
     if command == "" then
         self:OpenSettings()
     elseif command == "help" then
-        self:Print("/ifyi opens settings. Commands: scan, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
+        self:Print("/ifyi opens settings. Commands: scan, perf, perfitems, list, skip, ignore, ignored, unignore <key>, clearignored, clearskips, reset")
     elseif command == "scan" then
         self.sessionSkipped = {}
         self:ScheduleScan("manual", 0)
     elseif command == "list" then
         self:ListCandidates()
+    elseif command == "perf" then
+        local m = self:GetMetrics()
+        local state = (self.startupScanPending and "waiting")
+            or (self.workActive and "scanning") or "idle"
+        self:Print(("Scan %s | slots %d | classified %d | tooltips %d (fallback %d, incomplete %d, retries %d) | ticks %d | max tick %.2fms, total %.1fms"):format(
+            state, m.slotsInspected or 0, m.itemsClassified or 0,
+            m.tooltipSnapshots or 0, m.fallbackTooltips or 0,
+            m.incompleteTooltipReads or 0, m.tooltipRetriesScheduled or 0,
+            m.workTicks or 0, m.maxTickMs or 0, m.totalTickMs or 0))
+    elseif command == "perfitems" then
+        self:PrintIncompleteTooltips()
     elseif command == "skip" then
         self:SkipCurrent(false)
     elseif command == "ignore" then
@@ -382,6 +448,8 @@ events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
 events:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
 events:RegisterEvent("PLAYER_LOOT_SPEC_UPDATED")
 events:RegisterEvent("QUEST_TURNED_IN")
+events:RegisterEvent("QUEST_ACCEPTED")
+events:RegisterEvent("QUEST_REMOVED")
 events:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
 events:RegisterEvent("PLAYER_LEVEL_CHANGED")
 events:RegisterEvent("SKILL_LINES_CHANGED")
@@ -418,7 +486,9 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:RegisterSkinning()
         addon:RegisterEditMode()
         addon:SnapshotWatchedQuests()
-        addon:ScheduleScan("login", 0.4)
+        addon:ResetMetrics()
+        addon.startupScanPending = true
+        addon:ScheduleScan("login", INITIAL_SCAN_GRACE)
     elseif event == "PLAYER_REGEN_ENABLED" then
         if addon.layoutPending then
             local useSavedPosition = addon.layoutUseSavedPosition
@@ -460,6 +530,11 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:NoteItemRefresh(itemID)
             addon:ScheduleScan(event, GetBagScanDelay())
         end
+    elseif event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" then
+        -- A quest starter may remain in the bag after its quest is accepted.
+        -- Quest state changes need only a cached eligibility recheck, not a
+        -- full inventory or tooltip scan. The delay lets the log settle.
+        addon:ScheduleScan("quest state", 0.25)
     elseif event == "QUEST_TURNED_IN" then
         -- World quests and other turn-ins fire this even when the reward is
         -- only currency. Rescan bags only for weekly treatise quests.

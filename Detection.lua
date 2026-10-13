@@ -2,6 +2,22 @@ local _, addon = ...
 
 local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 
+-- Some legacy quest turn-in materials have a complete Blizzard tooltip
+-- consisting only of their name. They have no bag use/learn action and need
+-- no delayed retries. Keep these exceptions exact: learnable Curios can also
+-- initially return a name-only tooltip before their Use: line arrives.
+local inertNameOnlyItemIDs = {
+    [18945] = true, -- Dark Iron Residue (Thorium Brotherhood turn-in)
+    [20858] = true, -- Stone Scarab
+    [20859] = true, -- Gold Scarab
+    [20860] = true, -- Silver Scarab
+    [20861] = true, -- Bronze Scarab
+    [20862] = true, -- Crystal Scarab
+    [20863] = true, -- Clay Scarab
+    [20864] = true, -- Bone Scarab
+    [20865] = true, -- Ivory Scarab
+}
+
 local knownText = {
     "already known",
     "already collected",
@@ -155,6 +171,12 @@ local function GetPermanentSkillIncrease(text)
 end
 
 local function GetGarrisonActionReason(text, context)
+    -- Draenor caches, turn-in rewards, and similar consumables commonly use
+    -- "Use: Gain 25 Garrison Resources." Detect the action, not individual IDs.
+    -- Keep the match on a Use: line; flavour text alone is not actionable.
+    if string.find(text, "use:%s+gain%s+%d[%d,%.]*%s+garrison resources%f[%A]") then
+        return "Garrison Resources — click to collect"
+    end
     local itemSubType = string.lower(context and context.itemSubType or "")
     if itemSubType == "naval equipment"
         or string.find(text, "use:%s+equip a ship with") then
@@ -534,9 +556,14 @@ local function DefaultMetrics()
         slotsInspected = 0,
         slotsChanged = 0,
         tooltipSnapshots = 0,
+        incompleteTooltipReads = 0,
+        tooltipRetriesScheduled = 0,
         itemsClassified = 0,
         workTicks = 0,
         maxWorkPerTick = 0,
+        fallbackTooltips = 0,
+        maxTickMs = 0,
+        totalTickMs = 0,
     }
 end
 
@@ -666,6 +693,7 @@ function addon:GetTooltipSnapshot(context)
     if (needScanForText or needScanForColor) and not battlePetSpeciesID and not skipCompanionScan then
         local scanTooltip = EnsureScanTooltip(self)
         if scanTooltip then
+            self:NoteMetric("fallbackTooltips")
             local companionShown = BattlePetTooltip and BattlePetTooltip.IsShown
                 and BattlePetTooltip:IsShown()
             scanTooltip:ClearLines()
@@ -692,13 +720,24 @@ function addon:GetTooltipSnapshot(context)
     local hasUseText = string.find(text, "use:", 1, true) ~= nil
     local missingRestrictionColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
-    -- Name-only or companion-class tooltips after loot are not enough. Curios
-    -- and similar items only match their Use: line, which can arrive later.
-    -- Spell-less quest starters never grow a Use: line. "This Item Begins a
-    -- Quest" is the finished tooltip.
+    -- A fully loaded item can legitimately have NO Use: line: crafting
+    -- reagents, equipment, ordinary materials, etc. Treating all such items
+    -- as incomplete made each of them retry several times after every reload.
+    -- Keep retrying genuinely suspicious short/name-only tooltips, since a
+    -- Curio or another learnable may receive its Use: line asynchronously.
+    -- Quest starters can be finished without any Use: line.
+    local nameOnly = text ~= "" and context.name ~= nil
+        and text == string.lower(context.name)
+    local looksPartial = text == "" or not string.find(text, "\n", 1, true)
+        or nameOnly
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
-        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID or context.hasLoot == true)
+        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
+            or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
+            or not looksPartial)
+    if not complete then
+        self:NoteMetric("incompleteTooltipReads")
+    end
 
     context.tooltipSnapshot = {
         text = text,
@@ -706,6 +745,8 @@ function addon:GetTooltipSnapshot(context)
         sawRestrictionText = state.sawRestrictionText == true,
         battlePetSpeciesID = battlePetSpeciesID,
         questIDs = questIDs[1] and questIDs or nil,
+        questStarter = IsQuestStartAction(text),
+        nameOnly = nameOnly == true,
         complete = complete,
     }
     if self.useScanCache and complete then

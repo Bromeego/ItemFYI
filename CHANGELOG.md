@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased
+
+- Automatically refresh quest-starter FYIs on quest acceptance and abandonment
+  even when the item stays in the same bag slot. Re-evaluate only remembered
+  starters and their tooltips; no full inventory scan is needed.
+- Limit retries for unresolved name-only tooltips to two follow-up reads instead
+  of four. Completely empty or failed tooltip reads retain their existing
+  recovery limit, and delayed actionable Curios remain eligible for retries.
+
+- Recognized Draenor consumables with a `Use: Gain N Garrison Resources`
+  tooltip (including Pile of Frostfire Turnips and Icemother Milk) as
+  actionable progression items, without adding item-specific rules.
+
+- Reduced reload/login frame hitches by time-slicing bag-slot indexing as
+  well as tooltip classification, removing repeated queue compaction and
+  front-of-queue shifts, and rebuilding the notification list only after a
+  scan batch finishes.
+- Retained fresh cross-bag stack totals before classifying and safely revisited
+  bags that changed midway through a sliced scan.
+- Deferred automatic login scans until the UI has settled, then paced startup
+  tooltip reads to one item every 40ms. Manual scans remain immediate.
+- Added `/ifyi perf` to report scan progress, tooltip reads, retries, and
+  peak work-tick time when diagnosing reload frame hitches.
+- Added `/ifyi perfitems` to identify the remaining items with incomplete
+  tooltips, including item ID, bag/slot, read attempts, and sampled text,
+  without rescanning the inventory.
+- Stopped treating every normal item without a Use: line as incomplete. Fully
+  populated crafting-reagent and equipment tooltips are cached after one read
+  instead of receiving repeated scheduled retries, while short/name-only
+  tooltips still retry for late-arriving Curio and similar Use: lines.
+- Recognized all eight Ahn'Qiraj scarabs (20858–20865) and Dark Iron
+  Residue (18945) as inert name-only turn-in materials, eliminating four
+  unnecessary delayed tooltip retries per item without skipping legitimate
+  incomplete learnable tooltips.
+
 ## 0.2.33
 
 - Detected loot-specialization gear tokens such as Baleful Armament. Their
