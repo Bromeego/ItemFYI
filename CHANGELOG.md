@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.34
 
 - Automatically refresh quest-starter FYIs on quest acceptance and abandonment
   even when the item stays in the same bag slot. Re-evaluate only remembered
