@@ -1,0 +1,33 @@
+name: Publish ItemFYI v0.2.35 tag (one time)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: github.repository == 'Bromeego/ItemFYI'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publish tag for validated v0.2.35 release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=79d42d1fa42b58d61565387372e2339e693d78ca
+          toc=$(git show "$target:ItemFYI.toc")
+          test "$(printf '%s\n' "$toc" | sed -n 's/^## Version: //p')" = "0.2.35"
+          test "$(printf '%s\n' "$toc" | sed -n 's/^## Interface: //p')" = "120105"
+          if git ls-remote --exit-code --tags origin refs/tags/v0.2.35; then
+            echo "Refusing to overwrite existing v0.2.35"
+            exit 1
+          fi
+          git tag v0.2.35 "$target"
+          git push origin refs/tags/v0.2.35
