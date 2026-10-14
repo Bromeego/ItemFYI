@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.36
+
+- Fixed Companion Curios whose collection Use: action arrives after the rest
+  of their tooltip. Combat and Utility Curios now receive bounded follow-up
+  reads instead of being cached as non-actionable, without retrying ordinary
+  multiline item tooltips.
+- Added regression coverage for partially loaded and already-known Curios.
+
 ## 0.2.35
 
 - Updated the Retail TOC interface version to 12.1.5 (`120105`).
