@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.37
 
 - Recognize permanent Loa power consumables and Ancient Hash'ey glove
   enhancements from the Labyrinth of Kindo'jan using their tooltip actions
