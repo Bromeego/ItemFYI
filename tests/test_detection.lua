@@ -594,6 +594,50 @@ tooltipText = "Use: Gain 25 Artifact Power."
 category = addon:ClassifyItem(Context(137))
 assert(category == nil, "unrelated currency gain effects must not become Garrison Resource items")
 
+-- Labyrinth rewards: match the actual Use: action, not individual IDs.
+tooltipText = "Akil'zon's Swiftness\nSoulbound\nUse: Permanently gain Akil'zon's Swiftness, granting you stacking movement speed for every labyrinth chamber completed."
+local labyrinthCategory, labyrinthReason = addon:ClassifyItem(Context(282424))
+assert(labyrinthCategory == "progress" and labyrinthReason == "Labyrinth power — click to unlock",
+    "Akil'zon's Swiftness must be recognized as an actionable Labyrinth upgrade")
+
+tooltipText = "Nalorakk's Ferocity\nSoulbound\nUse: Permanently gain Nalorakk's Ferocity, granting you stacking Primary Stat for every labyrinth chamber completed."
+category = addon:ClassifyItem(Context(282427))
+assert(category == "progress", "Nalorakk's Ferocity should use the same upgrade rule")
+
+tooltipText = "Halazzi's Shroud\nSoulbound\nUse: Permanently gain Halazzi's Shroud, allowing you to cheat death once while within the Labyrinth."
+category = addon:ClassifyItem(Context(282718))
+assert(category == "progress", "Halazzi's Shroud should use the same upgrade rule")
+
+tooltipText = "Ancient Hash'ey Battle Art: Falco Strikes\nBinds to Warband\nUse:\nPermanently imbue your gloves with Akil'zon's winds. While inside a delve, you have a chance to strike an enemy."
+local gloveCategory, gloveReason = addon:ClassifyItem(Context(280563))
+assert(gloveCategory == "progress" and gloveReason == "Delve glove enhancement — click to apply",
+    "reusable Labyrinth glove upgrades should match even if Use: starts a separate line")
+
+tooltipText = "Use: Permanently imbue your gloves with Jan'alai's flames. While inside a delve, you have a chance to surround yourself in flames."
+category = addon:ClassifyItem(Context(283996))
+assert(category == "progress", "other Ancient Hash'ey glove upgrades should match generically")
+
+itemUsable = false
+tooltipText = "Use: Permanently gain Akil'zon's Swiftness, granting you stacking movement speed for every labyrinth chamber completed."
+category = addon:ClassifyItem(Context(282424))
+assert(category == nil, "unusable Labyrinth permanent powers should stay hidden")
+tooltipText = "Use: Permanently imbue your gloves with Akil'zon's winds. While inside a delve, you have a chance to strike an enemy."
+category = addon:ClassifyItem(Context(280563))
+assert(category == nil, "unusable glove enhancements should stay hidden")
+itemUsable = true
+
+tooltipText = "A tale of an ancient warrior who would permanently gain power within the labyrinth."
+category = addon:ClassifyItem(Context(282424))
+assert(category == nil, "flavour text about Labyrinth effects should not trigger an FYI")
+
+tooltipText = "Use: Permanently imbue your gloves with ancient power."
+category = addon:ClassifyItem(Context(280563))
+assert(category == nil, "an unrelated glove enchant should not match the Delve enhancement rule")
+
+tooltipText = "Use: Permanently enchants shoulder armor with Akil'zon's Swiftness, increasing Speed by 52."
+category = addon:ClassifyItem(Context(243963))
+assert(category == nil, "an ordinary enchant must not be confused with a Labyrinth unlock")
+
 tooltipText = "Use: Grants 750 reputation with the Army of the Light. (2 Sec Cooldown)\nCurrent: Paragon (250/10,000)"
 category = addon:ClassifyItem(Context(152956))
 assert(category == "progress", "Legion reputation insignias should be actionable at Paragon")

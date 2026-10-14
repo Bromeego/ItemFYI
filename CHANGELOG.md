@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Recognize permanent Loa power consumables and Ancient Hash'ey glove
+  enhancements from the Labyrinth of Kindo'jan using their tooltip actions
+  rather than item-specific IDs, without extra inventory scanning.
+
 ## 0.2.36
 
 - Fixed Companion Curios whose collection Use: action arrives after the rest
