@@ -10,7 +10,7 @@ local categoryOptions = {
     { key = "curio", label = "Companion curios" },
     { key = "profession", label = "Profession progress & processing" },
     { key = "recipe", label = "Recipes" },
-    { key = "progress", label = "Garrison & reputation" },
+    { key = "progress", label = "Progression, Garrison & reputation" },
     { key = "quest", label = "Quests" },
 }
 

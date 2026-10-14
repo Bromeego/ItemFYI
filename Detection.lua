@@ -199,6 +199,21 @@ local function GetGarrisonActionReason(text, context)
     end
 end
 
+local function GetLabyrinthActionReason(text)
+    -- Permanent Loa powers have a real collection Use: action and a Labyrinth
+    -- description. Match their tooltip wording, not a growing list of IDs.
+    if string.find(text, "use:%s+permanently gain%s+[^\n]-labyrinth") then
+        return "Labyrinth power — click to unlock"
+    end
+
+    -- Ancient Hash'ey Battle Arts are reusable Delve glove enhancements.
+    -- "Use:" and the actual description can be on separate tooltip lines.
+    if string.find(text, "use:%s+permanently imbue your gloves with")
+        and string.find(text, "while inside a delve", 1, true) then
+        return "Delve glove enhancement — click to apply"
+    end
+end
+
 local function IsReputationGrantAction(text)
     -- The client inserts a thousands separator, so "1000" appears as "1,000"
     -- or "2.500". The amount stays on the Use: line.
@@ -939,6 +954,12 @@ function addon:ClassifyItem(context)
     local garrisonReason = GetGarrisonActionReason(tooltipText, context)
     if garrisonReason and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
         return "progress", garrisonReason
+    end
+
+    local labyrinthReason = GetLabyrinthActionReason(tooltipText)
+    if labyrinthReason and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "progress", labyrinthReason
     end
 
     if IsReputationGrantAction(tooltipText) and IsItemUsable(context.itemID)
