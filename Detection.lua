@@ -730,8 +730,22 @@ function addon:GetTooltipSnapshot(context)
         and text == string.lower(context.name)
     local looksPartial = text == "" or not string.find(text, "\n", 1, true)
         or nameOnly
+    -- Combat and utility Curios can initially have a long, otherwise complete
+    -- tooltip (name, type, rank, flavour/effect) before their collection Use:
+    -- line arrives. Ordinary multi-line equipment/reagents should NOT retry.
+    -- A known Curio is intentionally complete even without an action line.
+    local itemType = string.lower(context.itemType or "")
+    local itemSubType = string.lower(context.itemSubType or "")
+    local curioTooltip = HasTooltipTypeLine(text, "combat curio")
+        or HasTooltipTypeLine(text, "utility curio")
+        or itemType == "combat curio" or itemType == "utility curio"
+        or itemSubType == "combat curio" or itemSubType == "utility curio"
+    local waitingForCurioUse = curioTooltip
+        and not ContainsAny(text, curioText)
+        and not ContainsAny(text, knownText)
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
+        and not waitingForCurioUse
         and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
             or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
             or not looksPartial)

@@ -239,6 +239,40 @@ addon:GetTooltipSnapshot(Context(113, {
     stackCount = 1,
 }))
 assert(incompleteCalls > nameOnlyCalls, "name-only tooltips must not be cached as valid")
+
+-- Curios can arrive with a fully populated multi-line tooltip, except for
+-- the collection Use: line. Treat that as incomplete rather than permanently
+-- caching it as an inert item; the next bounded scan retry can then see it.
+addon:InvalidateScanCache()
+local curioContext = {
+    bag = 6, slot = 2, stackCount = 1, name = "Ouroboric Curse",
+    itemSubType = "Other",
+}
+tooltipText = "Ouroboric Curse\nCombat Curio\nRank 5/5\nSoulbound\nWhen any player's health falls below 50%..."
+local curioCallsBefore = incompleteCalls
+local curioPartial = addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 2, stackCount = 1, name = curioContext.name,
+}))
+assert(curioPartial.complete == false,
+    "multi-line Curios missing their Use: line must be retried")
+tooltipText = tooltipText .. "\nUse: Add this Curio to your companion's collection."
+local curioComplete = addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 2, stackCount = 1, name = curioContext.name,
+}))
+assert(incompleteCalls == curioCallsBefore + 2 and curioComplete.complete == true,
+    "Curio should be re-read once the collection action loads")
+local curioCategory = addon:ClassifyItem(Context(113, {
+    bag = 6, slot = 2, stackCount = 1, name = curioContext.name,
+}))
+assert(curioCategory == "curio", "fully loaded Ouroboric Curse should be actionable")
+
+-- Collected Curios should not trigger additional polling.
+addon:InvalidateScanCache()
+tooltipText = "Ouroboric Curse\nCombat Curio\nAlready known"
+local curioKnown = addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 2, stackCount = 1, name = curioContext.name,
+}))
+assert(curioKnown.complete == true, "known Curios should not be retried")
 C_TooltipInfo.GetBagItem = originalGetBagItem
 addon.useScanCache = nil
 tooltipText = ""
