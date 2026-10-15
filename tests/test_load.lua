@@ -249,8 +249,13 @@ Settings = {
     OpenToCategory = function(categoryID) openedCategory = categoryID end,
 }
 
+C_AddOns = { GetAddOnMetadata = function(name, field)
+    assert(name == "ItemFYI" and field == "Version")
+    return "9.8.7"
+end }
 local addon = {}
 assert(loadfile("Core.lua"))("ItemFYI", addon)
+assert(addon.version == "9.8.7", "runtime version must come from TOC metadata")
 assert(loadfile("Rules.lua"))("ItemFYI", addon)
 assert(loadfile("Detection.lua"))("ItemFYI", addon)
 assert(loadfile("Inventory.lua"))("ItemFYI", addon)

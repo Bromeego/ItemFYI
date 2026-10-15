@@ -3,6 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+python3 tools/release.py
+python3 tests/test_release.py
+
 lua_bin=""
 for candidate in lua5.1 lua luajit; do
     if command -v "$candidate" >/dev/null 2>&1; then

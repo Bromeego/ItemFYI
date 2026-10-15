@@ -3,6 +3,7 @@ name: Validate addon
 on:
   push:
     branches: ['**']
+    tags: ['v*']
   pull_request:
 
 permissions:
@@ -13,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Lua 5.1
         run: sudo apt-get update && sudo apt-get install --yes lua5.1
       - name: Validate addon

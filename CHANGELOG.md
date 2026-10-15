@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Target the displayed pet cage when learning a pet, with combat and
+  inventory-interaction safeguards.
+- Keep bank updates out of carried-item counts and remove outside-bag entries
+  during a full rescan.
+- Honor red tooltip requirements on mounts, toys, pets, companions, and Curios;
+  refresh eligibility when character requirements change.
+- Read the runtime version from addon metadata. Add a matching-tag helper and
+  CI checks for the TOC version, release tag, and latest changelog release.
+- Document English tooltip coverage and update the CI checkout action.
+
 ## 0.2.39
 
 - Stop showing Ancient Hash'ey Battle Arts glove enhancements. These are
