@@ -1015,8 +1015,9 @@ function addon:ClassifyItem(context)
         return "transmog", "Mount customization — click to learn"
     end
 
-    if IsPepeCostumeUnlock(tooltipText) and IsItemUsable(context.itemID)
-        and not self:HasUnmetRequirement(context) then
+    -- The explicit costume-learning action is sufficient even when the
+    -- usable-item API reports false. Keep known/restriction tooltip guards.
+    if IsPepeCostumeUnlock(tooltipText) and not self:HasUnmetRequirement(context) then
         return "transmog", "Pepe costume — click to learn"
     end
 

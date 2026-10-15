@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Recognize Pepe costume unlocks, including A Tiny Explorer's Hat, when the
+  usable-item API reports false. Already-known costumes and unmet tooltip
+  requirements remain hidden, without additional inventory scanning.
+
 ## 0.2.37
 
 - Recognize permanent Loa power consumables and Ancient Hash'ey glove

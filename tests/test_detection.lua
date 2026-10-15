@@ -912,7 +912,33 @@ assert(category == nil, "an already-known Pepe costume should remain hidden")
 itemUsable = false
 tooltipText = "Use: When summoned, Pepe will sometimes be dressed like a dragon."
 category = addon:ClassifyItem(Context(213181))
-assert(category == nil, "an unusable Pepe costume should remain hidden")
+assert(category == "transmog", "Pepe costume actions should not depend on IsUsableItem")
+
+local explorerAction = "Use: When summoned, Pepe will sometimes be dressed like an explorer."
+tooltipText = "A Tiny Explorer's Hat\nUnique\n" .. explorerAction
+category, reason = addon:ClassifyItem(Context(999901))
+assert(category == "transmog" and reason == "Pepe costume — click to learn",
+    "the explorer costume should be learnable even when IsUsableItem is false")
+
+tooltipText = "Already known\n" .. explorerAction
+category = addon:ClassifyItem(Context(999901))
+assert(category == nil, "known explorer costumes must stay hidden when IsUsableItem is false")
+
+tooltipLines = {
+    { leftText = explorerAction, leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Level 80", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(999901))
+assert(category == nil, "Pepe costumes with unmet requirements must stay hidden")
+tooltipLines = nil
+
+tooltipText = "When summoned, Pepe will sometimes be dressed like an explorer."
+category = addon:ClassifyItem(Context(999901))
+assert(category == nil, "Pepe flavour text without a Use action must stay hidden")
+
+tooltipText = "Use: Summon Pepe to ride on your head."
+category = addon:ClassifyItem(Context(999901))
+assert(category == nil, "unrelated Pepe actions must not receive the costume exception")
 itemUsable = true
 
 tooltipText = "A tiny goblet that reminds you of Pepe dressed like a dragon."
