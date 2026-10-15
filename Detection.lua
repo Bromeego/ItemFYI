@@ -206,13 +206,6 @@ local function GetLabyrinthActionReason(text)
     if string.find(text, "use:%s+permanently gain%s+[^\n]-labyrinth") then
         return "Labyrinth power — click to unlock"
     end
-
-    -- Ancient Hash'ey Battle Arts are reusable Delve glove enhancements.
-    -- "Use:" and the actual description can be on separate tooltip lines.
-    if string.find(text, "use:%s+permanently imbue your gloves with")
-        and string.find(text, "while inside a delve", 1, true) then
-        return "Delve glove enhancement — click to apply"
-    end
 end
 
 local function IsReputationGrantAction(text)
