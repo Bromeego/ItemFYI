@@ -641,13 +641,13 @@ category = addon:ClassifyItem(Context(282718))
 assert(category == "progress", "Halazzi's Shroud should use the same upgrade rule")
 
 tooltipText = "Ancient Hash'ey Battle Art: Falco Strikes\nBinds to Warband\nUse:\nPermanently imbue your gloves with Akil'zon's winds. While inside a delve, you have a chance to strike an enemy."
-local gloveCategory, gloveReason = addon:ClassifyItem(Context(280563))
-assert(gloveCategory == "progress" and gloveReason == "Delve glove enhancement — click to apply",
-    "reusable Labyrinth glove upgrades should match even if Use: starts a separate line")
+category = addon:ClassifyItem(Context(280563))
+assert(category == nil,
+    "repeatable Delve glove enchants must stay hidden even with a multiline Use action")
 
 tooltipText = "Use: Permanently imbue your gloves with Jan'alai's flames. While inside a delve, you have a chance to surround yourself in flames."
 category = addon:ClassifyItem(Context(283996))
-assert(category == "progress", "other Ancient Hash'ey glove upgrades should match generically")
+assert(category == nil, "other Ancient Hash'ey glove enchants must stay hidden")
 
 itemUsable = false
 tooltipText = "Use: Permanently gain Akil'zon's Swiftness, granting you stacking movement speed for every labyrinth chamber completed."

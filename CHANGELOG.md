@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.39
+
+- Stop showing Ancient Hash'ey Battle Arts glove enhancements. These are
+  repeatable enchants rather than collection unlocks. Permanent Labyrinth
+  Loa power unlocks remain supported.
+
 ## 0.2.38
 
 - Recognize stack conversions using "to obtain", including Heroic Soul
