@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.38
 
 - Recognize stack conversions using "to obtain", including Heroic Soul
   Fragments once at least three are in your bags.
