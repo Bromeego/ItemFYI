@@ -147,6 +147,7 @@ local combineNumberWords = {
 local function GetStackCombineMinimum(text)
     local amount = string.match(text,
         "use:%s+combine%s+([%w]+)%s+[^\n]-to create")
+        or string.match(text, "use:%s+combine%s+([%w]+)%s+[^\n]-to obtain")
     local minimum = tonumber(amount) or combineNumberWords[amount]
     if minimum and minimum >= 2 then
         return minimum
@@ -1015,8 +1016,9 @@ function addon:ClassifyItem(context)
         return "transmog", "Mount customization — click to learn"
     end
 
-    if IsPepeCostumeUnlock(tooltipText) and IsItemUsable(context.itemID)
-        and not self:HasUnmetRequirement(context) then
+    -- The explicit costume-learning action is sufficient even when the
+    -- usable-item API reports false. Keep known/restriction tooltip guards.
+    if IsPepeCostumeUnlock(tooltipText) and not self:HasUnmetRequirement(context) then
         return "transmog", "Pepe costume — click to learn"
     end
 

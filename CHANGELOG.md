@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.38
+
+- Recognize stack conversions using "to obtain", including Heroic Soul
+  Fragments once at least three are in your bags.
+- Recognize Pepe costume unlocks, including A Tiny Explorer's Hat, when the
+  usable-item API reports false. Already-known costumes and unmet tooltip
+  requirements remain hidden, without additional inventory scanning.
+
 ## 0.2.37
 
 - Recognize permanent Loa power consumables and Ancient Hash'ey glove
