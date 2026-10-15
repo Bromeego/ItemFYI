@@ -361,6 +361,38 @@ assert(category == "container", "two Venom-Cursed Fragments should be actionable
 category = addon:ClassifyItem(Context(279382, { stackCount = 1, totalCount = 2 }))
 assert(category == "container", "split Venom-Cursed Fragment stacks should use their bag total")
 
+tooltipText = "Heroic Soul Fragment\nSoulbound\nUse: Combine three fragments to obtain a random Hero 2/6 piece of equipment. (5 Sec Cooldown)"
+for _, count in ipairs({ 2, 3, 4 }) do
+    category, reason = addon:ClassifyItem(Context(999902, { stackCount = count }))
+    if count < 3 then
+        assert(category == nil, "Heroic Soul Fragments must stay hidden below three")
+    else
+        assert(category == "container" and reason == "Stack of 3 ready — click to combine",
+            "Heroic Soul Fragments must appear at and above three")
+    end
+end
+category = addon:ClassifyItem(Context(999902, { stackCount = 1, totalCount = 3 }))
+assert(category == "container", "Heroic Soul Fragments should use the whole-bag total")
+itemUsable = false
+category = addon:ClassifyItem(Context(999902, { stackCount = 3 }))
+assert(category == nil, "unusable Heroic Soul Fragment conversions must stay hidden")
+itemUsable = true
+tooltipLines = {
+    { leftText = tooltipText },
+    { leftText = "Requires Level 80", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(999902, { stackCount = 3 }))
+assert(category == nil, "restricted Heroic Soul Fragment conversions must stay hidden")
+tooltipLines = nil
+
+tooltipText = "Use: Combine many fragments to obtain a mystery item."
+category = addon:ClassifyItem(Context(999902, { stackCount = 99 }))
+assert(category == nil, "obtain wording must still require a known quantity")
+
+tooltipText = "Combine three fragments to obtain a random piece of equipment."
+category = addon:ClassifyItem(Context(999902, { stackCount = 3 }))
+assert(category == nil, "obtain flavour text without a Use action must stay hidden")
+
 tooltipText = "Use: Combine many fragments to create a mystery item."
 category = addon:ClassifyItem(Context(120, { stackCount = 99, totalCount = 99 }))
 assert(category == nil, "unknown combine quantities must not invent a stack threshold")
