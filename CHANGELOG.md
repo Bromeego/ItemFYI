@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.40
 
 - Target the displayed pet cage when learning a pet, with combat and
   inventory-interaction safeguards.
