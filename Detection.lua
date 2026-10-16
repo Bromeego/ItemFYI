@@ -980,8 +980,14 @@ function addon:ClassifyItem(context)
         or itemSubType == "housing decor"
         or itemSubType == "decoration"
     local hasDecorUse = ContainsAny(tooltipText, decorText)
+    -- A House Chest deposit adds another copy, even when the decor is learned.
+    -- Trust this explicit action if generic item usability reports false; keep
+    -- the usability guard for other decor actions and all requirement checks.
+    local isHouseChestDeposit = string.find("\n" .. tooltipText,
+        "\n%s*use:%s+adds? this decor to your house chest%.") ~= nil
     if hasDecorUse and (isDecorType or string.find(tooltipText, "decor", 1, true))
-        and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
+        and (isHouseChestDeposit or IsItemUsable(context.itemID))
+        and not self:HasUnmetRequirement(context) then
         return "decor", "Housing decor — click to add"
     end
 

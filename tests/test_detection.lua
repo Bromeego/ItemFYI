@@ -499,6 +499,38 @@ tooltipText = "Housing Decor\nUse: Add this decor to your collection."
 category = addon:ClassifyItem(Context(104))
 assert(category == "decor", "housing decor detection failed")
 
+-- Screenshot regression: ownership describes copies already in housing storage,
+-- not whether the bag copy can be deposited. Generic usability can be false.
+tooltipText = "Frayed Amani Offering Basket\nHousing Decor\nWarbound\n"
+    .. "Total Owned: 1 (Placed: 0, Storage: 1)\n"
+    .. "Use: Add this Decor to your House Chest.\nLearned."
+for _, usable in ipairs({ true, false }) do
+    itemUsable = usable
+    for _, fields in ipairs({
+        { itemType = "Housing", itemSubType = "Housing Decor" },
+        { itemType = "Miscellaneous", itemSubType = "Other" },
+    }) do
+        category = addon:ClassifyItem(Context(263321, fields))
+        assert(category == "decor", "a learned House Chest deposit should appear regardless of generic usability or item type")
+    end
+end
+
+tooltipLines = {
+    { leftText = "Use: Add this Decor to your House Chest.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Level 80", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(263321))
+assert(category == nil, "House Chest deposits must still respect unmet requirements")
+tooltipLines = nil
+
+tooltipText = "Housing Decor\nUse: Add this decor to your collection."
+category = addon:ClassifyItem(Context(104))
+assert(category == nil, "other decor actions should retain the generic usability guard")
+tooltipText = "Housing Decor\nLearned.\nTotal Owned: 1 (Placed: 0, Storage: 1)"
+category = addon:ClassifyItem(Context(263321))
+assert(category == nil, "ownership and type alone must not create a decor action")
+itemUsable = true
+
 tooltipText = "Housing Decor\nUse: Add this Decor to your House Chest.\n"
     .. "Requires Midnight Blacksmithing (50)"
 tooltipLines = {
