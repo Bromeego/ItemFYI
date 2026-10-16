@@ -923,11 +923,90 @@ addon:RebuildCandidates()
 local countsByName = {}
 for _, candidate in ipairs(addon.candidates) do
     countsByName[candidate.name] = candidate.count
+    assert(candidate.secureBySlot and candidate.secureMacro ==
+        ("/stopmacro [combat]\n/use %d %d"):format(candidate.bag, candidate.slot),
+        "each pet species must target its own cage slot")
 end
 assert(countsByName["Lumpy"] == 2, "duplicate pet cages should count that species only")
 assert(countsByName["Sea Pony"] == 1, "one caged pet should not inherit the shared cage total")
 assert(countsByName["Spring Rabbit"] == 2, "a stacked pet cage should keep its own stack count")
 assert(countsByName["Lumpy"] ~= 8 and countsByName["Sea Pony"] ~= 8,
     "pet cage totals must not be copied onto every species")
+
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+    Enum.PlayerInteractionType.Banker)
+addon:RebuildCandidates()
+assert(#addon.candidates == 0, "pet cage slot actions must be suppressed at a bank")
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+    Enum.PlayerInteractionType.Banker)
+addon:RebuildCandidates()
+assert(#addon.candidates == 3, "pet cage reminders must return after closing the bank")
+local previousCloseMerchant = CloseMerchant
+CloseMerchant = function()
+    eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+end
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+addon.button.scripts.PreClick(addon.button, "LeftButton", true)
+assert(not addon.merchantOpen and addon.current and addon.current.secureBySlot,
+    "the vendor must close before using a displayed pet cage")
+CloseMerchant = previousCloseMerchant
+local petBag = addon.current.bag
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", petBag)
+assert(addon.current == nil, "moving cages must immediately invalidate the displayed slot action")
+
+-- Bank contents must not enter carried-item thresholds, even after a bank event.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+SetSlot(0, 1, 268650, 4)
+SetSlot(6, 1, 268650, 1)
+SetSlot(13, 1, 200, 1, { hasLoot = true })
+ScanNow("login")
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 6)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 13)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.itemTotals[268650] == 4 and #addon.candidates == 0,
+    "outside containers must not contribute to reminders or thresholds")
+assert(Metrics().slotsInspected == 0, "bank events must not inspect bank slots")
+-- A forced refresh must also evict an outside slot left in an old index.
+addon.slotIndex[6] = { [1] = { itemID = 268650, stackCount = 1 } }
+addon.itemTotals[268650] = 5
+ScanNow("manual")
+assert(addon.itemTotals[268650] == 4 and #addon.candidates == 0,
+    "manual refresh must remove outside slots left in the index")
+SetSlot(5, 1, 268650, 1)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 5)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.itemTotals[268650] == 5 and #addon.candidates == 1,
+    "the carried reagent bag must still contribute to thresholds")
+
+-- Restricted mounts and Curios should recover through targeted level refreshes.
+for _, fixture in ipairs({
+    { id = 101, action = "Use: Teaches you how to summon this mount.", category = "mount" },
+    { id = 113, action = "Use: Add this Curio to your companion's collection.", category = "curio" },
+}) do
+    addon:ClearInventoryState()
+    bags = {}
+    bagSlotCounts = {}
+    timers = {}
+    mountCollected = false
+    SetSlot(0, 1, fixture.id, 1)
+    tooltipByItem[fixture.id] = {
+        { leftText = fixture.action },
+        { leftText = "Requires Level 80", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+    }
+    ScanNow("login")
+    assert(addon.current == nil, "red level requirements must hide collectibles")
+    tooltipByItem[fixture.id][2].leftColor = { r = 1, g = 1, b = 1 }
+    addon:ResetMetrics()
+    eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LEVEL_CHANGED")
+    while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+    assert(addon.current and addon.current.category == fixture.category,
+        "meeting a requirement must restore the collectible")
+    assert(Metrics().slotsInspected == 0 and Metrics().tooltipSnapshots == 1,
+        "level changes must only refresh the affected tooltip")
+end
 
 print("inventory processing tests passed")

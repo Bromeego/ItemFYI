@@ -3,7 +3,8 @@ local ADDON_NAME, addon = ...
 _G.ItemFYI = addon
 
 addon.name = ADDON_NAME
-addon.version = "0.2.19"
+local GetMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+addon.version = GetMetadata and GetMetadata(ADDON_NAME, "Version") or "unknown"
 addon.sessionSkipped = {}
 addon.current = nil
 addon.candidates = {}

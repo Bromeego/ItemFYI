@@ -60,6 +60,10 @@ local function EquippedBagCount()
     return NUM_TOTAL_EQUIPPED_BAG_SLOTS or 5
 end
 
+local function IsCarriedBag(bag)
+    return type(bag) == "number" and bag >= 0 and bag <= EquippedBagCount()
+end
+
 local function TimeNow()
     if debugprofilestop then
         return debugprofilestop()
@@ -307,7 +311,9 @@ function addon:NoteDirtyBag(bagID)
         self.allBagsDirty = true
         return
     end
-    self.dirtyBags[bagID] = true
+    if IsCarriedBag(bagID) then
+        self.dirtyBags[bagID] = true
+    end
 end
 
 function addon:InvalidateSecureActionForBag(bagID)
@@ -435,12 +441,16 @@ local function ClearSnapshots(self)
     self:InvalidateScanCache()
     for bag, bagSlots in pairs(self.slotIndex) do
         for slot, entry in pairs(bagSlots) do
-            entry.snapshot = nil
-            entry.classified = false
-            entry.category = nil
-            entry.reason = nil
-            entry.uniqueKey = nil
-            self.tooltipRetries[SlotKey(bag, slot)] = nil
+            if not IsCarriedBag(bag) then
+                RemoveSlot(self, bag, slot)
+            else
+                entry.snapshot = nil
+                entry.classified = false
+                entry.category = nil
+                entry.reason = nil
+                entry.uniqueKey = nil
+                self.tooltipRetries[SlotKey(bag, slot)] = nil
+            end
         end
     end
 end
@@ -498,6 +508,9 @@ end
 -- the sliced tooltip queue could start. Slice the index pass too so a login
 -- with hundreds of occupied slots doesn't consume one long frame.
 local function QueueBagReconcile(self, bag)
+    if not IsCarriedBag(bag) then
+        return
+    end
     if self.reconcileQueued[bag] then
         return
     end
