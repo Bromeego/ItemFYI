@@ -900,15 +900,24 @@ function addon:ClassifyItem(context)
 
     local isMount = IsUncollectedMount(context.itemID)
     if isMount then
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
         return "mount", "Uncollected mount — click to learn"
     end
 
     if IsUncollectedToy(context.itemID) then
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
         return "toy", "Uncollected toy — click to learn"
     end
 
     local isPet, speciesID = IsUncollectedPet(context)
     if isPet then
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
         context.uniqueKey = "pet:" .. speciesID
         return "pet", "Collectible battle pet — click to learn"
     end
@@ -916,10 +925,16 @@ function addon:ClassifyItem(context)
     -- Some cosmetic companions do not expose battle-pet metadata consistently.
     -- Their standard use text is still an explicit learn action.
     if not speciesID and ContainsAny(tooltipText, companionText) then
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
         return "pet", "Uncollected companion — click to learn"
     end
 
     if ContainsAny(tooltipText, curioText) then
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
         return "curio", "Companion Curio — click to add"
     end
 
@@ -1112,6 +1127,11 @@ function addon:BuildContext(bag, slot, info)
 end
 
 function addon:BuildSecureUse(context, category)
+    if category == "pet" and context.itemID == PET_CAGE_ITEM_ID then
+        -- Cages share one item ID across species. Use the displayed cage,
+        -- with the same combat and interaction guards as appearance tokens.
+        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true
+    end
     if category == "transmog" and context.equipLocation and context.equipLocation ~= "" then
         -- Item-ID macros prefer equipping equippable gear. Target the current
         -- bag slot so WoW follows the same use path as right-clicking the item.

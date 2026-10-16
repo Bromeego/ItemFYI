@@ -61,6 +61,14 @@ automatically.
 Retail only. ItemFYI does not scan the bank, auto-open items, or pick locks.
 ElvUI and EllesmereUI skins are used when those addons are installed.
 
+Reminders and stack thresholds use items carried in your bags, including the
+reagent bag. WoW's ability to craft with bank reagents is separate from these
+bag-item reminders.
+
+Generic tooltip detection currently supports English clients. Other languages
+may still detect items through collection APIs and explicit item rules, but
+tooltip-based coverage is incomplete.
+
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## Reporting issues

@@ -1264,4 +1264,24 @@ tooltipOverride = { battlePetSpeciesID = 77, lines = {} }
 category = addon:ClassifyItem(Context(1632, { link = "item:1632" }))
 assert(category == "pet", "missing TooltipUtil.SurfaceArgs must not break battle-pet detection")
 
+-- Explicit red restrictions apply to every collectible path, without requiring
+-- IsUsableItem (some valid learn actions report false).
+C_TooltipInfo.GetBagItem = function()
+    return { lines = {
+        { leftText = tooltipText },
+        { leftText = "Requires Level 80", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+    } }
+end
+for _, fixture in ipairs({
+    { id = 101, text = "Use: Teaches you how to summon this mount." },
+    { id = 102, text = "Use: Add this toy to your Toy Box." },
+    { id = 271185, text = "Use: Teaches you how to summon this pet." },
+    { id = 999903, text = "Use: Teaches you how to summon and dismiss this companion." },
+    { id = 999904, text = "Use: Add this Curio to your companion's collection." },
+}) do
+    tooltipText = fixture.text
+    category = addon:ClassifyItem(Context(fixture.id))
+    assert(category == nil, "restricted collectible must stay hidden: " .. fixture.id)
+end
+
 print("detection tests passed")
