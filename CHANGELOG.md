@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.41
+
+- Recognize explicit House Chest decor deposits even when the generic item
+  usability check reports false, including additional copies of learned decor.
+  Unmet tooltip requirements still prevent reminders.
+
 ## 0.2.40
 
 - Target the displayed pet cage when learning a pet, with combat and
