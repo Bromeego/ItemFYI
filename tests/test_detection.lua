@@ -273,6 +273,29 @@ local curioKnown = addon:GetTooltipSnapshot(Context(113, {
     bag = 6, slot = 2, stackCount = 1, name = curioContext.name,
 }))
 assert(curioKnown.complete == true, "known Curios should not be retried")
+
+for _, fields in ipairs({
+    { itemType = "Decor" },
+    { itemType = "Housing Decor" },
+    { itemType = "Housing", itemSubType = "Housing Decor" },
+    { itemSubType = "Decoration" },
+}) do
+    addon:InvalidateScanCache()
+    tooltipText = "Test Decor\nWarbound\nLearned."
+    assert(addon:GetTooltipSnapshot(Context(278245, fields)).complete == false,
+        "decor metadata must trigger retries even before the tooltip type line loads")
+end
+for _, fixture in ipairs({
+    { text = "Housing Dye\nUsed to recolour housing decor.", itemType = "Housing", itemSubType = "Dye" },
+    { text = "Crafting Reagent\nUsed to craft housing decor.", itemType = "Trade Goods" },
+    { text = "Housing Decor\nUse: Add this Decor to your House Chest.\nLearned." },
+    { text = "Housing Decor\nAlready known" },
+}) do
+    addon:InvalidateScanCache()
+    tooltipText = fixture.text
+    assert(addon:GetTooltipSnapshot(Context(278245, fixture)).complete == true,
+        "complete decor, dyes, and decor flavour text must not trigger retries")
+end
 C_TooltipInfo.GetBagItem = originalGetBagItem
 addon.useScanCache = nil
 tooltipText = ""

@@ -752,9 +752,19 @@ function addon:GetTooltipSnapshot(context)
     local waitingForCurioUse = curioTooltip
         and not ContainsAny(text, curioText)
         and not ContainsAny(text, knownText)
+    -- Decor can expose its type and ownership before its deposit action loads.
+    -- Do not cache that multi-line tooltip as a finished miss. Learned/owned
+    -- decor can still be deposited; use the existing bounded slot retries.
+    -- Housing alone is too broad: dyes and other housing items need no retry.
+    local decorTooltip = HasTooltipTypeLine(text, "housing decor")
+        or itemType == "decor" or itemType == "housing decor"
+        or itemSubType == "housing decor" or itemSubType == "decoration"
+    local waitingForDecorUse = decorTooltip and not hasUseText
+        and not ContainsAny(text, knownText)
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
         and not waitingForCurioUse
+        and not waitingForDecorUse
         and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
             or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
             or not looksPartial)
