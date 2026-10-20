@@ -409,6 +409,60 @@ addon.settingsPanel.showGlow.scripts.OnClick(addon.settingsPanel.showGlow)
 assert(addon.db.showGlow == true and glowButton == addon.button,
     "enabling the glow should restore the spell-alert overlay")
 
+-- Keybinding: Bindings.xml clicks the secure button, and the key is shown.
+assert(BINDING_HEADER_ITEMFYI == "ItemFYI"
+    and _G["BINDING_NAME_CLICK ItemFYIActionButton:LeftButton"] == "ItemFYI: Use current item",
+    "the keybinding header and name must be defined")
+local bindingsFile = assert(io.open("Bindings.xml", "r"), "Bindings.xml must exist")
+local bindingsXml = bindingsFile:read("*a")
+bindingsFile:close()
+assert(string.find(bindingsXml, 'name="CLICK ItemFYIActionButton:LeftButton"', 1, true),
+    "Bindings.xml must click the secure ItemFYI button")
+assert(string.find(bindingsXml, 'category="BINDING_HEADER_ITEMFYI"', 1, true),
+    "the keybinding should get its own ItemFYI section")
+assert(eventFrame.registeredEvents.UPDATE_BINDINGS, "binding changes must refresh the hotkey")
+assert(addon.button.hotkey.text == "", "an unbound key should leave the hotkey label empty")
+GetBindingKey = function(command)
+    return command == addon.USE_BINDING and "ALT-F" or nil
+end
+GetBindingText = function(key, abbreviated)
+    return abbreviated and "A-F" or "Alt-F"
+end
+eventFrame.scripts.OnEvent(eventFrame, "UPDATE_BINDINGS")
+assert(addon.button.hotkey.text == "A-F", "a bound key should appear abbreviated on the button")
+assert(string.find(addon.settingsPanel.keybindStatus.text, "Alt-F", 1, true),
+    "settings should show the bound key")
+addon.button.scripts.OnEnter(addon.button)
+local keyLineFound = false
+for _, line in ipairs(GameTooltip.lines) do
+    if line == "Left-click or press Alt-F to use" then
+        keyLineFound = true
+    end
+end
+assert(keyLineFound, "the button tooltip should mention the bound key")
+addon.button.scripts.OnLeave(addon.button)
+
+-- Settings: pet ownership filter and rescan behaviour.
+local petOption = addon.settingsPanel.petUncollectedOnly
+assert(petOption and petOption.checked == false, "the pet ownership filter should default off")
+local petGeneration = addon.scanGeneration
+petOption.checked = true
+petOption.scripts.OnClick(petOption)
+assert(addon.db.petUncollectedOnly == true and addon.scanGeneration > petGeneration,
+    "the pet ownership filter should persist and recheck pets")
+petOption.checked = false
+petOption.scripts.OnClick(petOption)
+addon.sessionSkipped.skippedKey = true
+addon.startupScanPending = true
+addon.settingsPanel.rescan.scripts.OnClick(addon.settingsPanel.rescan)
+assert(next(addon.sessionSkipped) == nil, "the settings rescan should clear session skips")
+assert(not addon.startupScanPending, "the settings rescan should not wait for the login delay")
+
+local unignoreGeneration = addon.scanGeneration
+SlashCmdList.ITEMFYI("unignore 424242")
+assert(addon.scanGeneration == unignoreGeneration,
+    "unignoring an unknown key should not claim a restore or rescan")
+
 BattlePetTooltip.shown = true
 addon.button.scripts.OnLeave(addon.button)
 assert(not BattlePetTooltip.shown, "leaving the button must hide the battle-pet companion tooltip")
@@ -521,6 +575,11 @@ addon.button.scripts.PostClick(addon.button, "LeftButton", true)
 addon.button.scripts.PostClick(addon.button, "LeftButton", false)
 assert(addon.button.attributes.type1 == "macro" and addon.current and addon.current.itemID == 123,
     "releasing an alt-click must restore the action without consuming the item")
+addon.button.IsMouseOver = function() return false end
+addon.button.scripts.PreClick(addon.button, "LeftButton", true)
+assert(addon.button.attributes.type1 == "macro" and not addon.suppressingSecureUse,
+    "an Alt-modified key binding away from the button must still use the item")
+addon.button.IsMouseOver = nil
 altDown = false
 
 addon.db.ignored["999"] = { name = "Ignored Gem" }

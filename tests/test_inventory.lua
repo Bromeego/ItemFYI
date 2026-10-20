@@ -1049,6 +1049,38 @@ while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
 assert(addon.current, "the single tick chain should still finish the scan")
 addon.workPerTick = nil
 
+-- The pet ownership filter hides owned species, and turning it off restores
+-- them from cached tooltips without rescanning bags.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+C_PetJournal.GetNumCollectedInfo = function() return 1, 3 end
+itemData[82800] = { name = "Pet Cage" }
+tooltipByItem[82800] = "Lumpy\nBattle Pet"
+SetSlot(0, 1, 82800, 1, { hyperlink = "|Hbattlepet:321:1:3|h[Lumpy]|h" })
+ScanNow("login")
+assert(addon.current and addon.current.category == "pet"
+    and addon.current.reason == "Battle pet (1/3 owned) — click to learn",
+    "an owned-but-not-maxed pet should appear by default")
+local petOption = addon.settingsPanel.petUncollectedOnly
+addon:ResetMetrics()
+petOption.checked = true
+petOption.scripts.OnClick(petOption)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current == nil, "the ownership filter should hide owned species")
+petOption.checked = false
+petOption.scripts.OnClick(petOption)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.category == "pet",
+    "turning the ownership filter off should restore the hidden pet")
+assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
+    "toggling the pet filter must reuse cached tooltips")
+C_PetJournal.GetNumCollectedInfo = nil
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+SetSlot(0, 2, 200, 1, { hasLoot = true })
+SetSlot(1, 1, 268650, 5)
+
 -- An error inside one work tick must not leave scanning permanently stalled.
 addon:ClearInventoryState()
 timers = {}

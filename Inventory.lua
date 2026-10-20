@@ -383,7 +383,7 @@ function addon:NoteScanIntent(reason)
     if forceRefreshReasons[reason] then
         if reason == "login" then
             self.initialScanActive = true
-        elseif reason == "manual" then
+        else
             self.initialScanActive = false
         end
         self.forceRefresh = true
@@ -491,7 +491,8 @@ local function QueueEligibility(self, kind)
                         self.scanCache[SlotKey(bag, slot)] = nil
                     end
                 end
-            elseif entry.category == kind then
+            elseif entry.category == kind or (kind == "pet" and entry.petSpeciesID) then
+                -- Owned-count filters can hide a pet; keep rechecking its species.
                 shouldQueue = true
                 if tooltipCollectionKinds[kind] then
                     entry.snapshot = nil
@@ -580,6 +581,7 @@ local function ReconcileSlot(self, bag, slot)
         existing.sawRestrictionText = nil
         existing.awaitingItemInfo = nil
         existing.context = nil
+        existing.petSpeciesID = nil
         existing.bag = bag
         existing.slot = slot
         AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
@@ -761,6 +763,7 @@ local function ClassifySlot(self, bag, slot)
     entry.questStarterKnown = entry.questStarterKnown or (snapshot and snapshot.questStarter == true)
     entry.sawRestrictionText = snapshot and snapshot.sawRestrictionText
     entry.uniqueKey = context.uniqueKey
+    entry.petSpeciesID = context.petSpeciesID
     entry.classified = true
     entry.category = category
     entry.reason = itemReason

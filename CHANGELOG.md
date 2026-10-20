@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.44
+
+- Added an **ItemFYI: Use current item** keybinding in its own ItemFYI section
+  under Options → Keybindings, easy to find by searching for "ItemFYI". The bound key is shown on the button, in its tooltip, and in
+  settings, and keeps every mouse-click safety check. Alt-modified bindings
+  work too; Alt only starts a drag when the cursor is over the button.
+- Added **Only show battle pets you don't own yet**. Pet reminders now say how
+  many of the species you own, for example "Battle pet (1/3 owned)".
+- Used the client's translated text for "Already known", "Locked",
+  right-click-to-open, quest starters, the "Use:" prefix, and red level,
+  skill, class, race, and reputation requirements, improving non-English
+  clients. Red race requirements now hide items on English clients too.
+- The settings **Rescan bags** button now clears session skips like
+  `/ifyi scan`, and runs immediately during the login delay.
+- `/ifyi unignore` now says when a key is not on the ignore list instead of
+  reporting that it was restored.
+
 ## 0.2.43
 
 - Keep scanning after an unexpected error in one inventory work tick, instead

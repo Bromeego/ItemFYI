@@ -1,0 +1,4 @@
+<Bindings>
+    <Binding name="CLICK ItemFYIActionButton:LeftButton" category="BINDING_HEADER_ITEMFYI">
+    </Binding>
+</Bindings>

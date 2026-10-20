@@ -24,6 +24,20 @@ local function HideButtonTooltip(button, hideCompanions)
     end
 end
 
+function addon:GetUseBindingKey()
+    return GetBindingKey and GetBindingKey(self.USE_BINDING) or nil
+end
+
+function addon:UpdateHotkey()
+    local button = self.button
+    if not (button and button.hotkey) then
+        return
+    end
+    local key = self:GetUseBindingKey()
+    local text = key and GetBindingText and GetBindingText(key, true) or key
+    button.hotkey:SetText(text or "")
+end
+
 local QUEUE_TOOLTIP_LIMIT = 8
 
 local function ShowQueueTooltip(owner)
@@ -65,7 +79,13 @@ local function ShowButtonTooltip(button)
     GameTooltip:SetBagItem(candidate.bag, candidate.slot)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine(candidate.reason, 0.35, 0.85, 1, true)
-    GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
+    local key = addon:GetUseBindingKey()
+    if key then
+        local keyText = GetBindingText and GetBindingText(key) or key
+        GameTooltip:AddLine(("Left-click or press %s to use"):format(keyText), 0.2, 1, 0.2)
+    else
+        GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
+    end
     if candidate.secureBySlot and addon.merchantOpen then
         GameTooltip:AddLine("Vendor will close before use", 1, 0.82, 0.2)
     end
@@ -249,6 +269,8 @@ function addon:CreateUI()
     button.Count = button.count
     button.more = CreateText(button.badge, "GameFontNormalSmall", "TOPRIGHT", -1, -1)
     button.more:SetTextColor(0.35, 0.85, 1)
+    button.hotkey = CreateText(button.badge, "NumberFontNormalSmallGray", "TOPLEFT", 2, -2)
+    button.HotKey = button.hotkey
 
     -- FontStrings do not receive hover. This corner frame lists the rest of
     -- the queue. Clicks pass through so the secure use still fires.
@@ -305,8 +327,10 @@ function addon:CreateUI()
         end
 
         -- Alt-drag shares the left button with the secure use. Clear the
-        -- action before click-on-press can consume the item.
-        if mouseButton == "LeftButton" and IsAltKeyDown() then
+        -- action before click-on-press can consume the item. A key binding
+        -- with an Alt modifier fires away from the cursor and must still use.
+        local overButton = not frame.IsMouseOver or frame:IsMouseOver()
+        if mouseButton == "LeftButton" and IsAltKeyDown() and overButton then
             addon.suppressingSecureUse = true
             frame:SetAttribute("type1", nil)
             frame:SetAttribute("macrotext1", nil)
@@ -359,6 +383,7 @@ function addon:CreateUI()
     end)
 
     self:ApplyButtonLayout()
+    self:UpdateHotkey()
 end
 
 function addon:SetCandidate(candidate, total)

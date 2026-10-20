@@ -16,6 +16,13 @@ addon.layoutPending = false
 addon.slotActionBlocks = {}
 addon.merchantOpen = false
 
+-- Bindings.xml clicks the secure button, so keyboard use keeps the same
+-- combat, merchant, and inventory-interaction guards as a mouse click.
+addon.USE_BINDING = "CLICK ItemFYIActionButton:LeftButton"
+BINDING_HEADER_ITEMFYI = "ItemFYI"
+-- Keybinding search results omit the section name, so the label carries it.
+_G["BINDING_NAME_" .. addon.USE_BINDING] = "ItemFYI: Use current item"
+
 -- Bag-slot use actions inherit the behaviour of whichever inventory-routing
 -- window is active. In these interactions, the same click can sell, deposit,
 -- attach, trade, scrap, or select the item instead of using it.
@@ -57,6 +64,7 @@ local defaults = {
     },
     size = 42,
     showGlow = true,
+    petUncollectedOnly = false,
     editMode = {},
     editModeMigration = 0,
     categories = {
@@ -207,10 +215,11 @@ function addon:ScheduleScan(reason, delay)
     if self.NoteScanIntent then
         self:NoteScanIntent(reason)
     end
-    if self.startupScanPending and reason ~= "manual" then
+    local manual = reason == "manual" or reason == "manual settings scan"
+    if self.startupScanPending and not manual then
         -- Startup BAG_UPDATE bursts must not bypass the initial delay.
         delay = math.max(delay or 0.15, INITIAL_SCAN_GRACE)
-    elseif reason == "manual" then
+    elseif manual then
         self.startupScanPending = false
     end
     self.scanGeneration = self.scanGeneration + 1
@@ -415,8 +424,13 @@ function addon:HandleSlash(input)
     elseif command == "ignored" then
         self:ListIgnored()
     elseif command == "unignore" and argument ~= "" then
-        self.db.ignored[argument] = nil
         local numericKey = tonumber(argument)
+        if self.db.ignored[argument] == nil
+            and not (numericKey and self.db.ignored[numericKey] ~= nil) then
+            self:Print(("%s is not on the ignore list. Use /ifyi ignored to see keys."):format(argument))
+            return
+        end
+        self.db.ignored[argument] = nil
         if numericKey then
             self.db.ignored[numericKey] = nil
         end
@@ -467,6 +481,7 @@ events:RegisterEvent("NEW_PET_ADDED")
 events:RegisterEvent("COMPANION_LEARNED")
 events:RegisterEvent("TRANSMOG_COLLECTION_UPDATED")
 events:RegisterEvent("NEW_RECIPE_LEARNED")
+events:RegisterEvent("UPDATE_BINDINGS")
 
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -493,6 +508,7 @@ events:SetScript("OnEvent", function(_, event, ...)
     elseif event == "PLAYER_LOGIN" then
         addon:RegisterSkinning()
         addon:RegisterEditMode()
+        addon:UpdateHotkey()
         addon:SnapshotWatchedQuests()
         addon:ResetMetrics()
         addon.startupScanPending = true
@@ -601,5 +617,8 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:ScheduleScan("collection:transmog", 0.15)
     elseif event == "NEW_RECIPE_LEARNED" then
         addon:ScheduleScan("collection:recipe", 0.15)
+    elseif event == "UPDATE_BINDINGS" then
+        addon:UpdateHotkey()
+        addon:RefreshSettingsPanel()
     end
 end)
