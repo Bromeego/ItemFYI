@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.42
+
+- Recognize Hallow's End bags whose Use line does not say "open". Handful of
+  Treats says "Claim your treats", and the pumpkins, Crudely Wrapped Gift, and
+  old Treat Bag only say "Right Click to Open".
+
 ## 0.2.41
 
 - Recognize explicit House Chest decor deposits even when the generic item

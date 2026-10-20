@@ -304,9 +304,23 @@ local function HasReachedProfessionCap(skillName, maximum)
     return false
 end
 
+local function IsRightClickOpen(text)
+    -- Blizzard's ITEM_OPENABLE line. Loot-Filled Pumpkins, Loot-Stuffed
+    -- Pumpkins, Crudely Wrapped Gifts, and the old Treat Bag use it instead
+    -- of a Use: line. The angle brackets are part of that global string.
+    return string.find(text, "<right click to open>", 1, true) ~= nil
+end
+
+local function IsTreatClaimAction(text)
+    -- Handful of Treats: "Use: Claim your treats." The spell opens the bag,
+    -- but the line does not say "open".
+    return string.find(text, "use:%s+claim your treats%f[%A]") ~= nil
+end
+
 local function IsOpenAction(text)
     -- Require a non-letter after "open" so "Use: Opens a portal" is excluded.
     return string.find(text, "use: open%f[%A]") ~= nil
+        or IsRightClickOpen(text)
 end
 
 local function IsBlingtronMessageAction(text)
@@ -734,7 +748,8 @@ function addon:GetTooltipSnapshot(context)
     -- as incomplete made each of them retry several times after every reload.
     -- Keep retrying genuinely suspicious short/name-only tooltips, since a
     -- Curio or another learnable may receive its Use: line asynchronously.
-    -- Quest starters can be finished without any Use: line.
+    -- Quest starters can be finished without any Use: line. Right-click
+    -- containers such as a Loot-Filled Pumpkin never grow a Use: line either.
     local nameOnly = text ~= "" and context.name ~= nil
         and text == string.lower(context.name)
     local looksPartial = text == "" or not string.find(text, "\n", 1, true)
@@ -755,7 +770,8 @@ function addon:GetTooltipSnapshot(context)
     local complete = not tooltipReadFailed
         and not missingRestrictionColor
         and not waitingForCurioUse
-        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
+        and (hasUseText or IsQuestStartAction(text) or IsRightClickOpen(text)
+            or battlePetSpeciesID
             or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
             or not looksPartial)
     if not complete then
@@ -1066,6 +1082,16 @@ function addon:ClassifyItem(context)
     if IsBlingtronMessageAction(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "container", "Blingtron message — click to decode"
+    end
+
+    if IsTreatClaimAction(tooltipText) then
+        -- The claim spell has no item spell in the tooltip data, so
+        -- IsUsableItem can stay false while the line is still usable. A red
+        -- "Requires Hallow's End" line is the reliable off-season check.
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
+        return "container", "Hallow's End treats — click to claim"
     end
 
     if context.hasLoot or IsOpenAction(tooltipText) then

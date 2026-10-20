@@ -565,6 +565,57 @@ tooltipText = "Use: Open the satchel."
 category = addon:ClassifyItem(Context(131))
 assert(category == "container", "explicit open actions should remain containers")
 
+tooltipText = "Handful of Treats\nSoulbound\nUse: Claim your treats.\nRequires Hallow's End"
+local treatCategory, treatReason = addon:ClassifyItem(Context(37586))
+assert(treatCategory == "container" and treatReason == "Hallow's End treats — click to claim",
+    "Handful of Treats should be claimable")
+
+tooltipLines = {
+    { leftText = "Use: Claim your treats.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Hallow's End", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(37586))
+assert(category == nil, "treats outside Hallow's End should remain hidden")
+tooltipLines = nil
+
+tooltipText = "Use: Claim your reward."
+category = addon:ClassifyItem(Context(37587))
+assert(category == nil, "claiming a reward is not a treat container")
+
+tooltipText = "Tricky Treat\nUse: Dangerously sweet sugar-frosted taffy with a sinister syrup center.\nRequires Hallow's End"
+category = addon:ClassifyItem(Context(33226))
+assert(category == nil, "Tricky Treats are food, not containers")
+
+tooltipText = "Loot-Filled Pumpkin\nRequires Hallow's End\n<Right Click to Open>"
+local pumpkinSnapshot = addon:GetTooltipSnapshot(Context(209024, { bag = 2, slot = 3 }))
+assert(pumpkinSnapshot.complete == true, "a right-click container tooltip is complete")
+category = addon:ClassifyItem(Context(209024))
+assert(category == "container", "loot-filled pumpkins should be openable without hasLoot")
+
+tooltipText = "Loot-Stuffed Pumpkin\nRequires Hallow's End\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(149574))
+assert(category == "container", "loot-stuffed pumpkins should be openable")
+
+tooltipText = "Crudely Wrapped Gift\nUnique\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(34077))
+assert(category == "container", "crudely wrapped gifts should be openable")
+
+tooltipText = "Treat Bag\n\"Open your bag quickly as it will fade on logout.\"\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(20393))
+assert(category == "container", "the old treat bag should be openable")
+
+tooltipText = "Treat Bag\n\"Open your bag quickly as it will fade on logout.\""
+category = addon:ClassifyItem(Context(20393))
+assert(category == nil, "flavor text about opening is not an open action")
+
+tooltipText = "Locked\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(109))
+assert(category == nil, "a locked box should stay hidden even when it says to right-click")
+
+tooltipText = "You have collected all of the transmog looks contained in this cache.\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(264321))
+assert(category == nil, "a collected cache should stay hidden without hasLoot")
+
 tooltipText = "Encoded Message\nSoulbound\nUse: Decode the message.\nSell Price: 35"
 local encodedCategory, encodedReason = addon:ClassifyItem(Context(114002))
 assert(encodedCategory == "container" and encodedReason == "Blingtron message — click to decode",
