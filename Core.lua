@@ -235,6 +235,12 @@ function addon:ScheduleScan(reason, delay)
         end
         addon.scanPending = false
         addon.startupScanPending = false
+        -- A tooltip retry may have started a tick chain since this timer was
+        -- queued. That chain consumes the recorded intent; a second chain
+        -- would double the per-frame work.
+        if addon.workActive then
+            return
+        end
         addon:RunScheduledInventory()
     end)
 end
@@ -460,6 +466,7 @@ events:RegisterEvent("NEW_TOY_ADDED")
 events:RegisterEvent("NEW_PET_ADDED")
 events:RegisterEvent("COMPANION_LEARNED")
 events:RegisterEvent("TRANSMOG_COLLECTION_UPDATED")
+events:RegisterEvent("NEW_RECIPE_LEARNED")
 
 events:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
@@ -592,5 +599,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:ScheduleScan("collection:companion", 0.15)
     elseif event == "TRANSMOG_COLLECTION_UPDATED" then
         addon:ScheduleScan("collection:transmog", 0.15)
+    elseif event == "NEW_RECIPE_LEARNED" then
+        addon:ScheduleScan("collection:recipe", 0.15)
     end
 end)

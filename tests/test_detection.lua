@@ -1213,6 +1213,15 @@ tooltipText = "Unlocked strongbox"
 category = addon:ClassifyItem(Context(110, { hasLoot = true }))
 assert(category == "container", "unlocked container should remain actionable")
 
+tooltipText = "Battle-Worn Locked Chest\n\"Once locked away by a careful smuggler.\"\nUse: Open the chest."
+category = addon:ClassifyItem(Context(111, { hasLoot = true }))
+assert(category == "container",
+    "a picked box whose name or flavour mentions locked should remain actionable")
+
+tooltipText = "Sturdy Box\n  Locked  \n<Right Click to Open>"
+category = addon:ClassifyItem(Context(114, { hasLoot = true }))
+assert(category == nil, "a padded Locked status line should still hide the box")
+
 tooltipText = "You have collected all of the transmog looks contained in this cache.\n<Right Click to Open>"
 category = addon:ClassifyItem(Context(264321, { hasLoot = true }))
 assert(category == nil, "completed appearance cache should not be actionable")

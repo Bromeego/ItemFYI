@@ -319,7 +319,7 @@ end
 
 local function IsOpenAction(text)
     -- Require a non-letter after "open" so "Use: Opens a portal" is excluded.
-    return string.find(text, "use: open%f[%A]") ~= nil
+    return string.find(text, "use:%s+open%f[%A]") ~= nil
         or IsRightClickOpen(text)
 end
 
@@ -341,8 +341,10 @@ local function ContainsAny(text, needles)
 end
 
 local function IsLocked(text)
+    -- Blizzard's LOCKED status is a line of its own. Matching the word anywhere
+    -- would also hide items whose name or flavour text mentions "locked".
     return string.find(text, "requires lockpicking", 1, true) ~= nil
-        or string.find(text, "%f[%a]locked%f[%A]") ~= nil
+        or string.find("\n" .. text .. "\n", "\n%s*locked%s*\n") ~= nil
 end
 
 local function IsItemUsable(itemID)

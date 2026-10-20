@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.43
+
+- Keep scanning after an unexpected error in one inventory work tick, instead
+  of stalling all reminders until the next reload. The error is still reported.
+- Stop a scan timer queued just before a tooltip retry from starting a second,
+  parallel work chain that doubled per-frame work during login scans.
+- Drop recipes learned from a trainer or another copy as soon as they are
+  learned, refreshing only recipe tooltips.
+- Only treat a box as locked when its tooltip has Blizzard's own "Locked" status
+  line, so items that mention "locked" in their name or flavour text still show.
+
 ## 0.2.42
 
 - Recognize Hallow's End bags whose Use line does not say "open". Handful of

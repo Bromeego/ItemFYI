@@ -50,6 +50,13 @@ local collectionCategories = {
     ["collection:pet"] = "pet",
     ["collection:transmog"] = "transmog",
     ["collection:companion"] = "pet",
+    ["collection:recipe"] = "recipe",
+}
+
+-- These categories have no collection API; "Already known" exists only in the
+-- tooltip, so a cached snapshot would keep showing a recipe learned elsewhere.
+local tooltipCollectionKinds = {
+    recipe = true,
 }
 
 local function SlotKey(bag, slot)
@@ -486,6 +493,12 @@ local function QueueEligibility(self, kind)
                 end
             elseif entry.category == kind then
                 shouldQueue = true
+                if tooltipCollectionKinds[kind] then
+                    entry.snapshot = nil
+                    if self.scanCache then
+                        self.scanCache[SlotKey(bag, slot)] = nil
+                    end
+                end
             end
             if shouldQueue then
                 QueueClassify(self, bag, slot)
@@ -693,6 +706,9 @@ function addon:RebuildCandidates()
         end
         if left.itemID ~= right.itemID then
             return left.itemID < right.itemID
+        end
+        if left.bag ~= right.bag then
+            return left.bag < right.bag
         end
         return left.slot < right.slot
     end)
@@ -903,13 +919,40 @@ local function NextInventoryTickDelay()
     return addon.initialScanActive and LOGIN_CLASSIFY_TICK_DELAY or WORK_TICK_DELAY
 end
 
+local function TickErrorHandler(message)
+    local handler = geterrorhandler and geterrorhandler()
+    if handler then
+        handler(message)
+        return message
+    end
+    return debug and debug.traceback and debug.traceback(message, 2) or message
+end
+
+-- workActive suppresses new scan timers while a tick chain runs. An error in
+-- one tick would otherwise leave it set and stall scanning until a reload.
+-- The failing job is already dequeued, so the next scan moves past it.
+local function RunInventoryTick()
+    local ok, remaining = xpcall(function()
+        return addon:ProcessInventoryTick()
+    end, TickErrorHandler)
+    if ok then
+        return remaining
+    end
+    addon.workActive = false
+    addon.initialScanActive = false
+    if not (geterrorhandler and geterrorhandler()) then
+        error(remaining, 0)
+    end
+    return false
+end
+
 local function ContinueInventoryWork()
     if addon:IsInCombat() then
         addon.scanPending = true
         addon.workActive = false
         return
     end
-    local remaining = addon:ProcessInventoryTick()
+    local remaining = RunInventoryTick()
     if remaining then
         C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
@@ -937,7 +980,7 @@ function addon:RunScheduledInventory()
     end
 
     self.workActive = true
-    local remaining = self:ProcessInventoryTick()
+    local remaining = RunInventoryTick()
     if remaining then
         C_Timer.After(NextInventoryTickDelay(), ContinueInventoryWork)
     end
