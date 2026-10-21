@@ -736,6 +736,51 @@ assert(addon.current and addon.current.itemID == 113 and addon.current.category 
     "a looted curio should appear once its Use: text is available")
 C_Item.RequestLoadItemDataByID = Noop
 
+-- Newly acquired decor may have ownership/type lines before its deposit action.
+-- Exercise actual bag events and the delayed retry, without a manual scan.
+SetSlot(0, 1, nil)
+ScanNow("login")
+itemData[278245] = { name = "Royal Attendant's Coffin" }
+tooltipByItem[278245] = "Royal Attendant's Coffin\nHousing Decor\nWarbound\n"
+    .. "Total Owned: 1 (Placed: 0, Storage: 1)\nLearned."
+SetSlot(0, 1, 278245, 1)
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
+FireTimers()
+assert(addon.current == nil, "decor must wait for a deposit action")
+assert(addon.slotIndex[0][1].snapshot.complete == false and #timers > 0,
+    "multi-line decor without its action must schedule a targeted retry")
+local decorSlotsInspected = Metrics().slotsInspected
+tooltipByItem[278245] = tooltipByItem[278245]
+    .. "\nUse: Add this Decor to your House Chest."
+itemUsable = false
+FireOneTimer()
+assert(addon.current and addon.current.itemID == 278245 and addon.current.category == "decor",
+    "new decor must appear automatically when its delayed action loads")
+assert(Metrics().slotsInspected == decorSlotsInspected,
+    "decor retries must not rescan bags")
+assert(#timers == 0, "resolved decor must stop retrying")
+itemUsable = true
+
+-- Missing decor actions must not create endless polling.
+tooltipByItem[278245] = "Royal Attendant's Coffin\nHousing Decor\nLearned."
+SetSlot(0, 1, 278245, 2)
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
+local decorTimerRuns = 0
+while #timers > 0 and decorTimerRuns < 10 do
+    FireOneTimer()
+    decorTimerRuns = decorTimerRuns + 1
+end
+assert(#timers == 0 and Metrics().tooltipSnapshots == 5
+    and Metrics().tooltipRetriesScheduled == 4,
+    "decor without an action must stop after four delayed retries")
+assert(addon.current == nil, "incomplete decor must not create a false reminder")
+SetSlot(0, 1, 113, 1)
+ScanNow("login")
+
 -- Unrelated item-data events do nothing.
 local generation = addon.scanGeneration
 local snapshots = Metrics().tooltipSnapshots

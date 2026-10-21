@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.47
+
+- New housing decor now shows its reminder automatically. Previously, if the
+  decor's tooltip loaded before its "Add this Decor to your House Chest" line,
+  the reminder did not appear until `/ifyi scan`.
+
 ## 0.2.46
 
 - Fixed reminders that could stay out of date after combat. If combat
