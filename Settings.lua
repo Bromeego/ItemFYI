@@ -50,6 +50,11 @@ function addon:RefreshSettingsPanel()
     end
     panel.showGlow:SetChecked(self.db.showGlow ~= false)
     panel.showGlow:SetEnabled(self.db.enabled ~= false)
+    panel.petUncollectedOnly:SetChecked(self.db.petUncollectedOnly == true)
+    panel.petUncollectedOnly:SetEnabled(self.db.enabled ~= false and self:IsCategoryEnabled("pet"))
+    local key = self.GetUseBindingKey and self:GetUseBindingKey()
+    panel.keybindStatus:SetText(("Keybinding: %s (Options > Keybindings > ItemFYI)"):format(
+        key and (GetBindingText and GetBindingText(key) or key) or "not bound"))
     panel.sizeSlider:SetValue(self.db.size or 42)
     panel.ignoredStatus:SetText(self:FormatIgnoredSummary())
     panel.refreshing = false
@@ -125,12 +130,28 @@ function addon:RegisterSettings()
                 return
             end
             addon.db.categories[categoryKey] = IsChecked(control)
+            addon:RefreshSettingsPanel()
             addon:ScheduleScan("category changed", 0)
         end)
     end
 
     local categoryRows = math.ceil(#categoryOptions / 2)
-    local belowCategories = categoryOriginY - categoryRows * categoryRowHeight - 16
+    local petOptionY = categoryOriginY - categoryRows * categoryRowHeight - 4
+    local petUncollectedOnly = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+    panel.petUncollectedOnly = petUncollectedOnly
+    petUncollectedOnly:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, petOptionY)
+    petUncollectedOnly.text = petUncollectedOnly:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    petUncollectedOnly.text:SetPoint("LEFT", petUncollectedOnly, "RIGHT", 4, 0)
+    petUncollectedOnly.text:SetText("Only show battle pets you don't own yet")
+    petUncollectedOnly:SetScript("OnClick", function(control)
+        if panel.refreshing then
+            return
+        end
+        addon.db.petUncollectedOnly = IsChecked(control)
+        addon:ScheduleScan("collection:pet", 0)
+    end)
+
+    local belowCategories = petOptionY - categoryRowHeight - 16
     CreateLabel(panel, "Button size", "GameFontNormal", 16, belowCategories)
     local sizeSlider = CreateSizeSlider(panel)
     panel.sizeSlider = sizeSlider
@@ -200,12 +221,16 @@ function addon:RegisterSettings()
     end)
 
     local rescan = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    panel.rescan = rescan
     rescan:SetPoint("LEFT", clearIgnored, "RIGHT", 10, 0)
     rescan:SetSize(110, 24)
     rescan:SetText("Rescan bags")
     rescan:SetScript("OnClick", function()
+        wipe(addon.sessionSkipped)
         addon:ScheduleScan("manual settings scan", 0)
     end)
+
+    panel.keybindStatus = CreateLabel(panel, "", "GameFontHighlightSmall", 16, belowCategories - 200)
 
     panel:SetScript("OnShow", function()
         addon:RefreshSettingsPanel()

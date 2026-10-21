@@ -588,6 +588,57 @@ tooltipText = "Use: Open the satchel."
 category = addon:ClassifyItem(Context(131))
 assert(category == "container", "explicit open actions should remain containers")
 
+tooltipText = "Handful of Treats\nSoulbound\nUse: Claim your treats.\nRequires Hallow's End"
+local treatCategory, treatReason = addon:ClassifyItem(Context(37586))
+assert(treatCategory == "container" and treatReason == "Hallow's End treats — click to claim",
+    "Handful of Treats should be claimable")
+
+tooltipLines = {
+    { leftText = "Use: Claim your treats.", leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Requires Hallow's End", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+category = addon:ClassifyItem(Context(37586))
+assert(category == nil, "treats outside Hallow's End should remain hidden")
+tooltipLines = nil
+
+tooltipText = "Use: Claim your reward."
+category = addon:ClassifyItem(Context(37587))
+assert(category == nil, "claiming a reward is not a treat container")
+
+tooltipText = "Tricky Treat\nUse: Dangerously sweet sugar-frosted taffy with a sinister syrup center.\nRequires Hallow's End"
+category = addon:ClassifyItem(Context(33226))
+assert(category == nil, "Tricky Treats are food, not containers")
+
+tooltipText = "Loot-Filled Pumpkin\nRequires Hallow's End\n<Right Click to Open>"
+local pumpkinSnapshot = addon:GetTooltipSnapshot(Context(209024, { bag = 2, slot = 3 }))
+assert(pumpkinSnapshot.complete == true, "a right-click container tooltip is complete")
+category = addon:ClassifyItem(Context(209024))
+assert(category == "container", "loot-filled pumpkins should be openable without hasLoot")
+
+tooltipText = "Loot-Stuffed Pumpkin\nRequires Hallow's End\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(149574))
+assert(category == "container", "loot-stuffed pumpkins should be openable")
+
+tooltipText = "Crudely Wrapped Gift\nUnique\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(34077))
+assert(category == "container", "crudely wrapped gifts should be openable")
+
+tooltipText = "Treat Bag\n\"Open your bag quickly as it will fade on logout.\"\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(20393))
+assert(category == "container", "the old treat bag should be openable")
+
+tooltipText = "Treat Bag\n\"Open your bag quickly as it will fade on logout.\""
+category = addon:ClassifyItem(Context(20393))
+assert(category == nil, "flavor text about opening is not an open action")
+
+tooltipText = "Locked\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(109))
+assert(category == nil, "a locked box should stay hidden even when it says to right-click")
+
+tooltipText = "You have collected all of the transmog looks contained in this cache.\n<Right Click to Open>"
+category = addon:ClassifyItem(Context(264321))
+assert(category == nil, "a collected cache should stay hidden without hasLoot")
+
 tooltipText = "Encoded Message\nSoulbound\nUse: Decode the message.\nSell Price: 35"
 local encodedCategory, encodedReason = addon:ClassifyItem(Context(114002))
 assert(encodedCategory == "container" and encodedReason == "Blingtron message — click to decode",
@@ -1185,6 +1236,15 @@ tooltipText = "Unlocked strongbox"
 category = addon:ClassifyItem(Context(110, { hasLoot = true }))
 assert(category == "container", "unlocked container should remain actionable")
 
+tooltipText = "Battle-Worn Locked Chest\n\"Once locked away by a careful smuggler.\"\nUse: Open the chest."
+category = addon:ClassifyItem(Context(111, { hasLoot = true }))
+assert(category == "container",
+    "a picked box whose name or flavour mentions locked should remain actionable")
+
+tooltipText = "Sturdy Box\n  Locked  \n<Right Click to Open>"
+category = addon:ClassifyItem(Context(114, { hasLoot = true }))
+assert(category == nil, "a padded Locked status line should still hide the box")
+
 tooltipText = "You have collected all of the transmog looks contained in this cache.\n<Right Click to Open>"
 category = addon:ClassifyItem(Context(264321, { hasLoot = true }))
 assert(category == nil, "completed appearance cache should not be actionable")
@@ -1306,5 +1366,67 @@ for _, fixture in ipairs({
     category = addon:ClassifyItem(Context(fixture.id))
     assert(category == nil, "restricted collectible must stay hidden: " .. fixture.id)
 end
+
+-- Pet reasons report ownership, and the ownership filter hides owned species.
+tooltipLines = nil
+C_TooltipInfo.GetBagItem = function()
+    return { lines = tooltipLines or { { leftText = tooltipText } } }
+end
+local originalCollectedInfo = C_PetJournal.GetNumCollectedInfo
+C_PetJournal.GetNumCollectedInfo = function() return 1, 3 end
+tooltipText = "Lumpy\nBattle Pet"
+local petContext = Context(82800, { link = "|Hbattlepet:777:1:3|h[Lumpy]|h" })
+local petCategory, petReason = addon:ClassifyItem(petContext)
+assert(petCategory == "pet" and petReason == "Battle pet (1/3 owned) — click to learn",
+    "an owned-but-not-maxed pet should show its owned count")
+assert(petContext.petSpeciesID == 777, "classification should expose the pet species")
+addon.db = { petUncollectedOnly = true }
+petContext = Context(82800, { link = "|Hbattlepet:777:1:3|h[Lumpy]|h" })
+petCategory = addon:ClassifyItem(petContext)
+assert(petCategory == nil and petContext.petSpeciesID == 777,
+    "the ownership filter should hide owned species but keep their species ID")
+C_PetJournal.GetNumCollectedInfo = function() return 0, 3 end
+petCategory, petReason = addon:ClassifyItem(Context(82800, { link = "|Hbattlepet:777:1:3|h[Lumpy]|h" }))
+assert(petCategory == "pet" and petReason == "Uncollected battle pet — click to learn",
+    "the ownership filter should keep species you do not own")
+addon.db = nil
+C_PetJournal.GetNumCollectedInfo = originalCollectedInfo
+
+-- Generic tooltip states use Blizzard's localized strings on other clients.
+ITEM_SPELL_KNOWN = "Déjà connu"
+ITEM_OPENABLE = "<Clic droit pour ouvrir>"
+LOCKED = "Verrouillé"
+ITEM_STARTS_QUEST = "Cet objet permet de commencer une quête"
+ITEM_SPELL_TRIGGER_ONUSE = "Utiliser :"
+ITEM_MIN_LEVEL = "Niveau %d requis"
+ITEM_RACES_ALLOWED = "%s"
+local localized = {}
+assert(loadfile("Rules.lua"))("ItemFYI", localized)
+assert(loadfile("Detection.lua"))("ItemFYI", localized)
+
+tooltipText = "Coffre\n<Clic droit pour ouvrir>"
+assert(localized:ClassifyItem(Context(5001)) == "container",
+    "a localized right-click line should mark an openable")
+tooltipText = "Coffre\nVerrouillé\n<Clic droit pour ouvrir>"
+assert(localized:ClassifyItem(Context(5002)) == nil, "a localized Locked line should hide the box")
+tooltipText = "Coffre\nDéjà connu\n<Clic droit pour ouvrir>"
+assert(localized:ClassifyItem(Context(5003)) == nil, "a localized Already known line should hide the item")
+tooltipText = "Invitation\nCet objet permet de commencer une quête"
+assert(localized:ClassifyItem(Context(5004)) == "quest", "a localized quest-starter line should be detected")
+tooltipLines = {
+    { leftText = "Utiliser : Apprend à invoquer cette monture.", leftColor = { r = 1, g = 1, b = 1 } },
+    { leftText = "Niveau 80 requis", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+assert(localized:ClassifyItem(Context(101)) == nil,
+    "a red localized level requirement should hide a collectible")
+tooltipLines[2] = { leftText = "Objet unique", leftColor = { r = 1, g = 0.125, b = 0.125 } }
+assert(localized:ClassifyItem(Context(101)) == "mount",
+    "a placeholder-only localized format must not turn every red line into a requirement")
+tooltipLines = { { leftText = "Utiliser : Ouvrir le coffre." } }
+assert(localized:GetTooltipSnapshot(Context(5007, { hasLoot = false, name = "Coffre" })).complete,
+    "a localized Use: line should count as a complete tooltip")
+tooltipLines = nil
+ITEM_SPELL_KNOWN, ITEM_OPENABLE, LOCKED, ITEM_STARTS_QUEST = nil, nil, nil, nil
+ITEM_SPELL_TRIGGER_ONUSE, ITEM_MIN_LEVEL, ITEM_RACES_ALLOWED = nil, nil, nil
 
 print("detection tests passed")

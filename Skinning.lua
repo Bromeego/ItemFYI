@@ -1,7 +1,7 @@
 local _, addon = ...
 local Unpack = unpack or table.unpack
 
-local function RegisterEllesmereUISkin(self)
+local function RegisterEllesmereUISkin()
     if not (EllesmereUI and type(EllesmereUI.RegisterSkin) == "function") then
         return false
     end
@@ -48,7 +48,7 @@ function addon:RegisterSkinning()
 
     -- EllesmereUI has a public callback API and keeps registered skins in sync
     -- with live theme changes, so prefer it when both UI suites are installed.
-    if RegisterEllesmereUISkin(self) then
+    if RegisterEllesmereUISkin() then
         return
     end
 

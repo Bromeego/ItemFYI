@@ -2,6 +2,64 @@ local _, addon = ...
 
 local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 
+-- Blizzard's localized GlobalStrings cover the generic tooltip states on any
+-- client. Action-specific "Use: ..." wording below is still English-only.
+local function LocalizedText(name)
+    local value = _G[name]
+    if type(value) == "string" and value ~= "" then
+        return string.lower(value)
+    end
+end
+
+-- Turn a format string such as "Requires Level %d" into a whole-line pattern,
+-- so translations that put the placeholder first still match exactly.
+local function LocalizedLinePattern(name)
+    local format = LocalizedText(name)
+    if not format then
+        return nil
+    end
+    local marked = string.gsub(format, "%%[%d%$%.]*[sdf]", "\1")
+    if marked == format or #string.gsub(marked, "[\1%s%p]", "") < 3 then
+        return nil
+    end
+    local escaped = string.gsub(marked, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+    return "^" .. string.gsub(escaped, "\1", ".+") .. "$"
+end
+
+local localizedUsePrefix = LocalizedText("ITEM_SPELL_TRIGGER_ONUSE")
+local localizedKnown = LocalizedText("ITEM_SPELL_KNOWN")
+local localizedOpenable = LocalizedText("ITEM_OPENABLE")
+local localizedLocked = LocalizedText("LOCKED")
+local localizedStartsQuest = LocalizedText("ITEM_STARTS_QUEST")
+
+local localizedRestrictionPatterns = {}
+for _, name in ipairs({
+    "ITEM_MIN_LEVEL", "ITEM_REQ_SKILL", "ITEM_MIN_SKILL", "ITEM_REQ_REPUTATION",
+    "ITEM_CLASSES_ALLOWED", "ITEM_RACES_ALLOWED",
+}) do
+    local pattern = LocalizedLinePattern(name)
+    if pattern then
+        localizedRestrictionPatterns[#localizedRestrictionPatterns + 1] = pattern
+    end
+end
+
+local function HasUseText(text)
+    return string.find(text, "use:", 1, true) ~= nil
+        or (localizedUsePrefix ~= nil and string.find(text, localizedUsePrefix, 1, true) ~= nil)
+end
+
+local function HasExactLine(text, line)
+    if not line then
+        return false
+    end
+    for candidate in string.gmatch(text, "[^\n]+") do
+        if string.match(candidate, "^%s*(.-)%s*$") == line then
+            return true
+        end
+    end
+    return false
+end
+
 -- Some legacy quest turn-in materials have a complete Blizzard tooltip
 -- consisting only of their name. They have no bag use/learn action and need
 -- no delayed retries. Keep these exceptions exact: learnable Curios can also
@@ -24,6 +82,9 @@ local knownText = {
     "you have collected this appearance",
     "you have collected all of the transmog looks",
 }
+if localizedKnown and localizedKnown ~= "already known" then
+    knownText[#knownText + 1] = localizedKnown
+end
 
 local transmogText = {
     "use: collect the appearance",
@@ -223,6 +284,7 @@ local function IsQuestStartAction(text)
     -- Blizzard's yellow "This Item Begins a Quest" line, or an explicit use
     -- action. Turn-in quest items do not carry either phrase.
     return string.find(text, "this item begins a quest", 1, true) ~= nil
+        or (localizedStartsQuest ~= nil and string.find(text, localizedStartsQuest, 1, true) ~= nil)
         or string.find(text, "use:%s+[^\n]*begins? a quest") ~= nil
         or string.find(text, "use:%s+[^\n]*starts? a quest") ~= nil
 end
@@ -304,9 +366,24 @@ local function HasReachedProfessionCap(skillName, maximum)
     return false
 end
 
+local function IsRightClickOpen(text)
+    -- Blizzard's ITEM_OPENABLE line. Loot-Filled Pumpkins, Loot-Stuffed
+    -- Pumpkins, Crudely Wrapped Gifts, and the old Treat Bag use it instead
+    -- of a Use: line. The angle brackets are part of that global string.
+    return string.find(text, "<right click to open>", 1, true) ~= nil
+        or (localizedOpenable ~= nil and string.find(text, localizedOpenable, 1, true) ~= nil)
+end
+
+local function IsTreatClaimAction(text)
+    -- Handful of Treats: "Use: Claim your treats." The spell opens the bag,
+    -- but the line does not say "open".
+    return string.find(text, "use:%s+claim your treats%f[%A]") ~= nil
+end
+
 local function IsOpenAction(text)
     -- Require a non-letter after "open" so "Use: Opens a portal" is excluded.
-    return string.find(text, "use: open%f[%A]") ~= nil
+    return string.find(text, "use:%s+open%f[%A]") ~= nil
+        or IsRightClickOpen(text)
 end
 
 local function IsBlingtronMessageAction(text)
@@ -327,8 +404,11 @@ local function ContainsAny(text, needles)
 end
 
 local function IsLocked(text)
+    -- Blizzard's LOCKED status is a line of its own. Matching the word anywhere
+    -- would also hide items whose name or flavour text mentions "locked".
     return string.find(text, "requires lockpicking", 1, true) ~= nil
-        or string.find(text, "%f[%a]locked%f[%A]") ~= nil
+        or string.find("\n" .. text .. "\n", "\n%s*locked%s*\n") ~= nil
+        or HasExactLine(text, localizedLocked)
 end
 
 local function IsItemUsable(itemID)
@@ -356,8 +436,15 @@ local function IsRestrictionText(text)
     text = string.gsub(text, "|c%x%x%x%x%x%x%x%x", "")
     text = string.gsub(text, "|r", "")
     text = string.match(text, "^%s*(.-)%s*$") or ""
-    return string.find(text, "^requires[%s:]") ~= nil
-        or string.find(text, "^classes[%s:]") ~= nil
+    if string.find(text, "^requires[%s:]") or string.find(text, "^classes[%s:]") then
+        return true
+    end
+    for index = 1, #localizedRestrictionPatterns do
+        if string.find(text, localizedRestrictionPatterns[index]) then
+            return true
+        end
+    end
+    return false
 end
 
 local function GetColorRGB(color)
@@ -726,7 +813,7 @@ function addon:GetTooltipSnapshot(context)
     end
 
     local text = string.lower(table.concat(parts, "\n"))
-    local hasUseText = string.find(text, "use:", 1, true) ~= nil
+    local hasUseText = HasUseText(text)
     local missingRestrictionColor = state.sawRestrictionText and not state.sawRestrictionColor
         and not state.unmetRequirement
     -- A fully loaded item can legitimately have NO Use: line: crafting
@@ -734,7 +821,8 @@ function addon:GetTooltipSnapshot(context)
     -- as incomplete made each of them retry several times after every reload.
     -- Keep retrying genuinely suspicious short/name-only tooltips, since a
     -- Curio or another learnable may receive its Use: line asynchronously.
-    -- Quest starters can be finished without any Use: line.
+    -- Quest starters can be finished without any Use: line. Right-click
+    -- containers such as a Loot-Filled Pumpkin never grow a Use: line either.
     local nameOnly = text ~= "" and context.name ~= nil
         and text == string.lower(context.name)
     local looksPartial = text == "" or not string.find(text, "\n", 1, true)
@@ -765,7 +853,8 @@ function addon:GetTooltipSnapshot(context)
         and not missingRestrictionColor
         and not waitingForCurioUse
         and not waitingForDecorUse
-        and (hasUseText or IsQuestStartAction(text) or battlePetSpeciesID
+        and (hasUseText or IsQuestStartAction(text) or IsRightClickOpen(text)
+            or battlePetSpeciesID
             or context.hasLoot == true or inertNameOnlyItemIDs[context.itemID]
             or not looksPartial)
     if not complete then
@@ -801,7 +890,7 @@ local function GetPetSpecies(context)
     return snapshot.battlePetSpeciesID or GetBattlePetSpeciesID(context)
 end
 
-local function IsUncollectedPet(context)
+local function IsUncollectedPet(context, uncollectedOnly)
     if not (C_PetJournal and C_PetJournal.GetNumCollectedInfo) then
         return false
     end
@@ -815,7 +904,8 @@ local function IsUncollectedPet(context)
     end
     owned = tonumber(owned) or 0
     limit = tonumber(limit) or 3
-    return owned < limit, speciesID
+    local learnable = owned < limit and not (uncollectedOnly and owned > 0)
+    return learnable, speciesID, owned, limit
 end
 
 local function IsUncollectedMount(itemID)
@@ -923,13 +1013,18 @@ function addon:ClassifyItem(context)
         return "toy", "Uncollected toy — click to learn"
     end
 
-    local isPet, speciesID = IsUncollectedPet(context)
+    local isPet, speciesID, ownedPets, petLimit = IsUncollectedPet(context,
+        self.db and self.db.petUncollectedOnly == true)
+    context.petSpeciesID = speciesID
     if isPet then
         if self:HasUnmetRequirement(context) then
             return nil
         end
         context.uniqueKey = "pet:" .. speciesID
-        return "pet", "Collectible battle pet — click to learn"
+        if ownedPets > 0 then
+            return "pet", ("Battle pet (%d/%d owned) — click to learn"):format(ownedPets, petLimit)
+        end
+        return "pet", "Uncollected battle pet — click to learn"
     end
 
     -- Some cosmetic companions do not expose battle-pet metadata consistently.
@@ -991,8 +1086,7 @@ function addon:ClassifyItem(context)
         -- Some starters, such as Celestial Invitation, have no spell and no
         -- Use: line. IsUsableItem is false for those, but clicking still opens
         -- the quest. A real Use: line still has to pass the usable-item check.
-        local hasUseText = string.find(tooltipText, "use:", 1, true) ~= nil
-        if not hasUseText or IsItemUsable(context.itemID) then
+        if not HasUseText(tooltipText) or IsItemUsable(context.itemID) then
             return "quest", "Quest starter — click to begin"
         end
     end
@@ -1076,6 +1170,16 @@ function addon:ClassifyItem(context)
     if IsBlingtronMessageAction(tooltipText) and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "container", "Blingtron message — click to decode"
+    end
+
+    if IsTreatClaimAction(tooltipText) then
+        -- The claim spell has no item spell in the tooltip data, so
+        -- IsUsableItem can stay false while the line is still usable. A red
+        -- "Requires Hallow's End" line is the reliable off-season check.
+        if self:HasUnmetRequirement(context) then
+            return nil
+        end
+        return "container", "Hallow's End treats — click to claim"
     end
 
     if context.hasLoot or IsOpenAction(tooltipText) then

@@ -24,6 +24,12 @@ When an item appears in the ItemFYI notification:
 
 Alt-drag moves the button, or you can place it in Blizzard Edit Mode.
 
+To use the current item from the keyboard, bind a key under
+**Options → Keybindings → ItemFYI → ItemFYI: Use current item** (or search for
+"ItemFYI"). The key is
+shown on the button and works exactly like a left-click, including the
+vendor and bank safety checks.
+
 You can also type:
 
 ```text
@@ -65,9 +71,15 @@ Reminders and stack thresholds use items carried in your bags, including the
 reagent bag. WoW's ability to craft with bank reagents is separate from these
 bag-item reminders.
 
-Generic tooltip detection currently supports English clients. Other languages
-may still detect items through collection APIs and explicit item rules, but
-tooltip-based coverage is incomplete.
+Battle pets show while you own fewer than the species limit. Enable
+**Only show battle pets you don't own yet** in settings to limit reminders to
+new species.
+
+Generic tooltip detection is most complete on English clients. On other
+languages, mounts, toys, pets, and appearances use collection APIs, and the
+"Already known", "Locked", right-click-to-open, quest-starter, and red
+requirement checks use the client's own translated text. Action-specific
+detection (such as stack combines or profession processing) is English-only.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

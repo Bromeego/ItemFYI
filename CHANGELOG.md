@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.2.45
+
+- When combat ends, immediately clear a pet cage or appearance action whose bag
+  changed during combat, so a quick click cannot use whatever moved into that
+  slot before the rescan.
+- When several bag slots hold the same reminder, always show the first slot
+  instead of one that could change between scans.
+- `/ifyi unignore` without a key now explains how to use it.
+
+## 0.2.44
+
+- Added an **ItemFYI: Use current item** keybinding in its own ItemFYI section
+  under Options → Keybindings, easy to find by searching for "ItemFYI". The bound key is shown on the button, in its tooltip, and in
+  settings, and keeps every mouse-click safety check. Alt-modified bindings
+  work too; Alt only starts a drag when the cursor is over the button.
+- Added **Only show battle pets you don't own yet**. Pet reminders now say how
+  many of the species you own, for example "Battle pet (1/3 owned)".
+- Used the client's translated text for "Already known", "Locked",
+  right-click-to-open, quest starters, the "Use:" prefix, and red level,
+  skill, class, race, and reputation requirements, improving non-English
+  clients. Red race requirements now hide items on English clients too.
+- The settings **Rescan bags** button now clears session skips like
+  `/ifyi scan`, and runs immediately during the login delay.
+- `/ifyi unignore` now says when a key is not on the ignore list instead of
+  reporting that it was restored.
+
+## 0.2.43
+
+- Keep scanning after an unexpected error in one inventory work tick, instead
+  of stalling all reminders until the next reload. The error is still reported.
+- Stop a scan timer queued just before a tooltip retry from starting a second,
+  parallel work chain that doubled per-frame work during login scans.
+- Drop recipes learned from a trainer or another copy as soon as they are
+  learned, refreshing only recipe tooltips.
+- Only treat a box as locked when its tooltip has Blizzard's own "Locked" status
+  line, so items that mention "locked" in their name or flavour text still show.
+
+## 0.2.42
+
+- Recognize Hallow's End bags whose Use line does not say "open". Handful of
+  Treats says "Claim your treats", and the pumpkins, Crudely Wrapped Gift, and
+  old Treat Bag only say "Right Click to Open".
+
 ## 0.2.41
 
 - Recognize explicit House Chest decor deposits even when the generic item

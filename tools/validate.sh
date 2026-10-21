@@ -14,23 +14,22 @@ for candidate in lua5.1 lua luajit; do
     fi
 done
 
+source_files=(Core.lua Rules.lua Detection.lua Inventory.lua UI.lua Skinning.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua)
+test_files=(tests/test_rules.lua tests/test_detection.lua tests/test_skinning.lua tests/test_load.lua tests/test_inventory.lua)
+
 if [[ -n "$lua_bin" ]]; then
-    for file in Core.lua Rules.lua Detection.lua Inventory.lua UI.lua Skinning.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_skinning.lua tests/test_load.lua tests/test_inventory.lua; do
+    for file in "${source_files[@]}" "${test_files[@]}"; do
         "$lua_bin" -e "assert(loadfile('$file'))"
     done
 
-    "$lua_bin" tests/test_rules.lua
-    "$lua_bin" tests/test_detection.lua
-    "$lua_bin" tests/test_skinning.lua
-    "$lua_bin" tests/test_load.lua
-    "$lua_bin" tests/test_inventory.lua
+    for file in "${test_files[@]}"; do
+        "$lua_bin" "$file"
+    done
 else
-    python3 tools/run_lua.py --syntax Core.lua Rules.lua Detection.lua Inventory.lua UI.lua Skinning.lua EditMode.lua Settings.lua EditModeExpanded-1.0/EditModeExpanded-1.0.lua tests/test_rules.lua tests/test_detection.lua tests/test_skinning.lua tests/test_load.lua tests/test_inventory.lua
-    python3 tools/run_lua.py tests/test_rules.lua
-    python3 tools/run_lua.py tests/test_detection.lua
-    python3 tools/run_lua.py tests/test_skinning.lua
-    python3 tools/run_lua.py tests/test_load.lua
-    python3 tools/run_lua.py tests/test_inventory.lua
+    python3 tools/run_lua.py --syntax "${source_files[@]}" "${test_files[@]}"
+    for file in "${test_files[@]}"; do
+        python3 tools/run_lua.py "$file"
+    done
 fi
 
 if grep -R $'\r' --include='*.lua' --include='*.toc' . >/dev/null; then

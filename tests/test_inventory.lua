@@ -430,7 +430,32 @@ assert(addon.current and addon.current.secureBySlot and addon.current.bag == 2,
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
 assert(addon.current == nil and not addon.button.shown,
     "a changed bag must invalidate a slot-targeted action before reconciliation")
-FireTimers()
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.bag == 2,
+    "a bag event that left the slot unchanged must restore the slot action")
+
+-- A bag change during combat clears the slot action as soon as combat ends.
+ScanNow("login")
+assert(addon.current and addon.current.secureBySlot and addon.current.bag == 2,
+    "the slot-targeted appearance should be displayed before combat")
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 3)
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current and addon.current.bag == 2,
+    "an unrelated bag change in combat must keep the slot action")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+assert(addon.current and addon.current.bag == 2,
+    "combat cannot clear the protected slot action")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current == nil and not addon.button.shown,
+    "leaving combat must clear a slot action whose bag changed in combat")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.bag == 2,
+    "the rescan after combat should restore the slot action")
 
 -- Learning a collectible removes relevant candidates without rebuilding unrelated tooltips.
 SetSlot(2, 7, 789, 1)
@@ -968,6 +993,9 @@ addon:RebuildCandidates()
 local countsByName = {}
 for _, candidate in ipairs(addon.candidates) do
     countsByName[candidate.name] = candidate.count
+    if candidate.name == "Lumpy" then
+        assert(candidate.slot == 1, "duplicate keys should keep their first bag slot")
+    end
     assert(candidate.secureBySlot and candidate.secureMacro ==
         ("/stopmacro [combat]\n/use %d %d"):format(candidate.bag, candidate.slot),
         "each pet species must target its own cage slot")
@@ -1053,5 +1081,104 @@ for _, fixture in ipairs({
     assert(Metrics().slotsInspected == 0 and Metrics().tooltipSnapshots == 1,
         "level changes must only refresh the affected tooltip")
 end
+
+-- Learning a recipe elsewhere refreshes only recipe tooltips, because the
+-- "Already known" state is not available from a collection API.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+tooltipByItem[107] = {
+    { leftText = "Use: Teaches you how to craft a test item." },
+}
+SetSlot(0, 1, 107, 1)
+SetSlot(0, 2, 100, 1, { hasLoot = true })
+ScanNow("login")
+assert(addon.current and addon.current.itemID == 107, "an unlearned recipe should appear")
+tooltipByItem[107][2] = { leftText = "Already known" }
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "NEW_RECIPE_LEARNED", 5555)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.itemID == 100,
+    "a recipe learned elsewhere must drop from the queue")
+assert(Metrics().tooltipSnapshots == 1 and Metrics().slotsInspected == 0,
+    "learning a recipe must only refetch recipe tooltips")
+
+-- A scan timer queued before a tick chain started must not start a second chain.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+SetSlot(0, 2, 200, 1, { hasLoot = true })
+SetSlot(1, 1, 268650, 5)
+addon.workPerTick = 1
+addon:ScheduleScan("BAG_UPDATE", 0.3)
+addon:ScanBags("login")
+assert(addon.workActive and #timers == 2, "the chain and the earlier scan timer are both queued")
+FireOneTimer()
+assert(#timers == 1, "an earlier scan timer must defer to the running tick chain")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current, "the single tick chain should still finish the scan")
+addon.workPerTick = nil
+
+-- The pet ownership filter hides owned species, and turning it off restores
+-- them from cached tooltips without rescanning bags.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+C_PetJournal.GetNumCollectedInfo = function() return 1, 3 end
+itemData[82800] = { name = "Pet Cage" }
+tooltipByItem[82800] = "Lumpy\nBattle Pet"
+SetSlot(0, 1, 82800, 1, { hyperlink = "|Hbattlepet:321:1:3|h[Lumpy]|h" })
+ScanNow("login")
+assert(addon.current and addon.current.category == "pet"
+    and addon.current.reason == "Battle pet (1/3 owned) — click to learn",
+    "an owned-but-not-maxed pet should appear by default")
+local petOption = addon.settingsPanel.petUncollectedOnly
+addon:ResetMetrics()
+petOption.checked = true
+petOption.scripts.OnClick(petOption)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current == nil, "the ownership filter should hide owned species")
+petOption.checked = false
+petOption.scripts.OnClick(petOption)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.category == "pet",
+    "turning the ownership filter off should restore the hidden pet")
+assert(Metrics().tooltipSnapshots == 0 and Metrics().slotsInspected == 0,
+    "toggling the pet filter must reuse cached tooltips")
+C_PetJournal.GetNumCollectedInfo = nil
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+SetSlot(0, 2, 200, 1, { hasLoot = true })
+SetSlot(1, 1, 268650, 5)
+
+-- An error inside one work tick must not leave scanning permanently stalled.
+addon:ClearInventoryState()
+timers = {}
+local reportedErrors = {}
+geterrorhandler = function()
+    return function(message) reportedErrors[#reportedErrors + 1] = message end
+end
+local originalClassify = addon.ClassifyItem
+local failNextClassify = true
+addon.ClassifyItem = function(self, context)
+    if failNextClassify then
+        failNextClassify = false
+        error("simulated classification failure")
+    end
+    return originalClassify(self, context)
+end
+addon:ScanBags("login")
+assert(#reportedErrors == 1, "a tick error should reach the error handler")
+assert(not addon.workActive, "a tick error must release the work-active flag")
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+assert(#timers > 0, "new bag events must schedule work after a tick error")
+SlashCmdList.ITEMFYI("scan")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current, "a later scan should recover after a tick error")
+addon.ClassifyItem = originalClassify
+geterrorhandler = nil
 
 print("inventory processing tests passed")
