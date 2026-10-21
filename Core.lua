@@ -275,6 +275,13 @@ function addon:SkipCurrent(permanent)
     self:ScheduleScan("dismissed", 0)
 end
 
+function addon:ClearIgnored()
+    wipe(self.db.ignored)
+    self:Print("Permanent ignore list cleared.")
+    self:RefreshSettingsPanel()
+    self:ScheduleScan("ignore list cleared", 0)
+end
+
 function addon:GetIgnoredEntries()
     local entries = {}
     for key, value in pairs(self.db and self.db.ignored or {}) do
@@ -440,10 +447,7 @@ function addon:HandleSlash(input)
     elseif command == "unignore" then
         self:Print("Usage: /ifyi unignore <key>. Use /ifyi ignored to see keys.")
     elseif command == "clearignored" then
-        wipe(self.db.ignored)
-        self:Print("Permanent ignore list cleared.")
-        self:RefreshSettingsPanel()
-        self:ScheduleScan("ignore list cleared", 0)
+        self:ClearIgnored()
     elseif command == "clearskips" then
         wipe(self.sessionSkipped)
         self:Print("Session skips cleared.")
@@ -462,6 +466,7 @@ events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BAG_UPDATE_DELAYED")
+events:RegisterEvent("ITEM_LOCK_CHANGED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:RegisterEvent("ITEM_DATA_LOAD_RESULT")
@@ -598,6 +603,14 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon:InvalidateSecureActionForBag(changedBag)
         if not addon.workActive then
             addon:ScheduleScan(event, GetBagScanDelay())
+        end
+    elseif event == "ITEM_LOCK_CHANGED" then
+        -- Putting an item back in its own slot can unlock it without a
+        -- BAG_UPDATE. Recheck only bags whose indexed item is held as locked.
+        local bag, slot = ...
+        if slot ~= nil and addon:IsIndexedSlotLocked(bag, slot) then
+            addon:NoteDirtyBag(bag)
+            addon:ScheduleScan("BAG_UPDATE", GetBagScanDelay())
         end
     elseif event == "BAG_UPDATE_DELAYED" then
         if not addon.workActive then

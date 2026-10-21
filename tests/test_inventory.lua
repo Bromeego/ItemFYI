@@ -1117,6 +1117,67 @@ geterrorhandler = function()
     return function(message) reportedErrors[#reportedErrors + 1] = message end
 end
 local originalClassify = addon.ClassifyItem
+-- Combat pausing a bag partway through must not let a rebuild-only event
+-- (here, opening a vendor) finish the scan and strand the rest of the bag.
+for slot = 1, 10 do SetSlot(2, slot, 100, 1, { hasLoot = true }) end
+addon.startupScanPending = false
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+SetSlot(2, 10, 200, 1, { hasLoot = true })
+addon.reconcileSlotsPerTick = 1
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+FireOneTimer()
+inCombat = true
+FireTimers()
+assert(addon.reconcileBag == 2 and not addon.workActive,
+    "combat should pause reconciliation partway through the bag")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+local stallGuard = 0
+while #timers > 0 and stallGuard < 100 do
+    FireTimers()
+    stallGuard = stallGuard + 1
+end
+assert(addon.reconcileBag == nil and addon.slotIndex[2][10].itemID == 200,
+    "a rebuild-only event after combat must finish the paused bag")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+addon.reconcileSlotsPerTick = nil
+
+-- A picked-up item keeps its classification and is only hidden while locked.
+local function HasCandidateAt(bag, slot)
+    for _, candidate in ipairs(addon.candidates) do
+        if candidate.bag == bag and candidate.slot == slot then
+            return true
+        end
+    end
+    return false
+end
+assert(HasCandidateAt(2, 10), "the unlocked container should be a candidate")
+local lockedEntry = addon.slotIndex[2][10]
+local classifiedBeforeLock = Metrics().itemsClassified
+bags[2][10].isLocked = true
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.slotIndex[2][10] == lockedEntry and lockedEntry.locked,
+    "a locked slot must keep its indexed entry")
+assert(not HasCandidateAt(2, 10), "a locked item must not be offered")
+bags[2][10].isLocked = false
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_LOCK_CHANGED", 2, 10)
+assert(#timers > 0, "unlocking a held item must schedule a recheck")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(not lockedEntry.locked and HasCandidateAt(2, 10),
+    "an unlocked item must be offered again")
+assert(Metrics().itemsClassified == classifiedBeforeLock,
+    "picking up and putting back an item must not reclassify it")
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_LOCK_CHANGED", 2, 9)
+assert(#timers == 0, "lock changes on unlocked indexed slots must not rescan")
+for slot = 1, 10 do SetSlot(2, slot, nil) end
+bagSlotCounts[2] = 0
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+
 local failNextClassify = true
 addon.ClassifyItem = function(self, context)
     if failNextClassify then

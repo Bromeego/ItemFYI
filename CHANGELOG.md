@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Fixed reminders that could stay out of date after combat. If combat
+  interrupted a bag scan and the next event only refreshed the button (such as
+  opening a vendor), the rest of that bag was not checked until another bag
+  change.
+- Picking up or using an item now only hides its reminder while the item is
+  locked, instead of forgetting and rescanning it every time it is dragged.
+- **Clear permanent ignores** in settings now asks for confirmation.
+  `/ifyi clearignored` still clears immediately.
+- Mounts whose collection data has not loaded yet are no longer shown as
+  uncollected.
+- Words such as "because:" in flavour text no longer count as a "Use:" line.
+
 ## 0.2.45
 
 - When combat ends, immediately clear a pet cage or appearance action whose bag

@@ -423,6 +423,14 @@ assert(category == "container", "generic hasLoot container detection failed")
 category = addon:ClassifyItem(Context(101))
 assert(category == "mount", "mount detection failed")
 
+local originalMountInfo = C_MountJournal.GetMountInfoByID
+C_MountJournal.GetMountInfoByID = function()
+    return "Test Mount", 1, 1, false, true, 1, false, false, nil, false, nil
+end
+category = addon:ClassifyItem(Context(101))
+assert(category ~= "mount", "a mount whose collected state has not loaded must not show as uncollected")
+C_MountJournal.GetMountInfoByID = originalMountInfo
+
 category = addon:ClassifyItem(Context(102))
 assert(category == "toy", "toy detection failed")
 
@@ -818,6 +826,14 @@ local questSnapshot = addon:GetTooltipSnapshot(Context(142210, {
 }))
 assert(questSnapshot.complete == true,
     "a begins-a-quest tooltip with no Use: line is complete")
+itemUsable = true
+
+tooltipText = "Celestial Invitation\nItem Level 1\nThis Item Begins a Quest\n"
+    .. "\"Answer because: the stars demand it.\""
+itemUsable = false
+category = addon:ClassifyItem(Context(142210))
+assert(category == "quest",
+    "a word ending in 'use:' in flavour text must not count as a Use: line")
 itemUsable = true
 
 tooltipLines = {
