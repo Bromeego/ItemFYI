@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.46
 
 - Fixed reminders that could stay out of date after combat. If combat
   interrupted a bag scan and the next event only refreshed the button (such as
