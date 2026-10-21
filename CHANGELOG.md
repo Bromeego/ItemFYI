@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- When combat ends, immediately clear a pet cage or appearance action whose bag
+  changed during combat, so a quick click cannot use whatever moved into that
+  slot before the rescan.
+- When several bag slots hold the same reminder, always show the first slot
+  instead of one that could change between scans.
+- `/ifyi unignore` without a key now explains how to use it.
+
 ## 0.2.44
 
 - Added an **ItemFYI: Use current item** keybinding in its own ItemFYI section

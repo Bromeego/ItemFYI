@@ -462,6 +462,13 @@ local unignoreGeneration = addon.scanGeneration
 SlashCmdList.ITEMFYI("unignore 424242")
 assert(addon.scanGeneration == unignoreGeneration,
     "unignoring an unknown key should not claim a restore or rescan")
+local printed = {}
+local originalPrint = addon.Print
+addon.Print = function(_, message) printed[#printed + 1] = message end
+SlashCmdList.ITEMFYI("unignore")
+addon.Print = originalPrint
+assert(printed[1] and printed[1]:find("Usage: /ifyi unignore <key>", 1, true),
+    "unignore without a key should explain its usage")
 
 BattlePetTooltip.shown = true
 addon.button.scripts.OnLeave(addon.button)
