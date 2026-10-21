@@ -437,6 +437,8 @@ function addon:HandleSlash(input)
         self:Print(("Restored %s."):format(argument))
         self:RefreshSettingsPanel()
         self:ScheduleScan("unignored", 0)
+    elseif command == "unignore" then
+        self:Print("Usage: /ifyi unignore <key>. Use /ifyi ignored to see keys.")
     elseif command == "clearignored" then
         wipe(self.db.ignored)
         self:Print("Permanent ignore list cleared.")
@@ -519,6 +521,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon.layoutUseSavedPosition = nil
             addon:ApplyButtonLayout(useSavedPosition)
         end
+        addon:InvalidateSecureActionForCombatChanges()
         if addon.scanPending then
             addon:ScheduleScan("combat ended", GetBagScanDelay())
         end

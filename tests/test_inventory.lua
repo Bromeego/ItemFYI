@@ -430,7 +430,32 @@ assert(addon.current and addon.current.secureBySlot and addon.current.bag == 2,
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
 assert(addon.current == nil and not addon.button.shown,
     "a changed bag must invalidate a slot-targeted action before reconciliation")
-FireTimers()
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.bag == 2,
+    "a bag event that left the slot unchanged must restore the slot action")
+
+-- A bag change during combat clears the slot action as soon as combat ends.
+ScanNow("login")
+assert(addon.current and addon.current.secureBySlot and addon.current.bag == 2,
+    "the slot-targeted appearance should be displayed before combat")
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 3)
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current and addon.current.bag == 2,
+    "an unrelated bag change in combat must keep the slot action")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+assert(addon.current and addon.current.bag == 2,
+    "combat cannot clear the protected slot action")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current == nil and not addon.button.shown,
+    "leaving combat must clear a slot action whose bag changed in combat")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.bag == 2,
+    "the rescan after combat should restore the slot action")
 
 -- Learning a collectible removes relevant candidates without rebuilding unrelated tooltips.
 SetSlot(2, 7, 789, 1)
@@ -923,6 +948,9 @@ addon:RebuildCandidates()
 local countsByName = {}
 for _, candidate in ipairs(addon.candidates) do
     countsByName[candidate.name] = candidate.count
+    if candidate.name == "Lumpy" then
+        assert(candidate.slot == 1, "duplicate keys should keep their first bag slot")
+    end
     assert(candidate.secureBySlot and candidate.secureMacro ==
         ("/stopmacro [combat]\n/use %d %d"):format(candidate.bag, candidate.slot),
         "each pet species must target its own cage slot")

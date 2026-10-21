@@ -327,6 +327,20 @@ function addon:InvalidateSecureActionForBag(bagID)
     local current = self.current
     if current and current.secureBySlot and current.bag == bagID and not self:IsInCombat() then
         self:SetCandidate(nil, 0)
+        -- The bag event may not change any indexed slot; still restore the
+        -- reminder once the scan has confirmed what the slot holds.
+        self.rebuildNeeded = true
+    end
+end
+
+-- Combat blocks the BAG_UPDATE invalidation above. Once combat ends, drop a
+-- slot action whose bag changed so it cannot use whatever moved into the slot
+-- before the delayed rescan runs.
+function addon:InvalidateSecureActionForCombatChanges()
+    local current = self.current
+    if current and current.secureBySlot
+        and (self.allBagsDirty or (self.dirtyBags and self.dirtyBags[current.bag])) then
+        self:InvalidateSecureActionForBag(current.bag)
     end
 end
 
@@ -672,14 +686,13 @@ function addon:RebuildCandidates()
             for slot, entry in pairs(bagSlots) do
                 local category = entry.category
                 local key = entry.uniqueKey or (entry.itemID and tostring(entry.itemID))
-                if category and key and self:IsCategoryEnabled(category) and not seen[key]
+                if category and key and self:IsCategoryEnabled(category)
                     and not (self.db.ignored and self.db.ignored[key])
                     and not (self.sessionSkipped and self.sessionSkipped[key]) then
                     local context = entry.context
                     if context then
                         local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
                         if not (secureBySlot and self:IsSlotActionBlocked()) then
-                            seen[key] = true
                             candidates[#candidates + 1] = {
                                 key = key,
                                 itemID = entry.itemID,
@@ -714,6 +727,17 @@ function addon:RebuildCandidates()
         end
         return left.slot < right.slot
     end)
+
+    -- Deduplicate after sorting so the first bag slot always represents a key;
+    -- pairs() order would otherwise pick a different slot between rebuilds.
+    local unique = {}
+    for _, candidate in ipairs(candidates) do
+        if not seen[candidate.key] then
+            seen[candidate.key] = true
+            unique[#unique + 1] = candidate
+        end
+    end
+    candidates = unique
 
     self.candidates = candidates
     self.rebuildNeeded = false
