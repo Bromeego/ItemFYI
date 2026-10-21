@@ -365,29 +365,27 @@ function addon:NoteItemRefresh(itemID, keepTooltip)
     end
 end
 
-function addon:HasInventoryWork()
-    if self.allBagsDirty or (self.dirtyBags and next(self.dirtyBags))
+-- Work that a rebuild-only shortcut must not skip. This includes a bag
+-- reconciliation paused by combat partway through a bag.
+local function HasQueuedWork(self)
+    if self.forceRefresh or self.allBagsDirty or (self.dirtyBags and next(self.dirtyBags))
         or self.reconcileBag ~= nil
         or (self.reconcileQueue and self.reconcileQueue[self.reconcileHead or 1] ~= nil) then
         return true
     end
-    if self.forceRefresh or self.rebuildOnly
-        or (self.eligibilityKinds and next(self.eligibilityKinds)) then
+    if (self.eligibilityKinds and next(self.eligibilityKinds))
+        or (self.pendingItemIDs and next(self.pendingItemIDs)) then
         return true
     end
-    if self.pendingItemIDs and next(self.pendingItemIDs) then
-        return true
-    end
-    if self.classifyQueue and self.classifyQueue[self.classifyHead or 1] then
-        return true
-    end
-    if self.retryQueue and self.retryQueue[1] then
-        return true
-    end
-    if self.rebuildNeeded then
+    if (self.classifyQueue and self.classifyQueue[self.classifyHead or 1])
+        or (self.retryQueue and self.retryQueue[1]) then
         return true
     end
     return false
+end
+
+function addon:HasInventoryWork()
+    return HasQueuedWork(self) or self.rebuildOnly == true or self.rebuildNeeded == true
 end
 
 function addon:NoteScanIntent(reason)
@@ -564,8 +562,19 @@ end
 local function ReconcileSlot(self, bag, slot)
     self:NoteMetric("slotsInspected")
     local info = C_Container.GetContainerItemInfo(bag, slot)
-    local fingerprint = Fingerprint(info, bag, slot)
     local existing = GetEntry(self, bag, slot)
+    -- A picked-up or in-use item is locked but still in its slot. Keep its
+    -- entry, totals, and tooltip snapshot, and only hide it until it unlocks,
+    -- instead of discarding and reclassifying it on every drag.
+    if info and info.isLocked and existing
+        and (info.itemID == nil or info.itemID == existing.itemID) then
+        if not existing.locked then
+            existing.locked = true
+            self.rebuildNeeded = true
+        end
+        return
+    end
+    local fingerprint = Fingerprint(info, bag, slot)
     if not fingerprint then
         if existing then
             RemoveSlot(self, bag, slot)
@@ -596,6 +605,7 @@ local function ReconcileSlot(self, bag, slot)
         existing.awaitingItemInfo = nil
         existing.context = nil
         existing.petSpeciesID = nil
+        existing.locked = nil
         existing.bag = bag
         existing.slot = slot
         AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
@@ -605,9 +615,20 @@ local function ReconcileSlot(self, bag, slot)
         end
         self:NoteMetric("slotsChanged")
         QueueClassify(self, bag, slot)
-    elseif not existing.classified then
-        QueueClassify(self, bag, slot)
+    else
+        if existing.locked then
+            existing.locked = nil
+            self.rebuildNeeded = true
+        end
+        if not existing.classified then
+            QueueClassify(self, bag, slot)
+        end
     end
+end
+
+function addon:IsIndexedSlotLocked(bag, slot)
+    local entry = GetEntry(self, bag, slot)
+    return entry ~= nil and entry.locked == true
 end
 
 local function FinishReconcileBag(self, bag, slotCount)
@@ -686,7 +707,7 @@ function addon:RebuildCandidates()
             for slot, entry in pairs(bagSlots) do
                 local category = entry.category
                 local key = entry.uniqueKey or (entry.itemID and tostring(entry.itemID))
-                if category and key and self:IsCategoryEnabled(category)
+                if category and key and not entry.locked and self:IsCategoryEnabled(category)
                     and not (self.db.ignored and self.db.ignored[key])
                     and not (self.sessionSkipped and self.sessionSkipped[key]) then
                     local context = entry.context
@@ -996,10 +1017,7 @@ function addon:RunScheduledInventory()
         return
     end
 
-    if self.rebuildOnly and not self.forceRefresh and not self.allBagsDirty
-        and not next(self.dirtyBags) and not next(self.pendingItemIDs)
-        and not next(self.eligibilityKinds) and not self.classifyQueue[self.classifyHead or 1]
-        and not (self.retryQueue and self.retryQueue[1]) then
+    if self.rebuildOnly and not HasQueuedWork(self) then
         self:RebuildCandidates()
         self.rebuildOnly = false
         self.workActive = false
@@ -1018,11 +1036,7 @@ function addon:ScanBags(reason)
     if reason then
         self:NoteScanIntent(reason)
     end
-    if not self.forceRefresh and not self.rebuildOnly
-        and not next(self.eligibilityKinds)
-        and not self.allBagsDirty and not next(self.dirtyBags)
-        and not next(self.pendingItemIDs) and not self.classifyQueue[self.classifyHead or 1]
-        and not (self.retryQueue and self.retryQueue[1]) then
+    if not self.rebuildOnly and not HasQueuedWork(self) then
         self.allBagsDirty = true
     end
     self:RunScheduledInventory()

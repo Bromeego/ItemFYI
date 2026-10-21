@@ -14,6 +14,32 @@ local categoryOptions = {
     { key = "quest", label = "Quests" },
 }
 
+local CLEAR_IGNORED_POPUP = "ITEMFYI_CLEAR_IGNORED"
+
+-- One mis-click on the settings button would otherwise wipe every permanent
+-- ignore. /ifyi clearignored is typed deliberately and stays immediate.
+local function ConfirmClearIgnored()
+    if not (StaticPopupDialogs and StaticPopup_Show) then
+        addon:ClearIgnored()
+        return
+    end
+    if not StaticPopupDialogs[CLEAR_IGNORED_POPUP] then
+        StaticPopupDialogs[CLEAR_IGNORED_POPUP] = {
+            text = "Clear all permanently ignored ItemFYI items?",
+            button1 = YES or "Yes",
+            button2 = NO or "No",
+            OnAccept = function()
+                addon:ClearIgnored()
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+    end
+    StaticPopup_Show(CLEAR_IGNORED_POPUP)
+end
+
 local function CreateLabel(parent, text, template, x, y)
     local label = parent:CreateFontString(nil, "ARTWORK", template or "GameFontNormal")
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -211,14 +237,11 @@ function addon:RegisterSettings()
     end)
 
     local clearIgnored = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    panel.clearIgnored = clearIgnored
     clearIgnored:SetPoint("LEFT", clearSkips, "RIGHT", 10, 0)
     clearIgnored:SetSize(170, 24)
     clearIgnored:SetText("Clear permanent ignores")
-    clearIgnored:SetScript("OnClick", function()
-        wipe(addon.db.ignored)
-        addon:RefreshSettingsPanel()
-        addon:ScheduleScan("ignore list cleared", 0)
-    end)
+    clearIgnored:SetScript("OnClick", ConfirmClearIgnored)
 
     local rescan = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     panel.rescan = rescan

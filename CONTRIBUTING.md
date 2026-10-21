@@ -18,6 +18,9 @@ From the repository root:
 ```
 
 GitHub Actions runs the same check on every push and pull request.
+WoW runs Lua 5.1, and so does CI. Install `lua5.1` (or at least the
+`liblua5.1-0` library) locally too: without it, the fallback runner uses a newer
+Lua that accepts syntax WoW rejects, and prints a warning.
 It also runs on version tags and checks release metadata. Python 3 is required
 for the release checks and their tests.
 
@@ -36,9 +39,14 @@ A Git tag is optional and is only something you create yourself.
 4. Validate, commit, and merge the release changes into `main`. CurseForge
    packages that commit as an **alpha**.
 
-To publish a build most CurseForge users will receive, also create a tag:
+To publish a build most CurseForge users will receive, also create a tag.
+The easiest way is the **Tag release** workflow: on GitHub, open
+**Actions → Tag release → Run workflow** on `main`. It runs the validation
+suite, then creates and pushes the tag that matches the TOC version. It refuses
+to run from any other branch and fails instead of moving an existing tag.
 
-Use the TOC as the source of truth. After merging, update your local `main`,
+To tag from your own checkout instead, use the TOC as the source of truth.
+After merging, update your local `main`,
 run the validation suite, then create its matching tag:
 
 ```bash
