@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.45
 
 - When combat ends, immediately clear a pet cage or appearance action whose bag
   changed during combat, so a quick click cannot use whatever moved into that
