@@ -597,6 +597,7 @@ local ignoredEntries = addon:GetIgnoredEntries()
 assert(ignoredEntries[1] and ignoredEntries[1].key == "999" and ignoredEntries[1].name == "Ignored Gem",
     "ignored entries must keep the stored name")
 addon.db.ignored["999"] = nil
+
 addon:RefreshSettingsPanel()
 
 addon.button.scripts.PostClick(addon.button, "LeftButton", true)
@@ -745,5 +746,17 @@ generation = addon.scanGeneration
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_LOOT_SPEC_UPDATED")
 assert(addon.scanGeneration > generation,
     "loot spec changes must rescan")
+
+-- The settings button asks before wiping the permanent ignore list.
+addon.db.ignored["998"] = { name = "Kept Gem" }
+StaticPopupDialogs = {}
+local shownPopup
+StaticPopup_Show = function(name) shownPopup = name end
+addon.settingsPanel.clearIgnored.scripts.OnClick(addon.settingsPanel.clearIgnored)
+assert(shownPopup == "ITEMFYI_CLEAR_IGNORED", "clearing ignores from settings must ask first")
+assert(addon.db.ignored["998"], "the ignore list must survive until the player confirms")
+StaticPopupDialogs.ITEMFYI_CLEAR_IGNORED.OnAccept()
+assert(next(addon.db.ignored) == nil, "confirming must clear the ignore list")
+StaticPopupDialogs, StaticPopup_Show = nil, nil
 
 print("load and secure-button smoke test passed")

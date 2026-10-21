@@ -44,7 +44,8 @@ for _, name in ipairs({
 end
 
 local function HasUseText(text)
-    return string.find(text, "use:", 1, true) ~= nil
+    -- Word boundary so "because:" or "house:" in flavour text is not a Use: line.
+    return string.find(text, "%f[%a]use:") ~= nil
         or (localizedUsePrefix ~= nil and string.find(text, localizedUsePrefix, 1, true) ~= nil)
 end
 
@@ -917,7 +918,9 @@ local function IsUncollectedMount(itemID)
         return false
     end
     local info = { C_MountJournal.GetMountInfoByID(mountID) }
-    return info[11] ~= true, mountID
+    -- isCollected is nil while mount data is still loading; only an explicit
+    -- false means the mount is uncollected.
+    return info[11] == false, mountID
 end
 
 local function IsUncollectedToy(itemID)

@@ -1,0 +1,39 @@
+name: Tag release
+
+# Run manually from Actions after the release commit is merged into main.
+# It validates the addon, then creates and pushes the tag that matches the
+# TOC version. It never moves or overwrites an existing tag.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install --yes lua5.1
+      - name: Validate addon
+        run: ./tools/validate.sh
+      - name: Create matching tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 tools/release.py --create-tag
+      - name: Push tag
+        run: |
+          tag="$(python3 tools/release.py | sed -n 's/^Release metadata validated: //p')"
+          test -n "$tag"
+          git push origin "refs/tags/$tag"
