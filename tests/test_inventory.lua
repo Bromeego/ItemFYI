@@ -1115,11 +1115,12 @@ assert(countsByName["Lumpy"] ~= 8 and countsByName["Sea Pony"] ~= 8,
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
     Enum.PlayerInteractionType.Banker)
 addon:RebuildCandidates()
-assert(#addon.candidates == 0, "pet cage slot actions must be suppressed at a bank")
+assert(addon.current == nil and #addon.candidates == 3,
+    "pet cage actions must be suppressed at a bank, without dropping the list")
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.Banker)
 addon:RebuildCandidates()
-assert(#addon.candidates == 3, "pet cage reminders must return after closing the bank")
+assert(addon.current and #addon.candidates == 3, "pet cage reminders must return after closing the bank")
 -- Blizzard's BankFrame is one window for all three bank interaction types and
 -- closes on a HIDE of any of them. A close reported with a different bank
 -- type than the open must still restore slot actions.
@@ -1130,10 +1131,10 @@ for _, pair in ipairs({
 }) do
     eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
         Enum.PlayerInteractionType[pair[1]])
-    assert(addon:IsSlotActionBlocked(), pair[1] .. " must block slot actions")
+    assert(addon:IsItemUseBlocked(), pair[1] .. " must block slot actions")
     eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
         Enum.PlayerInteractionType[pair[2]])
-    assert(not addon:IsSlotActionBlocked(),
+    assert(not addon:IsItemUseBlocked(),
         ("closing the bank as %s after opening it as %s must clear the block"):format(pair[2], pair[1]))
 end
 -- Other windows keep their own blocks: closing the bank leaves the mailbox blocked.
@@ -1143,24 +1144,64 @@ eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
     Enum.PlayerInteractionType.Banker)
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.AccountBanker)
-assert(addon:IsSlotActionBlocked(), "a bank close must not clear an open mailbox block")
+assert(addon:IsItemUseBlocked(), "a bank close must not clear an open mailbox block")
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.MailInfo)
-assert(not addon:IsSlotActionBlocked(), "closing the mailbox clears its block")
+assert(not addon:IsItemUseBlocked(), "closing the mailbox clears its block")
 addon:RebuildCandidates()
-assert(#addon.candidates == 3, "pet cage reminders must return after a mismatched bank close")
+assert(addon.current and #addon.candidates == 3,
+    "pet cage reminders must return after a mismatched bank close")
+-- A vendor blocks the pet cage until the player closes it; ItemFYI does not
+-- close the vendor to use the cage.
+local merchantCloses = 0
 local previousCloseMerchant = CloseMerchant
-CloseMerchant = function()
-    eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
-end
+CloseMerchant = function() merchantCloses = merchantCloses + 1 end
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+assert(addon.current == nil and addon.button.attributes.macrotext1 == nil,
+    "opening a vendor must clear the pet cage action immediately")
 addon.button.scripts.PreClick(addon.button, "LeftButton", true)
-assert(not addon.merchantOpen and addon.current and addon.current.secureBySlot,
-    "the vendor must close before using a displayed pet cage")
+assert(merchantCloses == 0, "using ItemFYI must not close the vendor")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.secureBySlot,
+    "closing the vendor must restore the pet cage action")
 CloseMerchant = previousCloseMerchant
 local petBag = addon.current.bag
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", petBag)
 assert(addon.current == nil, "moving cages must immediately invalidate the displayed slot action")
+
+-- With real timer delays, an item-ID action must be cleared the moment a
+-- window opens, and the moment combat ends with one open, not 0.3 s later
+-- when the rescan runs.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+ScanNow("login")
+assert(addon.current and addon.current.secureMacro == "/use item:100"
+    and not addon.current.secureBySlot, "the satchel uses an item-ID action")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+assert(#timers > 0 and addon.current == nil and addon.button.attributes.macrotext1 == nil,
+    "opening a vendor must clear an item-ID action before the delayed rescan")
+eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.button.attributes.macrotext1 == "/use item:100",
+    "closing the vendor restores the item-ID action")
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+    Enum.PlayerInteractionType.TradePartner)
+assert(addon.current and addon.button.attributes.macrotext1 == "/use item:100",
+    "combat lockdown keeps the button unchanged")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current == nil and addon.button.attributes.macrotext1 == nil,
+    "leaving combat with a trade open must clear the action before the delayed rescan")
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+    Enum.PlayerInteractionType.TradePartner)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.button.attributes.macrotext1 == "/use item:100"
+    and not addon:IsItemUseBlocked(), "closing the trade restores the action")
 
 -- Bank contents must not enter carried-item thresholds, even after a bank event.
 addon:ClearInventoryState()

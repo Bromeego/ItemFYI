@@ -13,21 +13,23 @@ addon.scanGeneration = 0
 addon.pendingItemLoads = {}
 addon.scanCache = {}
 addon.layoutPending = false
-addon.slotActionBlocks = {}
-addon.merchantOpen = false
+addon.itemUseBlocks = {}
 
 -- Bindings.xml clicks the secure button, so keyboard use keeps the same
--- combat, merchant, and inventory-interaction guards as a mouse click.
+-- combat, vendor, and inventory-interaction guards as a mouse click.
 addon.USE_BINDING = "CLICK ItemFYIActionButton:LeftButton"
 BINDING_HEADER_ITEMFYI = "ItemFYI"
 -- Keybinding search results omit the section name, so the label carries it.
 _G["BINDING_NAME_" .. addon.USE_BINDING] = "ItemFYI: Use current item"
 
--- Bag-slot use actions inherit the behaviour of whichever inventory-routing
--- window is active. In these interactions, the same click can sell, deposit,
--- attach, trade, scrap, or select the item instead of using it.
-local unsafeSlotInteractionTypes = {}
-local unsafeSlotInteractionNames = {
+-- A bag-slot use (C_Container.UseContainerItem) is documented to follow the
+-- open inventory-routing window: it can sell, deposit, attach, trade, scrap,
+-- or select the item instead of using it. Item-ID uses go through
+-- C_Item.UseItemByName, whose behaviour in these windows is undocumented, so
+-- every ItemFYI action is blocked while one is open (and while a vendor is),
+-- until in-game testing shows item-ID uses are safe there.
+local unsafeInteractionTypes = {}
+local unsafeInteractionNames = {
     "TradePartner",
     "Banker",
     "GuildBanker",
@@ -45,17 +47,17 @@ local unsafeSlotInteractionNames = {
     "AccountBanker",
 }
 
-for _, name in ipairs(unsafeSlotInteractionNames) do
+for _, name in ipairs(unsafeInteractionNames) do
     local interactionType = Enum and Enum.PlayerInteractionType
         and Enum.PlayerInteractionType[name]
     if interactionType ~= nil then
-        unsafeSlotInteractionTypes[interactionType] = true
+        unsafeInteractionTypes[interactionType] = true
     end
 end
 
 -- Blizzard's BankFrame registers all three bank types for one window and
 -- hides it on a HIDE of any of them. Share one block, so a close reported
--- with a different bank type than the open still restores slot actions.
+-- with a different bank type than the open still restores the action.
 local sharedInteractionBlockKeys = {}
 for _, name in ipairs({ "Banker", "CharacterBanker", "AccountBanker" }) do
     local interactionType = Enum and Enum.PlayerInteractionType
@@ -132,12 +134,8 @@ function addon:IsCategoryEnabled(category)
     return not self.db or not self.db.categories or self.db.categories[category] ~= false
 end
 
-function addon:IsSlotActionBlocked()
-    return next(self.slotActionBlocks) ~= nil
-end
-
-function addon:CanCloseMerchantSafely()
-    return type(CloseMerchant) == "function"
+function addon:IsItemUseBlocked()
+    return next(self.itemUseBlocks) ~= nil
 end
 
 local BAG_SCAN_DELAY = 0.3
@@ -148,31 +146,31 @@ local INITIAL_SCAN_GRACE = 2.5
 local function GetBagScanDelay()
     -- Mail take-all, vendor auto-sell, and similar bursts fire many bag events.
     -- Wait until they settle so we classify once instead of after every item.
-    if addon:IsSlotActionBlocked() then
+    if addon:IsItemUseBlocked() then
         return BUSY_BAG_SCAN_DELAY
     end
     return BAG_SCAN_DELAY
 end
 
-function addon:SetSlotActionBlock(key, blocked)
+function addon:SetItemUseBlock(key, blocked)
     if key == nil then
         return
     end
 
-    local wasBlocked = self.slotActionBlocks[key] == true
-    if blocked then
-        self.slotActionBlocks[key] = true
-    else
-        self.slotActionBlocks[key] = nil
-    end
-
+    blocked = blocked == true
+    local wasBlocked = self.itemUseBlocks[key] == true
+    self.itemUseBlocks[key] = blocked or nil
     if wasBlocked == blocked then
         return
     end
 
-    if blocked and self.current and self.current.secureBySlot and not self:IsInCombat() then
-        -- Remove the protected action synchronously. Leaving it clickable until
-        -- the delayed scan could allow a merchant or bank to consume the click.
+    -- Queued bag work may change no slot, so mark the button stale here.
+    self.rebuildNeeded = true
+    if blocked and self.current and not self:IsInCombat() then
+        -- Remove the protected action synchronously, so the next click or key
+        -- press finds no macro. An insecure PreClick cannot be relied on to
+        -- stop a press that already dispatched. In combat the secure button
+        -- cannot change; PLAYER_REGEN_ENABLED clears it instead.
         self:SetCandidate(nil, 0)
     end
     self:ScheduleScan(blocked and "unsafe item interaction opened"
@@ -539,30 +537,24 @@ events:SetScript("OnEvent", function(_, event, ...)
             addon:ApplyButtonLayout(useSavedPosition)
         end
         addon:InvalidateSecureActionForCombatChanges()
+        if addon:IsItemUseBlocked() and addon.current then
+            -- A window opened during combat could not clear the action then.
+            addon:SetCandidate(nil, 0)
+        end
         if addon.scanPending then
             addon:ScheduleScan("combat ended", GetBagScanDelay())
         end
     elseif event == "MERCHANT_SHOW" then
-        addon.merchantOpen = true
-        if addon:CanCloseMerchantSafely() then
-            addon.slotActionBlocks.merchant = nil
-            addon:ScheduleScan("merchant opened", GetBagScanDelay())
-        else
-            -- Clients without a callable close API keep the conservative behaviour.
-            addon:SetSlotActionBlock("merchant", true)
-        end
+        -- Blocked until the player closes the vendor; ItemFYI does not close it.
+        addon:SetItemUseBlock("merchant", true)
     elseif event == "MERCHANT_CLOSED" then
-        addon.merchantOpen = false
-        if addon.slotActionBlocks.merchant then
-            addon:SetSlotActionBlock("merchant", false)
-        else
-            addon:ScheduleScan("merchant closed", GetBagScanDelay())
-        end
+        -- This can fire more than once per close; the block ignores repeats.
+        addon:SetItemUseBlock("merchant", false)
     elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW"
         or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
         local interactionType = ...
-        if unsafeSlotInteractionTypes[interactionType] then
-            addon:SetSlotActionBlock("interaction:"
+        if unsafeInteractionTypes[interactionType] then
+            addon:SetItemUseBlock("interaction:"
                 .. (sharedInteractionBlockKeys[interactionType] or tostring(interactionType)),
                 event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
         end

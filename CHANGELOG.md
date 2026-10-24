@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Temporary safety restriction:** the ItemFYI button now hides while a
+  vendor, bank, mailbox, auction house, trade, scrapper, or other window that
+  can route bag items is open, and returns when you close it. This applies to
+  every reminder and to the keybinding. Previously only pet cages and
+  equippable appearance tokens were hidden, and using one at a vendor closed
+  the vendor first; ItemFYI no longer closes the vendor. In these windows WoW
+  can sell, deposit, mail, or trade a clicked item instead of using it, and
+  that has not yet been ruled out for item-ID actions.
+- The bank no longer leaves reminders hidden until `/reload` if it opens and
+  closes as different bank types.
+
 ## 0.2.47
 
 - New housing decor now shows its reminder automatically. Previously, if the
