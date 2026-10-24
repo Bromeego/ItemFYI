@@ -381,6 +381,32 @@ FireTimers()
 assert(addon.current and addon.current.itemID == 268650, "returning to the threshold should restore the item")
 assert(Metrics().tooltipSnapshots == 1, "raising a split stack should not rebuild unrelated tooltips")
 
+-- Several items whose totals change together are all rechecked, including
+-- unchanged stacks of each item in other bags.
+itemData[279576] = { name = "Void Vestige" }
+tooltipByItem[279576] = "Use: Combine 4 vestiges."
+SetSlot(0, 2, 279576, 1)
+SetSlot(1, 2, 279576, 2)
+bagSlotCounts[1] = 2
+ScanNow("login")
+assert(#addon.candidates == 1 and addon.current.itemID == 268650,
+    "three vestiges are below their threshold")
+addon:ResetMetrics()
+SetSlot(0, 1, 268650, 2)
+SetSlot(0, 2, 279576, 2)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(Metrics().itemsClassified == 4 and Metrics().tooltipSnapshots == 2,
+    "both changed items and their other-bag stacks must be rechecked once each")
+assert(#addon.candidates == 1 and addon.current.itemID == 279576,
+    "one total change must hide its item while the other reaches its threshold")
+SetSlot(0, 1, 268650, 3)
+SetSlot(0, 2, nil)
+SetSlot(1, 2, nil)
+bagSlotCounts[1] = 1
+ScanNow("login")
+
 -- Moving or sorting items cannot leave stale slot state.
 SetSlot(0, 1, 100, 1, { hasLoot = true })
 SetSlot(0, 2, nil)

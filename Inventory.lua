@@ -247,13 +247,16 @@ local function ScheduleTooltipRetry(self, bag, slot)
     end)
 end
 
-local function QueueItemSlots(self, itemID)
-    if not itemID or not self.slotIndex then
+-- Takes a set of item IDs. A login scan changes the total of nearly every
+-- item, and walking the whole index once per item ID took several
+-- milliseconds in one unsliced tick; a single pass covers them all.
+local function QueueItemSlots(self, itemIDs)
+    if not next(itemIDs) or not self.slotIndex then
         return
     end
     for bag, bagSlots in pairs(self.slotIndex) do
         for slot, entry in pairs(bagSlots) do
-            if entry.itemID == itemID then
+            if entry.itemID ~= nil and itemIDs[entry.itemID] then
                 QueueClassify(self, bag, slot)
             end
         end
@@ -524,9 +527,7 @@ local function QueuePendingItemIDs(self)
     if not next(self.pendingItemIDs) then
         return
     end
-    for itemID in pairs(self.pendingItemIDs) do
-        QueueItemSlots(self, itemID)
-    end
+    QueueItemSlots(self, self.pendingItemIDs)
     self.pendingItemIDs = {}
 end
 
@@ -908,9 +909,7 @@ function addon:ProcessInventoryTick(maxExpensive)
     end
 
     if next(self.changedTotals) then
-        for itemID in pairs(self.changedTotals) do
-            QueueItemSlots(self, itemID)
-        end
+        QueueItemSlots(self, self.changedTotals)
         wipe(self.changedTotals)
     end
 
