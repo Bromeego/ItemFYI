@@ -457,6 +457,29 @@ while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
 assert(addon.current and addon.current.bag == 2,
     "the rescan after combat should restore the slot action")
 
+-- A skip must apply even when a bag update that changed nothing is still
+-- queued: that reconciliation alone never marks the candidate list stale.
+SetSlot(2, 7, nil)
+SetSlot(0, 1, 100, 1, { hasLoot = true })
+SetSlot(1, 1, 200, 1, { hasLoot = true })
+ScanNow("login")
+assert(addon.current and addon.current.itemID == 100, "the first satchel should be displayed")
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 1)
+addon:SkipCurrent(false)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.itemID == 200,
+    "skipping during unchanged bag work must move on to the next item")
+addon.sessionSkipped = {}
+addon.db.categories.container = false
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 1)
+addon:ScheduleScan("category changed", 0)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current == nil,
+    "disabling a category during unchanged bag work must hide its items")
+addon.db.categories.container = true
+ScanNow("login")
+SetSlot(1, 1, nil)
+
 -- Learning a collectible removes relevant candidates without rebuilding unrelated tooltips.
 SetSlot(2, 7, 789, 1)
 SetSlot(0, 1, 100, 1, { hasLoot = true })
