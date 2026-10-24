@@ -490,9 +490,16 @@ local function QueueEligibility(self, kind)
             local shouldQueue = false
             if kind == "restriction" then
                 if entry.sawRestrictionText then
-                    entry.snapshot = nil
-                    if self.scanCache then
-                        self.scanCache[SlotKey(bag, slot)] = nil
+                    -- Skill-ups fire this often, and most gear has a met
+                    -- "Requires Level" line. Only a red line can turn white,
+                    -- and only an offered item can lose a met requirement
+                    -- (an unlearned profession). Recheck the rest from cache.
+                    local snapshot = entry.snapshot
+                    if entry.category or not snapshot or snapshot.unmetRequirement then
+                        entry.snapshot = nil
+                        if self.scanCache then
+                            self.scanCache[SlotKey(bag, slot)] = nil
+                        end
                     end
                     shouldQueue = true
                 elseif entry.category == "profession" then

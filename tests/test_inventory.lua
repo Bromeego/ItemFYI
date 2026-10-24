@@ -605,6 +605,35 @@ assert(addon.current and addon.current.itemID == 107,
     "character-state changes must recheck restriction tooltips")
 assert(Metrics().tooltipSnapshots == 1, "only restriction items should refetch tooltips")
 
+-- An offered item can lose a met requirement, such as an unlearned profession.
+tooltipByItem[107][2].leftColor = { r = 1, g = 0.125, b = 0.125 }
+eventFrame.scripts.OnEvent(eventFrame, "SKILL_LINES_CHANGED")
+FireTimers()
+assert(addon.current == nil, "an offered recipe must hide when its requirement becomes unmet")
+tooltipByItem[107][2].leftColor = { r = 1, g = 1, b = 1 }
+eventFrame.scripts.OnEvent(eventFrame, "SKILL_LINES_CHANGED")
+FireTimers()
+assert(addon.current and addon.current.itemID == 107, "the recipe should return when met again")
+
+-- Gear with an already met requirement is not offered and cannot become
+-- offerable through that requirement, so skill-ups reuse its cached tooltip.
+itemData[5000] = { name = "Leveled Chestpiece", itemType = "Armor",
+    equipLocation = "INVTYPE_CHEST", classID = 4 }
+tooltipByItem[5000] = {
+    { leftText = "Leveled Chestpiece" },
+    { leftText = "Requires Level 10", leftColor = { r = 1, g = 1, b = 1 } },
+}
+SetSlot(0, 2, 5000, 1)
+ScanNow("login")
+assert(addon.slotIndex[0][2].sawRestrictionText and addon.slotIndex[0][2].category == nil,
+    "the chestpiece is indexed with a met restriction")
+addon:ResetMetrics()
+eventFrame.scripts.OnEvent(eventFrame, "CHAT_MSG_SKILL")
+FireTimers()
+assert(Metrics().tooltipSnapshots == 1 and Metrics().itemsClassified == 2,
+    "a skill-up must reread only the offered recipe, and recheck the gear from cache")
+SetSlot(0, 2, nil)
+
 -- A fully populated non-actionable tooltip with no Use: line must not retry.
 SetSlot(0, 1, 1200, 1)
 SetSlot(0, 2, nil)
