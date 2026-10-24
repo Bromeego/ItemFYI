@@ -1241,6 +1241,34 @@ assert(Metrics().itemsClassified == classifiedBeforeLock,
     "picking up and putting back an item must not reclassify it")
 eventFrame.scripts.OnEvent(eventFrame, "ITEM_LOCK_CHANGED", 2, 9)
 assert(#timers == 0, "lock changes on unlocked indexed slots must not rescan")
+
+-- A new item already picked up when its bag is scanned, then put back in
+-- the same slot, unlocks without a BAG_UPDATE. It must still be offered.
+itemData[210] = { name = "Fresh Satchel" }
+itemData[211] = { name = "Replacement Satchel" }
+SetSlot(2, 11, 210, 1, { hasLoot = true, isLocked = true })
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.slotIndex[2][11] and addon.slotIndex[2][11].locked and not HasCandidateAt(2, 11),
+    "a new item seen locked must be indexed but not offered")
+assert(addon.itemTotals[210] == 1, "a locked new item still counts toward carried totals")
+bags[2][11].isLocked = false
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_LOCK_CHANGED", 2, 11)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(HasCandidateAt(2, 11), "a new item put back in place must be offered once unlocked")
+
+-- A locked item that replaced a different one is indexed the same way.
+SetSlot(2, 11, 211, 1, { hasLoot = true, isLocked = true })
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.slotIndex[2][11].itemID == 211 and addon.slotIndex[2][11].locked
+    and not HasCandidateAt(2, 11) and addon.itemTotals[210] == nil,
+    "a locked replacement must be indexed hidden")
+bags[2][11].isLocked = false
+eventFrame.scripts.OnEvent(eventFrame, "ITEM_LOCK_CHANGED", 2, 11)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(HasCandidateAt(2, 11), "an unlocked replacement must be offered")
+SetSlot(2, 11, nil)
 for slot = 1, 10 do SetSlot(2, slot, nil) end
 bagSlotCounts[2] = 0
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
