@@ -444,6 +444,10 @@ function addon:NoteScanIntent(reason)
             self.rebuildOnly = false
             return
         end
+        -- Skips, filters, and interaction blocks change which indexed items
+        -- are offered. Queued bag work may find no slot changes and so never
+        -- set this itself, which would leave a skipped item on the button.
+        self.rebuildNeeded = true
         if not self.forceRefresh and not self.allBagsDirty and not next(self.dirtyBags)
             and not next(self.pendingItemIDs) and not next(self.eligibilityKinds) then
             self.rebuildOnly = true
