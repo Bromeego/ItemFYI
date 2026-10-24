@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.48
 
 - **Temporary safety restriction:** the ItemFYI button now hides while a
   vendor, bank, mailbox, auction house, trade, scrapper, or other window that
@@ -12,6 +12,15 @@
   that has not yet been ruled out for item-ID actions.
 - The bank no longer leaves reminders hidden until `/reload` if it opens and
   closes as different bank types.
+- Skipping, ignoring, or hiding a category now takes effect immediately, even
+  right after a bag update that changed nothing.
+- An item you pick up and put back in the same slot right after looting it
+  now shows its reminder.
+- Item tooltips that load slowly now have about 7 seconds to finish loading
+  before ItemFYI stops checking them, instead of about 2, with no extra
+  tooltip reads.
+- Faster login scans with full bags, and skill-ups or level-ups no longer
+  re-read the tooltips of gear whose requirements you already meet.
 
 ## 0.2.47
 
