@@ -53,6 +53,18 @@ for _, name in ipairs(unsafeSlotInteractionNames) do
     end
 end
 
+-- Blizzard's BankFrame registers all three bank types for one window and
+-- hides it on a HIDE of any of them. Share one block, so a close reported
+-- with a different bank type than the open still restores slot actions.
+local sharedInteractionBlockKeys = {}
+for _, name in ipairs({ "Banker", "CharacterBanker", "AccountBanker" }) do
+    local interactionType = Enum and Enum.PlayerInteractionType
+        and Enum.PlayerInteractionType[name]
+    if interactionType ~= nil then
+        sharedInteractionBlockKeys[interactionType] = "bank"
+    end
+end
+
 local defaults = {
     enabled = true,
     ignored = {},
@@ -550,7 +562,8 @@ events:SetScript("OnEvent", function(_, event, ...)
         or event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
         local interactionType = ...
         if unsafeSlotInteractionTypes[interactionType] then
-            addon:SetSlotActionBlock("interaction:" .. tostring(interactionType),
+            addon:SetSlotActionBlock("interaction:"
+                .. (sharedInteractionBlockKeys[interactionType] or tostring(interactionType)),
                 event == "PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
         end
     elseif event == "GET_ITEM_INFO_RECEIVED" or event == "ITEM_DATA_LOAD_RESULT" then
