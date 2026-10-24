@@ -86,9 +86,6 @@ local function ShowButtonTooltip(button)
     else
         GameTooltip:AddLine("Left-click to use", 0.2, 1, 0.2)
     end
-    if candidate.secureBySlot and addon.merchantOpen then
-        GameTooltip:AddLine("Vendor will close before use", 1, 0.82, 0.2)
-    end
     GameTooltip:AddLine("Right-click to skip this session", 0.9, 0.9, 0.9)
     GameTooltip:AddLine("Ctrl-right-click to ignore", 0.9, 0.9, 0.9)
     GameTooltip:AddLine("Alt-drag to move", 0.65, 0.65, 0.65)
@@ -315,7 +312,7 @@ function addon:CreateUI()
         addon.movingButton = false
         addon:SavePosition()
         local candidate = addon.current
-        if candidate and not addon:IsInCombat() then
+        if candidate and not addon:IsInCombat() and not addon:IsItemUseBlocked() then
             frame:SetAttribute("type1", "macro")
             frame:SetAttribute("macrotext1", candidate.secureMacro)
         end
@@ -337,21 +334,13 @@ function addon:CreateUI()
             return
         end
 
-        local candidate = addon.current
-        if mouseButton ~= "LeftButton" or not candidate or not candidate.secureBySlot
-            or not addon.merchantOpen or not addon:CanCloseMerchantSafely() then
-            return
-        end
-
-        -- A bag-slot use is interpreted as a sale while the merchant
-        -- interaction is active. Close it immediately before the secure action
-        -- runs. WoW does not reliably allow addons to reopen a fully closed
-        -- merchant interaction, so the player must interact with the vendor again.
-        local closed = pcall(CloseMerchant)
-        if not closed or addon.merchantOpen then
-            -- MERCHANT_CLOSED is synchronous. If it did not arrive, remove the
-            -- action now so this click cannot fall through and sell the item.
-            addon:SetSlotActionBlock("merchant", true)
+        -- Backstop only: opening a vendor or routing window already cleared
+        -- the action. This runs before the secure OnClick of the same press
+        -- or release, so it stops a stale action out of combat. In combat the
+        -- button cannot be changed, so this guard cannot be relied on alone.
+        if addon:IsItemUseBlocked() then
+            frame:SetAttribute("type1", nil)
+            frame:SetAttribute("macrotext1", nil)
         end
     end)
 
@@ -365,7 +354,8 @@ function addon:CreateUI()
         if addon.suppressingSecureUse or addon.movingButton then
             addon.suppressingSecureUse = false
             local candidate = addon.current
-            if candidate and not addon.movingButton and not addon:IsInCombat() then
+            if candidate and not addon.movingButton and not addon:IsInCombat()
+                and not addon:IsItemUseBlocked() then
                 frame:SetAttribute("type1", "macro")
                 frame:SetAttribute("macrotext1", candidate.secureMacro)
             end
@@ -374,10 +364,9 @@ function addon:CreateUI()
 
         if mouseButton == "RightButton" then
             addon:SkipCurrent(IsControlKeyDown())
-        else
-            if addon.current then
-                addon:NoteItemRefresh(addon.current.itemID)
-            end
+        elseif addon.current then
+            -- A key press on the hidden, empty button uses nothing to rescan for.
+            addon:NoteItemRefresh(addon.current.itemID)
             addon:ScheduleScan("item used", 0.3)
         end
     end)
@@ -393,6 +382,10 @@ function addon:SetCandidate(candidate, total)
     if self:IsInCombat() then
         self.scanPending = true
         return
+    end
+    if candidate and self:IsItemUseBlocked() then
+        -- No path may arm an action while a vendor or routing window is open.
+        candidate, total = nil, 0
     end
 
     self.current = candidate

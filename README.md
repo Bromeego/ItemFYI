@@ -30,6 +30,20 @@ To use the current item from the keyboard, bind a key under
 shown on the button and works exactly like a left-click, including the
 vendor and bank safety checks.
 
+### Hidden while a vendor, bank, or mailbox is open
+
+For now, the button hides while any of these windows is open: a vendor, bank
+(character, warband, guild, or void storage), mailbox, auction house or black
+market, trade, scrapper, transmogrifier, item upgrade or catalyst, or similar
+item-interaction window. It returns as soon as you close the window. ItemFYI
+does not close a vendor for you.
+
+In these windows, WoW can sell, deposit, mail, trade, or scrap an item you
+click instead of using it. Until that is confirmed safe for every kind of
+ItemFYI action, the button stays out of the way. If one of these windows opens
+during combat, the button cannot change until combat ends, so don't click it
+until then.
+
 You can also type:
 
 ```text

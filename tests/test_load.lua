@@ -630,63 +630,168 @@ addon:ScanBags("merchant safety test")
 assert(addon.current and addon.current.itemID == 789 and addon.current.secureBySlot,
     "equippable appearance should be selected outside inventory-routing windows")
 
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
-assert(addon.merchantOpen and not addon:IsSlotActionBlocked()
-    and addon.current and addon.current.itemID == 789,
-    "closable merchants must keep slot-targeted appearance actions available")
+-- Fail-safe item use: while a vendor or any inventory-routing window is
+-- open, neither bag-slot nor item-ID actions may be armed, for mouse clicks
+-- or the keybinding. ItemFYI does not close the vendor to use an item.
+local function ButtonArmed()
+    return addon.button.attributes.type1 ~= nil or addon.button.attributes.macrotext1 ~= nil
+end
 
-addon.button.scripts.OnEnter(addon.button)
-local merchantWarningFound = false
-for _, line in ipairs(GameTooltip.lines) do
-    if line == "Vendor will close before use" then
-        merchantWarningFound = true
+local function PressBinding(down)
+    -- The binding clicks the secure button: PreClick, secure OnClick, PostClick.
+    addon.button.scripts.PreClick(addon.button, "LeftButton", down)
+    addon.button.scripts.PostClick(addon.button, "LeftButton", down)
+end
+
+local function ShowWindow(kind)
+    if kind == "Merchant" then
+        eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
+    else
+        eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+            Enum.PlayerInteractionType[kind])
     end
 end
-assert(merchantWarningFound,
-    "slot-targeted appearances must explain that using them closes the vendor")
 
+local function HideWindow(kind)
+    if kind == "Merchant" then
+        eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
+    else
+        eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+            Enum.PlayerInteractionType[kind])
+    end
+end
+
+local actionTypes = {
+    { label = "bag-slot", equipLocation = "INVTYPE_WEAPON", macro = "/stopmacro [combat]\n/use 0 1" },
+    { label = "item-ID", equipLocation = "", macro = "/use item:789" },
+}
+local windows = { "Merchant", "TradePartner", "Banker", "GuildBanker", "MailInfo",
+    "Auctioneer", "ScrappingMachine", "VoidStorageBanker", "CharacterBanker", "AccountBanker" }
+
+for _, actionType in ipairs(actionTypes) do
+    bagItem.equipLocation = actionType.equipLocation
+    addon:ScanBags("manual")
+    assert(addon.current and addon.current.secureMacro == actionType.macro and ButtonArmed(),
+        actionType.label .. " action should be armed with no window open")
+
+    for _, kind in ipairs(windows) do
+        local closesBefore = merchantCloseCount
+        ShowWindow(kind)
+        assert(addon:IsItemUseBlocked() and addon.current == nil and not ButtonArmed()
+            and not addon.button.shown,
+            ("%s must clear the %s action as soon as it opens"):format(kind, actionType.label))
+        local generation = addon.scanGeneration
+        PressBinding(true)
+        PressBinding(false)
+        assert(not ButtonArmed() and addon.current == nil,
+            ("the keybinding must not re-arm a %s action at %s"):format(actionType.label, kind))
+        assert(addon.scanGeneration == generation,
+            "a key press on the empty button must not schedule an item-used rescan")
+        assert(merchantCloseCount == closesBefore, "ItemFYI must not close the vendor itself")
+        addon:ScanBags("BAG_UPDATE")
+        assert(addon.current == nil and not ButtonArmed(),
+            ("a rescan at %s must keep the %s action blocked"):format(kind, actionType.label))
+        HideWindow(kind)
+        assert(not addon:IsItemUseBlocked() and addon.current
+            and addon.current.secureMacro == actionType.macro and ButtonArmed(),
+            ("closing %s must restore the %s action"):format(kind, actionType.label))
+    end
+end
+
+-- Overlapping windows: the action returns only after the last one closes,
+-- and repeated open or close events neither stick nor rescan.
+ShowWindow("Merchant")
+ShowWindow("MailInfo")
+ShowWindow("Banker")
+HideWindow("Merchant")
+HideWindow("Merchant")
+assert(addon:IsItemUseBlocked() and addon.current == nil, "mail and bank remain open")
+HideWindow("AccountBanker")
+assert(addon:IsItemUseBlocked() and addon.current == nil, "the mailbox remains open")
+local repeatGeneration = addon.scanGeneration
+ShowWindow("MailInfo")
+assert(addon.scanGeneration == repeatGeneration, "a repeated open must not rescan")
+HideWindow("MailInfo")
+assert(not addon:IsItemUseBlocked() and addon.current and ButtonArmed(),
+    "closing the last window must restore the action")
+local closeGeneration = addon.scanGeneration
+HideWindow("MailInfo")
+HideWindow("Merchant")
+assert(addon.scanGeneration == closeGeneration and ButtonArmed(),
+    "duplicate close events must be ignored")
+
+-- Opening and closing windows refreshes the button only; it must not read
+-- tooltips or rescan bags.
+local tooltipReads = 0
+local getBagItem = C_TooltipInfo.GetBagItem
+C_TooltipInfo.GetBagItem = function(...)
+    tooltipReads = tooltipReads + 1
+    return getBagItem(...)
+end
+addon:ResetMetrics()
+ShowWindow("Banker")
+HideWindow("Banker")
+ShowWindow("Merchant")
+HideWindow("Merchant")
+assert(tooltipReads == 0 and addon:GetMetrics().slotsInspected == 0,
+    "interaction windows must not trigger tooltip reads or bag scans")
+C_TooltipInfo.GetBagItem = getBagItem
+
+-- The PreClick backstop strips a stale action out of combat, before the
+-- secure handler of the same press runs.
+ShowWindow("Merchant")
+addon.button:SetAttribute("type1", "macro")
+addon.button:SetAttribute("macrotext1", "/use item:789")
 addon.button.scripts.PreClick(addon.button, "LeftButton", true)
-assert(merchantCloseCount == 1 and not addon.merchantOpen,
-    "a merchant must close before the secure slot action runs")
+assert(not ButtonArmed(), "PreClick must strip a stale action while a vendor is open")
 addon.button.scripts.PostClick(addon.button, "LeftButton", true)
-addon.button.scripts.PreClick(addon.button, "LeftButton", false)
 addon.button.scripts.PostClick(addon.button, "LeftButton", false)
-assert(not addon.merchantOpen and not addon:IsSlotActionBlocked()
-    and addon.current and addon.current.itemID == 789,
-    "the safe slot action must remain available after closing the merchant")
+assert(not ButtonArmed(), "PostClick must not restore the stripped action")
+-- Alt-drag restore paths must not re-arm a blocked button either.
+addon.suppressingSecureUse = true
+addon.current = { secureMacro = "/use item:789" }
+addon.button.scripts.PostClick(addon.button, "LeftButton", false)
+assert(not ButtonArmed(), "an Alt-click release must not re-arm a blocked button")
+addon.button.scripts.OnDragStop(addon.button)
+assert(not ButtonArmed(), "finishing a drag must not re-arm a blocked button")
+addon.current = nil
+HideWindow("Merchant")
+assert(ButtonArmed(), "the vendor closing must restore the action")
 
-local closeMerchant = CloseMerchant
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
-CloseMerchant = function() error("simulated merchant close failure") end
+-- Combat: a window opened in combat cannot change the secure button. The
+-- action is cleared as soon as combat ends if the window is still open.
+inCombat = true
+ShowWindow("Merchant")
+assert(addon:IsItemUseBlocked() and addon.current and ButtonArmed(),
+    "combat lockdown keeps the button unchanged")
 addon.button.scripts.PreClick(addon.button, "LeftButton", true)
-assert(addon:IsSlotActionBlocked() and addon.current == nil,
-    "a failed merchant handoff must abort and suppress the secure slot action")
-CloseMerchant = closeMerchant
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
-addon:ScanBags("merchant close failure ended")
-assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
-    "ending a failed merchant handoff must restore the eligible appearance action")
+assert(ButtonArmed(), "PreClick must not touch the secure button in combat")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(addon.current == nil and not ButtonArmed() and not addon.button.shown,
+    "leaving combat with a vendor open must clear the action immediately")
+HideWindow("Merchant")
+assert(addon.current and ButtonArmed(), "the vendor closing after combat must restore the action")
+-- A window opened and closed within combat leaves nothing blocked afterwards.
+inCombat = true
+ShowWindow("Banker")
+HideWindow("CharacterBanker")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(not addon:IsItemUseBlocked() and addon.current and ButtonArmed(),
+    "a window opened and closed in combat must not leave the action blocked")
 
-local closeMerchantAgain = CloseMerchant
-CloseMerchant = nil
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
-assert(addon:IsSlotActionBlocked() and addon.current == nil,
-    "clients unable to close a merchant must suppress risky slot actions")
-eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
-CloseMerchant = closeMerchantAgain
-addon:ScanBags("merchant fallback ended")
-assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
-    "ending the merchant fallback must restore the eligible appearance action")
+bagItem.equipLocation = "INVTYPE_WEAPON"
+addon:ScanBags("manual")
 
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
     Enum.PlayerInteractionType.Banker)
-assert(addon:IsSlotActionBlocked() and addon.current == nil,
+assert(addon:IsItemUseBlocked() and addon.current == nil,
     "bank interactions must suppress slot-targeted appearance actions")
 
 eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.Banker)
-assert(not addon:IsSlotActionBlocked() and addon.current and addon.current.itemID == 789,
+assert(not addon:IsItemUseBlocked() and addon.current and addon.current.itemID == 789,
     "closing an inventory-routing interaction must restore appearance actions")
 
 local snapshotCalls = 0

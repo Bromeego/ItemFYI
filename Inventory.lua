@@ -35,8 +35,6 @@ local rebuildOnlyReasons = {
     ["settings changed"] = true,
     ["unsafe item interaction opened"] = true,
     ["unsafe item interaction closed"] = true,
-    ["merchant opened"] = true,
-    ["merchant closed"] = true,
 }
 
 local restrictionReasons = {
@@ -713,23 +711,21 @@ function addon:RebuildCandidates()
                     local context = entry.context
                     if context then
                         local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
-                        if not (secureBySlot and self:IsSlotActionBlocked()) then
-                            candidates[#candidates + 1] = {
-                                key = key,
-                                itemID = entry.itemID,
-                                name = context.name,
-                                link = context.link,
-                                icon = context.icon,
-                                count = countsByKey[key] or entry.stackCount,
-                                bag = bag,
-                                slot = slot,
-                                category = category,
-                                reason = entry.reason,
-                                priority = self.CategoryPriority[category] or 100,
-                                secureMacro = secureMacro,
-                                secureBySlot = secureBySlot,
-                            }
-                        end
+                        candidates[#candidates + 1] = {
+                            key = key,
+                            itemID = entry.itemID,
+                            name = context.name,
+                            link = context.link,
+                            icon = context.icon,
+                            count = countsByKey[key] or entry.stackCount,
+                            bag = bag,
+                            slot = slot,
+                            category = category,
+                            reason = entry.reason,
+                            priority = self.CategoryPriority[category] or 100,
+                            secureMacro = secureMacro,
+                            secureBySlot = secureBySlot,
+                        }
                     end
                 end
             end
@@ -762,6 +758,8 @@ function addon:RebuildCandidates()
 
     self.candidates = candidates
     self.rebuildNeeded = false
+    -- While a vendor or routing window is open, SetCandidate leaves the button
+    -- without an action; the list stays available to /ifyi list.
     self:SetCandidate(candidates[1], #candidates)
 end
 
