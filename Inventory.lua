@@ -156,7 +156,7 @@ local function AdjustTotal(self, itemID, delta)
 end
 
 local function Fingerprint(info, bag, slot)
-    if not info or info.isLocked then
+    if not info then
         return nil
     end
     local itemID = info.itemID or (C_Container.GetContainerItemID and C_Container.GetContainerItemID(bag, slot))
@@ -605,7 +605,9 @@ local function ReconcileSlot(self, bag, slot)
         existing.awaitingItemInfo = nil
         existing.context = nil
         existing.petSpeciesID = nil
-        existing.locked = nil
+        -- A new item can already be on the cursor. Index it hidden, so the
+        -- ITEM_LOCK_CHANGED from putting it back in place restores it.
+        existing.locked = info.isLocked == true or nil
         existing.bag = bag
         existing.slot = slot
         AdjustTotal(self, fingerprint.itemID, fingerprint.stackCount)
