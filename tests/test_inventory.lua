@@ -226,6 +226,8 @@ Enum = {
         TradePartner = 1,
         Banker = 8,
         MailInfo = 17,
+        CharacterBanker = 67,
+        AccountBanker = 68,
     },
 }
 NUM_TOTAL_EQUIPPED_BAG_SLOTS = 5
@@ -1118,6 +1120,35 @@ eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
     Enum.PlayerInteractionType.Banker)
 addon:RebuildCandidates()
 assert(#addon.candidates == 3, "pet cage reminders must return after closing the bank")
+-- Blizzard's BankFrame is one window for all three bank interaction types and
+-- closes on a HIDE of any of them. A close reported with a different bank
+-- type than the open must still restore slot actions.
+for _, pair in ipairs({
+    { "Banker", "CharacterBanker" },
+    { "CharacterBanker", "AccountBanker" },
+    { "AccountBanker", "Banker" },
+}) do
+    eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+        Enum.PlayerInteractionType[pair[1]])
+    assert(addon:IsSlotActionBlocked(), pair[1] .. " must block slot actions")
+    eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+        Enum.PlayerInteractionType[pair[2]])
+    assert(not addon:IsSlotActionBlocked(),
+        ("closing the bank as %s after opening it as %s must clear the block"):format(pair[2], pair[1]))
+end
+-- Other windows keep their own blocks: closing the bank leaves the mailbox blocked.
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+    Enum.PlayerInteractionType.MailInfo)
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
+    Enum.PlayerInteractionType.Banker)
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+    Enum.PlayerInteractionType.AccountBanker)
+assert(addon:IsSlotActionBlocked(), "a bank close must not clear an open mailbox block")
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_INTERACTION_MANAGER_FRAME_HIDE",
+    Enum.PlayerInteractionType.MailInfo)
+assert(not addon:IsSlotActionBlocked(), "closing the mailbox clears its block")
+addon:RebuildCandidates()
+assert(#addon.candidates == 3, "pet cage reminders must return after a mismatched bank close")
 local previousCloseMerchant = CloseMerchant
 CloseMerchant = function()
     eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_CLOSED")
