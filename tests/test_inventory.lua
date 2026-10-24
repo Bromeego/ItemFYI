@@ -770,14 +770,40 @@ addon:ResetMetrics()
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_DELAYED")
 local decorTimerRuns = 0
+local retryDelays = {}
 while #timers > 0 and decorTimerRuns < 10 do
+    if timers[1].delay >= 0.45 then
+        retryDelays[#retryDelays + 1] = timers[1].delay
+    end
     FireOneTimer()
     decorTimerRuns = decorTimerRuns + 1
 end
 assert(#timers == 0 and Metrics().tooltipSnapshots == 5
     and Metrics().tooltipRetriesScheduled == 4,
     "decor without an action must stop after four delayed retries")
+-- Each retry waits twice as long, giving slow data ~6.75 s for four reads.
+assert(#retryDelays == 4, "each delayed retry should be one timer")
+for index, expected in ipairs({ 0.45, 0.9, 1.8, 3.6 }) do
+    assert(math.abs(retryDelays[index] - expected) < 1e-9,
+        ("retry %d should wait %.2f s, not %s"):format(index, expected, tostring(retryDelays[index])))
+end
 assert(addon.current == nil, "incomplete decor must not create a false reminder")
+
+-- A retry that comes due in combat waits, and resumes once combat ends.
+tooltipByItem[278245] = "Royal Attendant's Coffin\nHousing Decor\nLearned."
+SetSlot(0, 1, 278245, 3)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 0)
+FireTimers()
+assert(addon.current == nil and #timers == 1, "the partial decor should queue one retry")
+inCombat = true
+FireOneTimer()
+assert(addon.scanPending and #timers == 0, "a retry due in combat must wait for combat to end")
+tooltipByItem[278245] = tooltipByItem[278245] .. "\nUse: Add this Decor to your House Chest."
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(addon.current and addon.current.itemID == 278245,
+    "a retry deferred by combat must still find the decor action")
 SetSlot(0, 1, 113, 1)
 ScanNow("login")
 
