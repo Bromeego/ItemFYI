@@ -14,6 +14,9 @@ local MAX_TOOLTIP_RETRIES = 4
 -- are enough to catch normal delayed Use: lines without polling indefinitely.
 -- Empty/error tooltips still get the longer recovery window above.
 local MAX_NAME_ONLY_RETRIES = 2
+-- The first follow-up read waits this long, and each later one twice as
+-- long (0.45, 0.9, 1.8, 3.6 s). Slow item data then has ~6.75 s to arrive
+-- for the same four reads, instead of 1.8 s, before the slot stops retrying.
 local TOOLTIP_RETRY_DELAY = 0.45
 local WORK_TICK_DELAY = 0
 -- Spread the initial login scan out: inventory FYIs are not time-critical.
@@ -217,7 +220,7 @@ local function PromoteRetries(self)
     wipe(self.retryQueue)
 end
 
-local function ScheduleTooltipRetry(self, bag, slot)
+local function ScheduleTooltipRetry(self, bag, slot, attempt)
     local entry = GetEntry(self, bag, slot)
     if not entry then
         return
@@ -225,7 +228,7 @@ local function ScheduleTooltipRetry(self, bag, slot)
     local itemID = entry.itemID
     local link = entry.link
     local stackCount = entry.stackCount
-    C_Timer.After(TOOLTIP_RETRY_DELAY, function()
+    C_Timer.After(TOOLTIP_RETRY_DELAY * 2 ^ ((attempt or 1) - 1), function()
         local current = GetEntry(addon, bag, slot)
         if not current or current.itemID ~= itemID or current.link ~= link
             or current.stackCount ~= stackCount then
@@ -844,7 +847,7 @@ local function ClassifySlot(self, bag, slot)
         local maxRetries = snapshot.nameOnly and MAX_NAME_ONLY_RETRIES or MAX_TOOLTIP_RETRIES
         if retries <= maxRetries then
             self:NoteMetric("tooltipRetriesScheduled")
-            ScheduleTooltipRetry(self, bag, slot)
+            ScheduleTooltipRetry(self, bag, slot, retries)
         end
     else
         self.tooltipRetries[key] = nil
