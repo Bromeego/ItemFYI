@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.49
+
+- Uncollected mounts now appear even if the mount journal finishes loading
+  after the login scan. Previously such a mount stayed hidden until that bag
+  changed or `/ifyi scan` was used. ItemFYI rechecks it a few times over about
+  7 seconds, without re-reading tooltips or rescanning bags.
+- New: unlearned glyphs for your class are shown under **Transmog, visuals &
+  customizations**. Some glyphs can be rejected by the game because of your
+  specialization, a talent, or a spell you have not learned yet; their
+  tooltips do not show this, so right-click to skip them.
+- Non-English clients: unlearned recipes and Delve Curios are now detected,
+  using the client's translated "Use:" line. English clients are unchanged.
+- Curios are recognised by their item type number rather than the English
+  type name when deciding whether a tooltip is still loading.
+
 ## 0.2.48
 
 - **Temporary safety restriction:** the ItemFYI button now hides while a

@@ -232,10 +232,15 @@ local function ScheduleTooltipRetry(self, bag, slot, attempt)
             or current.stackCount ~= stackCount then
             return
         end
-        if current.snapshot and current.snapshot.complete ~= false then
+        local snapshotIncomplete = current.snapshot and current.snapshot.complete == false
+        if current.snapshot and not snapshotIncomplete and not current.collectionDataPending then
             return
         end
-        current.snapshot = nil
+        -- Collection data still loading needs no new tooltip read; keep a
+        -- complete snapshot and only reclassify.
+        if snapshotIncomplete then
+            current.snapshot = nil
+        end
         if addon:IsInCombat() then
             addon.scanPending = true
             QueueRetry(addon, bag, slot)
@@ -618,6 +623,7 @@ local function ReconcileSlot(self, bag, slot)
         existing.awaitingItemInfo = nil
         existing.context = nil
         existing.petSpeciesID = nil
+        existing.collectionDataPending = nil
         -- A new item can already be on the cursor. Index it hidden, so the
         -- ITEM_LOCK_CHANGED from putting it back in place restores it.
         existing.locked = info.isLocked == true or nil
@@ -824,25 +830,30 @@ local function ClassifySlot(self, bag, slot)
     entry.sawRestrictionText = snapshot and snapshot.sawRestrictionText
     entry.uniqueKey = context.uniqueKey
     entry.petSpeciesID = context.petSpeciesID
+    entry.collectionDataPending = context.collectionDataPending or nil
     entry.classified = true
     entry.category = category
     entry.reason = itemReason
     self.rebuildNeeded = true
 
     local key = SlotKey(bag, slot)
-    if snapshot and snapshot.complete == false then
+    local tooltipIncomplete = snapshot and snapshot.complete == false
+    -- Collection data that has not loaded yet (a mount journal entry) uses
+    -- the same bounded retries as a partial tooltip.
+    if tooltipIncomplete or entry.collectionDataPending then
         local retries = (self.tooltipRetries[key] or 0) + 1
         self.tooltipRetries[key] = retries
         -- Item info is already available here. Asking ITEM_DATA_LOAD_RESULT to
         -- restart the slot would reset retries and loop until the Use: line
         -- appears. Request load once as a hint, and rely on bounded delays.
-        if retries == 1 and C_Item and C_Item.RequestLoadItemDataByID then
+        if tooltipIncomplete and retries == 1 and C_Item and C_Item.RequestLoadItemDataByID then
             C_Item.RequestLoadItemDataByID(context.itemID)
         end
         if not category then
             entry.classified = false
         end
-        local maxRetries = snapshot.nameOnly and MAX_NAME_ONLY_RETRIES or MAX_TOOLTIP_RETRIES
+        local maxRetries = tooltipIncomplete and snapshot.nameOnly and MAX_NAME_ONLY_RETRIES
+            or MAX_TOOLTIP_RETRIES
         if retries <= maxRetries then
             self:NoteMetric("tooltipRetriesScheduled")
             ScheduleTooltipRetry(self, bag, slot, retries)

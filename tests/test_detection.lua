@@ -274,6 +274,36 @@ local curioKnown = addon:GetTooltipSnapshot(Context(113, {
 }))
 assert(curioKnown.complete == true, "known Curios should not be retried")
 
+-- The Consumable Curio subclasses identify Curios without the English type
+-- name; other consumables must not start waiting for a Curio action.
+addon:InvalidateScanCache()
+tooltipText = "Ouroboric Curse\nRank 5/5\nSoulbound"
+assert(addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 3, name = "Ouroboric Curse", itemSubType = "Other", classID = 0, subclassID = 11,
+})).complete == false, "a Combat Curio class item missing its Use: line must be retried")
+addon:InvalidateScanCache()
+assert(addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 4, name = "Ouroboric Curse", itemSubType = "Other", classID = 0, subclassID = 10,
+})).complete == false, "a Utility Curio class item missing its Use: line must be retried")
+addon:InvalidateScanCache()
+tooltipText = "Healing Potion\nPotion\nRestores health."
+assert(addon:GetTooltipSnapshot(Context(1113, {
+    bag = 6, slot = 5, name = "Healing Potion", classID = 0, subclassID = 1,
+})).complete == true, "other consumables must not wait for a Curio action")
+addon:InvalidateScanCache()
+tooltipText = "Ouroboric Curse\nAlready known"
+assert(addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 6, name = "Ouroboric Curse", classID = 0, subclassID = 11,
+})).complete == true, "a known Curio class item must not be retried")
+addon:InvalidateScanCache()
+tooltipText = "Ouroboric Curse\nCombat Curio\nUse: Gain a test buff."
+assert(addon:GetTooltipSnapshot(Context(113, {
+    bag = 6, slot = 7, name = "Ouroboric Curse", itemSubType = "Combat Curio", classID = 0, subclassID = 11,
+})).complete == false, "English Curios must still wait for the collection phrase")
+assert(addon:ClassifyItem(Context(113, {
+    bag = 6, slot = 8, name = "Ouroboric Curse", itemSubType = "Combat Curio", classID = 0, subclassID = 11,
+})) == nil, "an English Curio without the collection phrase must not be offered")
+
 for _, fields in ipairs({
     { itemType = "Decor" },
     { itemType = "Housing Decor" },
@@ -450,9 +480,25 @@ local originalMountInfo = C_MountJournal.GetMountInfoByID
 C_MountJournal.GetMountInfoByID = function()
     return "Test Mount", 1, 1, false, true, 1, false, false, nil, false, nil
 end
-category = addon:ClassifyItem(Context(101))
+local pendingMount = Context(101)
+category = addon:ClassifyItem(pendingMount)
 assert(category ~= "mount", "a mount whose collected state has not loaded must not show as uncollected")
+assert(pendingMount.collectionDataPending == true,
+    "a mount whose collected state has not loaded must ask for a retry")
+C_MountJournal.GetMountInfoByID = function()
+    return "Test Mount", 1, 1, false, true, 1, false, false, nil, false, true
+end
+local collectedMount = Context(101)
+category = addon:ClassifyItem(collectedMount)
+assert(category == nil and collectedMount.collectionDataPending == nil,
+    "a collected mount must be neither offered nor retried")
 C_MountJournal.GetMountInfoByID = originalMountInfo
+local loadedMount = Context(101)
+assert(addon:ClassifyItem(loadedMount) == "mount" and loadedMount.collectionDataPending == nil,
+    "a loaded uncollected mount needs no retry")
+local notMount = Context(102)
+addon:ClassifyItem(notMount)
+assert(notMount.collectionDataPending == nil, "items that are not mounts must not ask for a retry")
 
 category = addon:ClassifyItem(Context(102))
 assert(category == "toy", "toy detection failed")
@@ -1244,6 +1290,61 @@ category = addon:ClassifyItem(Context(112, { itemType = "Recipe", classID = 9 })
 assert(category == "recipe", "a recipe with a satisfied requirement should remain actionable")
 tooltipLines = nil
 
+-- English clients keep the exact recipe phrases: another Use: line on a
+-- Recipe-class item is not a learn action.
+tooltipText = "Test Recipe\nUse: Gain a test buff."
+category = addon:ClassifyItem(Context(1107, { itemType = "Recipe", classID = 9 }))
+assert(category == nil, "English recipes must still need a teaching phrase")
+
+-- Glyphs are detected from their item class and any Use: line.
+local glyphUse = "Use: Permanently teaches you this glyph."
+tooltipText = "Glyph of the Test\nGlyph\n" .. glyphUse
+local glyphCategory, glyphReason = addon:ClassifyItem(Context(1601, { itemType = "Glyph", classID = 16 }))
+assert(glyphCategory == "transmog" and glyphReason == "Glyph — click to learn",
+    "an unlearned glyph should be actionable")
+tooltipText = "Glyph of the Test\nGlyph\nAlready known\n" .. glyphUse
+assert(addon:ClassifyItem(Context(1602, { itemType = "Glyph", classID = 16 })) == nil,
+    "a known glyph must stay hidden")
+tooltipLines = {
+    { leftText = glyphUse, leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Classes: Mage", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+assert(addon:ClassifyItem(Context(1603, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph for another class must stay hidden")
+tooltipLines = nil
+tooltipText = "Glyph of the Test\nGlyph\n" .. glyphUse
+itemUsable = false
+assert(addon:ClassifyItem(Context(1604, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph this character cannot use must stay hidden")
+itemUsable = true
+assert(addon:ClassifyItem(Context(1605, { classID = 15 })) == nil,
+    "glyph wording must not make other item classes glyphs")
+tooltipText = "Glyph of the Test\nGlyph\nUnique"
+assert(addon:ClassifyItem(Context(1606, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph with no Use: line must not be offered")
+
+-- Real 12.x glyph tooltips describe the effect, not "teaches you".
+for index, effect in ipairs({
+    "Use: When you Heroic Leap you now land with thunder.",
+    "Use: Your Execute critical strikes summon a flock of carrion birds.",
+}) do
+    tooltipLines = {
+        { leftText = "Glyph of the Test" },
+        { leftText = "Warrior" },
+        { leftText = effect, leftColor = { r = 0, g = 1, b = 0 } },
+        { leftText = "Classes: Warrior", leftColor = { r = 1, g = 1, b = 1 } },
+        { leftText = "Sell Price: 1" },
+    }
+    assert(addon:ClassifyItem(Context(1606 + index,
+        { itemType = "Glyph", itemSubType = "Warrior", classID = 16, subclassID = 1 })) == "transmog",
+        "a real warrior glyph tooltip should be actionable for a warrior")
+    tooltipLines[4].leftColor = { r = 1, g = 0.125, b = 0.125 }
+    assert(addon:ClassifyItem(Context(1608 + index,
+        { itemType = "Glyph", itemSubType = "Warrior", classID = 16, subclassID = 1 })) == nil,
+        "a real warrior glyph tooltip must stay hidden for other classes")
+end
+tooltipLines = nil
+
 tooltipText = "Locked\nRequires Lockpicking"
 category = addon:ClassifyItem(Context(109, { hasLoot = true }))
 assert(category == nil, "locked lockbox should not be actionable")
@@ -1442,6 +1543,78 @@ tooltipLines = { { leftText = "Utiliser : Ouvrir le coffre." } }
 assert(localized:GetTooltipSnapshot(Context(5007, { hasLoot = false, name = "Coffre" })).complete,
     "a localized Use: line should count as a complete tooltip")
 tooltipLines = nil
+
+-- Recipes: the Recipe item class plus the translated Use: line, with the
+-- usual known, requirement, and usability guards.
+local recipeUse = "Utiliser : Vous apprend à fabriquer un objet de test."
+tooltipText = "Recette : Objet de test\n" .. recipeUse
+assert(localized:ClassifyItem(Context(5101, { itemType = "Recette", classID = 9 })) == "recipe",
+    "a localized recipe should be detected from its item class")
+tooltipText = "Recette : Objet de test\nDéjà connu\n" .. recipeUse
+assert(localized:ClassifyItem(Context(5102, { itemType = "Recette", classID = 9 })) == nil,
+    "a localized known recipe must stay hidden")
+tooltipLines = {
+    { leftText = recipeUse, leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Niveau 80 requis", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+assert(localized:ClassifyItem(Context(5103, { itemType = "Recette", classID = 9 })) == nil,
+    "a localized recipe with a red requirement must stay hidden")
+tooltipLines = nil
+tooltipText = "Recette : Objet de test\n" .. recipeUse
+itemUsable = false
+assert(localized:ClassifyItem(Context(5104, { itemType = "Recette", classID = 9 })) == nil,
+    "a localized recipe this character cannot use must stay hidden")
+itemUsable = true
+assert(localized:ClassifyItem(Context(5105, { itemType = "Divers", classID = 15 })) == nil,
+    "a translated Use: line must not make other item classes recipes")
+tooltipText = "Recette : Objet de test\nObjet unique"
+assert(localized:ClassifyItem(Context(5106, { itemType = "Recette", classID = 9 })) == nil,
+    "a localized recipe with no Use: line must not be offered")
+
+tooltipText = "Glyphe du test\nGlyphe\nUtiliser : Vous apprend ce glyphe de manière permanente."
+assert(localized:ClassifyItem(Context(5110, { itemType = "Glyphe", classID = 16 })) == "transmog",
+    "a localized glyph should be detected from its item class")
+tooltipText = "Glyphe du test\nGlyphe\nDéjà connu\nUtiliser : Vous apprend ce glyphe de manière permanente."
+assert(localized:ClassifyItem(Context(5111, { itemType = "Glyphe", classID = 16 })) == nil,
+    "a localized known glyph must stay hidden")
+
+-- Curios: the Consumable Curio subclasses plus the translated Use: line.
+local curioUse = "Utiliser : Ajoute cette curiosité à la collection de votre compagnon."
+local function CurioContext(itemID, subclassID)
+    return Context(itemID, {
+        name = "Malédiction", itemType = "Consommable", itemSubType = "Curiosité de combat",
+        classID = 0, subclassID = subclassID or 11,
+    })
+end
+tooltipText = "Malédiction\nCuriosité de combat\n" .. curioUse
+assert(localized:ClassifyItem(CurioContext(5201)) == "curio",
+    "a localized Combat Curio should be detected from its item class")
+assert(localized:ClassifyItem(CurioContext(5202, 10)) == "curio",
+    "a localized Utility Curio should be detected from its item class")
+assert(localized:GetTooltipSnapshot(CurioContext(5203)).complete == true,
+    "a localized Curio with its Use: line must not be retried")
+tooltipText = "Malédiction\nCuriosité de combat\nRang 5/5\nLié"
+assert(localized:GetTooltipSnapshot(CurioContext(5204)).complete == false,
+    "a localized Curio missing its Use: line must be retried")
+tooltipText = "Malédiction\nCuriosité de combat\nDéjà connu"
+assert(localized:ClassifyItem(CurioContext(5205)) == nil
+    and localized:GetTooltipSnapshot(CurioContext(5206)).complete == true,
+    "a localized known Curio must be neither offered nor retried")
+tooltipLines = {
+    { leftText = curioUse, leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Niveau 80 requis", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+assert(localized:ClassifyItem(CurioContext(5207)) == nil,
+    "a localized Curio with a red requirement must stay hidden")
+tooltipLines = nil
+tooltipText = "Potion de soins\nPotion\nUtiliser : Rend des points de vie."
+local potion = Context(5208, { name = "Potion de soins", itemType = "Consommable", classID = 0, subclassID = 1 })
+assert(localized:ClassifyItem(potion) == nil,
+    "a translated Use: line must not make other consumables Curios")
+tooltipText = "Potion de soins\nPotion\nRend des points de vie."
+assert(localized:GetTooltipSnapshot(Context(5209, {
+    name = "Potion de soins", classID = 0, subclassID = 1,
+})).complete == true, "other localized consumables must not wait for a Curio action")
 ITEM_SPELL_KNOWN, ITEM_OPENABLE, LOCKED, ITEM_STARTS_QUEST = nil, nil, nil, nil
 ITEM_SPELL_TRIGGER_ONUSE, ITEM_MIN_LEVEL, ITEM_RACES_ALLOWED = nil, nil, nil
 
