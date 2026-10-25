@@ -1258,6 +1258,72 @@ for _, fixture in ipairs({
         "level changes must only refresh the affected tooltip")
 end
 
+-- A mount whose journal data has not loaded must be checked again through
+-- the bounded tooltip retries, reusing its complete tooltip.
+local function DrainMountRetries(onRetry)
+    local retryCount, guard = 0, 0
+    while (#timers > 0 or addon:HasInventoryWork()) and guard < 50 do
+        if timers[1] and timers[1].delay >= 0.45 then
+            retryCount = retryCount + 1
+            if onRetry then
+                onRetry(retryCount)
+            end
+        end
+        FireOneTimer()
+        guard = guard + 1
+    end
+    assert(guard < 50, "mount data retries must finish")
+    return retryCount
+end
+
+for _, loadsOnRetry in ipairs({ 2, false }) do
+    addon:ClearInventoryState()
+    bags = {}
+    bagSlotCounts = {}
+    timers = {}
+    tooltipByItem[101] = "Use: Teaches you how to summon this mount."
+    mountCollected = nil
+    SetSlot(0, 1, 101, 1)
+    addon:ResetMetrics()
+    addon:ScanBags("login")
+    local inspectedAfterScan
+    local retries = DrainMountRetries(function(retryCount)
+        inspectedAfterScan = inspectedAfterScan or Metrics().slotsInspected
+        if retryCount == loadsOnRetry then
+            mountCollected = false
+        end
+    end)
+    assert(retries == (loadsOnRetry or 4),
+        "mount data that has not loaded must use the bounded retries")
+    assert(Metrics().tooltipSnapshots == 1,
+        "mount data retries must reuse the complete tooltip")
+    assert(Metrics().slotsInspected == inspectedAfterScan,
+        "mount data retries must not rescan bags")
+    if loadsOnRetry then
+        assert(retries == loadsOnRetry, "retries must stop once the mount data loads")
+        assert(addon.current and addon.current.itemID == 101 and addon.current.category == "mount",
+            "an uncollected mount must appear once its journal data loads")
+    else
+        assert(retries == 4, "mount data that never loads must stop after four retries")
+        assert(addon.current == nil, "a mount with unknown collection state must stay hidden")
+    end
+end
+
+-- A collected mount, or any other complete item, schedules no retries.
+addon:ClearInventoryState()
+bags = {}
+bagSlotCounts = {}
+timers = {}
+mountCollected = true
+SetSlot(0, 1, 101, 1)
+SetSlot(0, 2, 1200, 1)
+addon:ResetMetrics()
+addon:ScanBags("login")
+assert(DrainMountRetries() == 0 and Metrics().tooltipRetriesScheduled == 0,
+    "loaded collection data must not schedule retries")
+assert(addon.current == nil, "a collected mount must not be offered")
+mountCollected = false
+
 -- Learning a recipe elsewhere refreshes only recipe tooltips, because the
 -- "Already known" state is not available from a collection API.
 addon:ClearInventoryState()

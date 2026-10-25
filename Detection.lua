@@ -49,6 +49,15 @@ local function HasUseText(text)
         or (localizedUsePrefix ~= nil and string.find(text, localizedUsePrefix, 1, true) ~= nil)
 end
 
+-- Action-specific phrases below are English. On other clients, item classes
+-- whose only Use: action is learning or collecting the item (recipes, Curios)
+-- fall back to the client's translated Use: prefix. English clients keep the
+-- exact phrase checks, so this never applies to them.
+local function HasTranslatedUseText(text)
+    return localizedUsePrefix ~= nil and localizedUsePrefix ~= "use:"
+        and string.find(text, localizedUsePrefix, 1, true) ~= nil
+end
+
 local function HasExactLine(text, line)
     if not line then
         return false
@@ -106,6 +115,21 @@ local customizationItemTypes = {
 
 local function HasTooltipTypeLine(text, typeName)
     return string.find("\n" .. text .. "\n", "\n" .. typeName .. "\n", 1, true) ~= nil
+end
+
+-- Utility and Combat Curios are Consumable subclasses 10 and 11 (11.0.0),
+-- shown as "Utility Curio" and "Combat Curio" on English clients.
+local function IsCurioItemClass(context)
+    if not context then
+        return false
+    end
+    local itemClass = Enum and Enum.ItemClass
+    local consumableClass = itemClass and itemClass.Consumable or 0
+    local subclasses = Enum and Enum.ItemConsumableSubclass
+    local utilityCurio = subclasses and subclasses.UtilityCurio or 10
+    local combatCurio = subclasses and subclasses.CombatCurio or 11
+    return context.classID == consumableClass
+        and (context.subclassID == utilityCurio or context.subclassID == combatCurio)
 end
 
 local function IsCustomizationItem(context, text)
@@ -834,12 +858,17 @@ function addon:GetTooltipSnapshot(context)
     -- A known Curio is intentionally complete even without an action line.
     local itemType = string.lower(context.itemType or "")
     local itemSubType = string.lower(context.itemSubType or "")
-    local curioTooltip = HasTooltipTypeLine(text, "combat curio")
+    -- The item class works on every client; the English type names remain a
+    -- fallback for items whose class data is missing.
+    local curioClass = IsCurioItemClass(context)
+    local curioTooltip = curioClass
+        or HasTooltipTypeLine(text, "combat curio")
         or HasTooltipTypeLine(text, "utility curio")
         or itemType == "combat curio" or itemType == "utility curio"
         or itemSubType == "combat curio" or itemSubType == "utility curio"
     local waitingForCurioUse = curioTooltip
         and not ContainsAny(text, curioText)
+        and not (curioClass and HasTranslatedUseText(text))
         and not ContainsAny(text, knownText)
     -- Decor can expose its type and ownership before its deposit action loads.
     -- Do not cache that multi-line tooltip as a finished miss. Learned/owned
@@ -919,8 +948,9 @@ local function IsUncollectedMount(itemID)
     end
     local info = { C_MountJournal.GetMountInfoByID(mountID) }
     -- isCollected is nil while mount data is still loading; only an explicit
-    -- false means the mount is uncollected.
-    return info[11] == false, mountID
+    -- false means the mount is uncollected. Report the loading state too, so
+    -- the slot is checked again instead of being settled as not a mount.
+    return info[11] == false, mountID, info[11] == nil
 end
 
 local function IsUncollectedToy(itemID)
@@ -1001,7 +1031,12 @@ function addon:ClassifyItem(context)
         return explicit.category, explicit.reason
     end
 
-    local isMount = IsUncollectedMount(context.itemID)
+    local isMount, _, mountDataPending = IsUncollectedMount(context.itemID)
+    if mountDataPending then
+        -- The tooltip is complete, but the journal is not. Inventory retries
+        -- the slot with its bounded tooltip-retry delays, reusing the snapshot.
+        context.collectionDataPending = true
+    end
     if isMount then
         if self:HasUnmetRequirement(context) then
             return nil
@@ -1039,7 +1074,8 @@ function addon:ClassifyItem(context)
         return "pet", "Uncollected companion — click to learn"
     end
 
-    if ContainsAny(tooltipText, curioText) then
+    if ContainsAny(tooltipText, curioText)
+        or (IsCurioItemClass(context) and HasTranslatedUseText(tooltipText)) then
         if self:HasUnmetRequirement(context) then
             return nil
         end
@@ -1158,9 +1194,11 @@ function addon:ClassifyItem(context)
     end
 
     local recipeClassID = Enum and Enum.ItemClass and Enum.ItemClass.Recipe or 9
-    local isRecipe = context.classID == recipeClassID or itemType == "recipe"
+    local isRecipeClass = context.classID == recipeClassID
+    local isRecipe = isRecipeClass or itemType == "recipe"
     if isRecipe and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
-        and ContainsAny(tooltipText, recipeText) then
+        and (ContainsAny(tooltipText, recipeText)
+            or (isRecipeClass and HasTranslatedUseText(tooltipText))) then
         return "recipe", "Unlearned recipe — click to learn"
     end
 
