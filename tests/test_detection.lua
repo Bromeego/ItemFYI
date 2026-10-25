@@ -1323,6 +1323,28 @@ tooltipText = "Glyph of the Test\nGlyph\nUnique"
 assert(addon:ClassifyItem(Context(1606, { itemType = "Glyph", classID = 16 })) == nil,
     "a glyph with no Use: line must not be offered")
 
+-- Real 12.x glyph tooltips describe the effect, not "teaches you".
+for index, effect in ipairs({
+    "Use: When you Heroic Leap you now land with thunder.",
+    "Use: Your Execute critical strikes summon a flock of carrion birds.",
+}) do
+    tooltipLines = {
+        { leftText = "Glyph of the Test" },
+        { leftText = "Warrior" },
+        { leftText = effect, leftColor = { r = 0, g = 1, b = 0 } },
+        { leftText = "Classes: Warrior", leftColor = { r = 1, g = 1, b = 1 } },
+        { leftText = "Sell Price: 1" },
+    }
+    assert(addon:ClassifyItem(Context(1606 + index,
+        { itemType = "Glyph", itemSubType = "Warrior", classID = 16, subclassID = 1 })) == "transmog",
+        "a real warrior glyph tooltip should be actionable for a warrior")
+    tooltipLines[4].leftColor = { r = 1, g = 0.125, b = 0.125 }
+    assert(addon:ClassifyItem(Context(1608 + index,
+        { itemType = "Glyph", itemSubType = "Warrior", classID = 16, subclassID = 1 })) == nil,
+        "a real warrior glyph tooltip must stay hidden for other classes")
+end
+tooltipLines = nil
+
 tooltipText = "Locked\nRequires Lockpicking"
 category = addon:ClassifyItem(Context(109, { hasLoot = true }))
 assert(category == nil, "locked lockbox should not be actionable")
