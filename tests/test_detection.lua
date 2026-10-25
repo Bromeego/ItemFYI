@@ -1296,6 +1296,33 @@ tooltipText = "Test Recipe\nUse: Gain a test buff."
 category = addon:ClassifyItem(Context(1107, { itemType = "Recipe", classID = 9 }))
 assert(category == nil, "English recipes must still need a teaching phrase")
 
+-- Glyphs are detected from their item class and any Use: line.
+local glyphUse = "Use: Permanently teaches you this glyph."
+tooltipText = "Glyph of the Test\nGlyph\n" .. glyphUse
+local glyphCategory, glyphReason = addon:ClassifyItem(Context(1601, { itemType = "Glyph", classID = 16 }))
+assert(glyphCategory == "transmog" and glyphReason == "Glyph — click to learn",
+    "an unlearned glyph should be actionable")
+tooltipText = "Glyph of the Test\nGlyph\nAlready known\n" .. glyphUse
+assert(addon:ClassifyItem(Context(1602, { itemType = "Glyph", classID = 16 })) == nil,
+    "a known glyph must stay hidden")
+tooltipLines = {
+    { leftText = glyphUse, leftColor = { r = 0, g = 1, b = 0 } },
+    { leftText = "Classes: Mage", leftColor = { r = 1, g = 0.125, b = 0.125 } },
+}
+assert(addon:ClassifyItem(Context(1603, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph for another class must stay hidden")
+tooltipLines = nil
+tooltipText = "Glyph of the Test\nGlyph\n" .. glyphUse
+itemUsable = false
+assert(addon:ClassifyItem(Context(1604, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph this character cannot use must stay hidden")
+itemUsable = true
+assert(addon:ClassifyItem(Context(1605, { classID = 15 })) == nil,
+    "glyph wording must not make other item classes glyphs")
+tooltipText = "Glyph of the Test\nGlyph\nUnique"
+assert(addon:ClassifyItem(Context(1606, { itemType = "Glyph", classID = 16 })) == nil,
+    "a glyph with no Use: line must not be offered")
+
 tooltipText = "Locked\nRequires Lockpicking"
 category = addon:ClassifyItem(Context(109, { hasLoot = true }))
 assert(category == nil, "locked lockbox should not be actionable")
@@ -1521,6 +1548,13 @@ assert(localized:ClassifyItem(Context(5105, { itemType = "Divers", classID = 15 
 tooltipText = "Recette : Objet de test\nObjet unique"
 assert(localized:ClassifyItem(Context(5106, { itemType = "Recette", classID = 9 })) == nil,
     "a localized recipe with no Use: line must not be offered")
+
+tooltipText = "Glyphe du test\nGlyphe\nUtiliser : Vous apprend ce glyphe de manière permanente."
+assert(localized:ClassifyItem(Context(5110, { itemType = "Glyphe", classID = 16 })) == "transmog",
+    "a localized glyph should be detected from its item class")
+tooltipText = "Glyphe du test\nGlyphe\nDéjà connu\nUtiliser : Vous apprend ce glyphe de manière permanente."
+assert(localized:ClassifyItem(Context(5111, { itemType = "Glyphe", classID = 16 })) == nil,
+    "a localized known glyph must stay hidden")
 
 -- Curios: the Consumable Curio subclasses plus the translated Use: line.
 local curioUse = "Utiliser : Ajoute cette curiosité à la collection de votre compagnon."

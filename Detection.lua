@@ -1184,6 +1184,14 @@ function addon:ClassifyItem(context)
         return "transmog", "Weapon illusion — click to learn"
     end
 
+    -- Glyph-class items (16) only teach a glyph, like recipes, so their Use:
+    -- wording is not matched and this works on every client.
+    local glyphClassID = Enum and Enum.ItemClass and Enum.ItemClass.Glyph or 16
+    if context.classID == glyphClassID and HasUseText(tooltipText)
+        and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
+        return "transmog", "Glyph — click to learn"
+    end
+
     if ContainsAny(tooltipText, transmogText) then
         -- Warband tokens must still appear on the wrong armour class, so this
         -- path uses collection APIs instead of generic usability checks.
