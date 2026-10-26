@@ -733,7 +733,8 @@ function addon:RebuildCandidates()
                     and not (self.sessionSkipped and self.sessionSkipped[key]) then
                     local context = entry.context
                     if context then
-                        local secureMacro, secureBySlot = self:BuildSecureUse(context, category)
+                        local secureMacro, secureBySlot, blockedInCombat =
+                            self:BuildSecureUse(context, category)
                         candidates[#candidates + 1] = {
                             key = key,
                             itemID = entry.itemID,
@@ -748,6 +749,7 @@ function addon:RebuildCandidates()
                             priority = self.CategoryPriority[category] or 100,
                             secureMacro = secureMacro,
                             secureBySlot = secureBySlot,
+                            blockedInCombat = blockedInCombat,
                         }
                     end
                 end

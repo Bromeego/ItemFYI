@@ -264,7 +264,9 @@ function addon:ScheduleScan(reason, delay)
     end)
 end
 
-function addon:SkipCurrent(permanent)
+-- Right-click skips are frequent, so the button skips quietly. A permanent
+-- ignore always prints, since the message holds its restore key.
+function addon:SkipCurrent(permanent, quiet)
     local candidate = self.current
     if not candidate then
         return
@@ -279,7 +281,9 @@ function addon:SkipCurrent(permanent)
         self:RefreshSettingsPanel()
     else
         self.sessionSkipped[candidate.key] = true
-        self:Print(("Skipped %s for this session."):format(candidate.name))
+        if not quiet then
+            self:Print(("Skipped %s for this session."):format(candidate.name))
+        end
     end
 
     self:ScheduleScan("dismissed", 0)
@@ -478,6 +482,8 @@ events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("ITEM_LOCK_CHANGED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:RegisterEvent("PLAYER_REGEN_DISABLED")
+events:RegisterEvent("BAG_UPDATE_COOLDOWN")
 events:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 events:RegisterEvent("ITEM_DATA_LOAD_RESULT")
 events:RegisterEvent("MERCHANT_SHOW")
@@ -531,6 +537,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         addon.startupScanPending = true
         addon:ScheduleScan("login", INITIAL_SCAN_GRACE)
     elseif event == "PLAYER_REGEN_ENABLED" then
+        addon:ApplyCombatDimming(false)
         if addon.layoutPending then
             local useSavedPosition = addon.layoutUseSavedPosition
             addon.layoutUseSavedPosition = nil
@@ -543,6 +550,18 @@ events:SetScript("OnEvent", function(_, event, ...)
         end
         if addon.scanPending then
             addon:ScheduleScan("combat ended", GetBagScanDelay())
+        end
+        if addon.cooldownRefreshPending then
+            addon:UpdateButtonCooldown()
+        end
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        -- Fires as combat starts. Only the icon texture changes.
+        addon:ApplyCombatDimming(true)
+    elseif event == "BAG_UPDATE_COOLDOWN" then
+        -- Fires often (including global cooldowns); only an item on the
+        -- button needs one cooldown read.
+        if addon.current then
+            addon:UpdateButtonCooldown()
         end
     elseif event == "MERCHANT_SHOW" then
         -- Blocked until the player closes the vendor; ItemFYI does not close it.

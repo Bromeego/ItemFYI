@@ -156,6 +156,80 @@ local function HideButtonGlow(button)
     end
 end
 
+local function IsSecret(value)
+    return issecretvalue ~= nil and issecretvalue(value) == true
+end
+
+-- Read the cooldown of exactly what the button's action uses: the targeted
+-- bag slot for slot macros, or the item ID for /use item:ID. Anything missing,
+-- secret, or not yet started returns nil, so no overlay is shown.
+local function ReadCandidateCooldown(candidate)
+    local container = C_Container
+    local ok, start, duration, enable
+    if candidate.secureBySlot then
+        if not (container and container.GetContainerItemCooldown) then
+            return nil
+        end
+        ok, start, duration, enable = pcall(container.GetContainerItemCooldown,
+            candidate.bag, candidate.slot)
+    else
+        if not (container and container.GetItemCooldown and candidate.itemID) then
+            return nil
+        end
+        ok, start, duration, enable = pcall(container.GetItemCooldown, candidate.itemID)
+    end
+    if not ok or IsSecret(start) or IsSecret(duration) or IsSecret(enable) then
+        return nil
+    end
+    start, duration = tonumber(start), tonumber(duration)
+    -- enable is 0 while a cooldown waits to start (for example, a potion
+    -- used in combat); the sweep would show the wrong time then.
+    if not (start and duration and start > 0 and duration > 0)
+        or (enable ~= 1 and enable ~= true) then
+        return nil
+    end
+    return start, duration
+end
+
+-- Cooldown changes never touch secure attributes. In combat the displayed
+-- action cannot change, a running sweep keeps animating, and the next
+-- refresh waits until combat ends.
+function addon:UpdateButtonCooldown()
+    local cooldown = self.button and self.button.cooldown
+    if not cooldown then
+        return
+    end
+    if self:IsInCombat() then
+        self.cooldownRefreshPending = true
+        return
+    end
+    self.cooldownRefreshPending = nil
+
+    local start, duration
+    if self.current then
+        start, duration = ReadCandidateCooldown(self.current)
+    end
+    if start then
+        cooldown:SetCooldown(start, duration)
+    elseif cooldown.Clear then
+        cooldown:Clear()
+    else
+        cooldown:SetCooldown(0, 0)
+    end
+end
+
+-- Grey the icon in combat only when the action's macro stops in combat
+-- (slot-targeted pet cages and appearance tokens). This changes a texture,
+-- never the secure button.
+function addon:ApplyCombatDimming(inCombat)
+    local icon = self.button and self.button.icon
+    if not (icon and icon.SetDesaturated) then
+        return
+    end
+    local current = self.current
+    icon:SetDesaturated(inCombat == true and current ~= nil and current.blockedInCombat == true)
+end
+
 function addon:ShouldShowGlow()
     return not self.db or self.db.showGlow ~= false
 end
@@ -250,6 +324,12 @@ function addon:CreateUI()
     button.icon:SetPoint("TOPLEFT", 3, -3)
     button.icon:SetPoint("BOTTOMRIGHT", -3, 3)
     button.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+    -- Blizzard's standard cooldown sweep, over the icon only. It is visual and
+    -- has no mouse input, so clicks still reach the secure button.
+    button.cooldown = CreateFrame("Cooldown", nil, button, "CooldownFrameTemplate")
+    button.Cooldown = button.cooldown
+    button.cooldown:SetAllPoints(button.icon)
 
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
     button.highlight:SetPoint("TOPLEFT", 2, -2)
@@ -363,7 +443,7 @@ function addon:CreateUI()
         end
 
         if mouseButton == "RightButton" then
-            addon:SkipCurrent(IsControlKeyDown())
+            addon:SkipCurrent(IsControlKeyDown(), true)
         elseif addon.current then
             -- A key press on the hidden, empty button uses nothing to rescan for.
             addon:NoteItemRefresh(addon.current.itemID)
@@ -411,6 +491,8 @@ function addon:SetCandidate(candidate, total)
         end
         self.button.moreHit:Hide()
         HideButtonTooltip(self.button)
+        self:ApplyCombatDimming(false)
+        self:UpdateButtonCooldown()
         return
     end
 
@@ -426,6 +508,9 @@ function addon:SetCandidate(candidate, total)
     self.button:SetAttribute("type1", "macro")
     self.button:SetAttribute("macrotext1", candidate.secureMacro)
     self.button:Show()
+    -- SetCandidate only runs out of combat, so the icon is never dimmed here.
+    self:ApplyCombatDimming(false)
+    self:UpdateButtonCooldown()
     self:ApplyButtonGlow()
     RefreshButtonTooltip(self.button)
 end

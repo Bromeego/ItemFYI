@@ -22,6 +22,10 @@ When an item appears in the ItemFYI notification:
 - **Ctrl-right-click** to ignore it if you do not want ItemFYI to show that
   item again
 
+A dark sweep over the icon shows when the item is still on cooldown. Pet
+cages and appearance tokens can't be used from the button in combat, so their
+icon turns grey until combat ends.
+
 Alt-drag moves the button, or you can place it in Blizzard Edit Mode.
 
 To use the current item from the keyboard, bind a key under

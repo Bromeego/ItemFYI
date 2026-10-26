@@ -16,6 +16,7 @@ local function NewRegion()
         SetWidth = Noop,
         SetJustifyH = Noop,
         SetWordWrap = Noop,
+        SetDesaturated = function(self, value) self.desaturated = value and true or false end,
     }
 end
 
@@ -54,6 +55,8 @@ local function NewFrame(name)
     function frame:CreateTexture() return NewRegion() end
     function frame:CreateFontString() return NewRegion() end
     function frame:SetAttribute(key, value) self.attributes[key] = value end
+    function frame:SetCooldown(start, duration) self.cooldownStart, self.cooldownDuration = start, duration end
+    function frame:Clear() self.cooldownStart, self.cooldownDuration = nil, nil end
     function frame:SetText(value) self.text = value end
     function frame:SetChecked(value) self.checked = value end
     function frame:GetChecked() return self.checked end
@@ -1105,6 +1108,7 @@ for _, candidate in ipairs(addon.candidates) do
     assert(candidate.secureBySlot and candidate.secureMacro ==
         ("/stopmacro [combat]\n/use %d %d"):format(candidate.bag, candidate.slot),
         "each pet species must target its own cage slot")
+    assert(candidate.blockedInCombat == true, "cage actions must be marked as blocked in combat")
 end
 assert(countsByName["Lumpy"] == 2, "duplicate pet cages should count that species only")
 assert(countsByName["Sea Pony"] == 1, "one caged pet should not inherit the shared cage total")
@@ -1181,6 +1185,7 @@ SetSlot(0, 1, 100, 1, { hasLoot = true })
 ScanNow("login")
 assert(addon.current and addon.current.secureMacro == "/use item:100"
     and not addon.current.secureBySlot, "the satchel uses an item-ID action")
+assert(addon.current.blockedInCombat == false, "item-ID actions are not blocked in combat")
 eventFrame.scripts.OnEvent(eventFrame, "MERCHANT_SHOW")
 assert(#timers > 0 and addon.current == nil and addon.button.attributes.macrotext1 == nil,
     "opening a vendor must clear an item-ID action before the delayed rescan")
