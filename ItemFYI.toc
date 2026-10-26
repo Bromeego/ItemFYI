@@ -1,4 +1,4 @@
-## Interface: 120105
+## Interface: 120105, 16001
 ## Title: ItemFYI: Openables & Learnables
 ## Notes: A lightweight heads-up for actionable items already sitting in your bags.
 ## Author: Bromeego

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- ItemFYI now loads in WoW: Forever without needing "Load out of date
+  AddOns". Forever uses the same addon API as Retail; categories whose game
+  systems don't exist there (such as housing decor or Delve Curios) simply
+  stay empty.
+
 ## 0.2.50
 
 - The button now shows a cooldown sweep while its item is on cooldown, such
