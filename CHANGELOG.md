@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.50
+
+- The button now shows a cooldown sweep while its item is on cooldown, such
+  as reputation tokens or Heroic Soul Fragments, so repeated clicks no longer
+  fail silently. It uses Blizzard's standard cooldown display.
+- In combat, the button icon turns grey when its action can't be used then
+  (pet cages and equippable appearance tokens), and returns to colour when
+  combat ends.
+- Right-clicking to skip an item no longer prints a chat message.
+  Ctrl-right-click still prints the key to restore an ignored item, and
+  `/ifyi skip` still confirms the skip.
+
 ## 0.2.49
 
 - Uncollected mounts now appear even if the mount journal finishes loading
