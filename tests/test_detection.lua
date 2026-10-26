@@ -371,6 +371,26 @@ macro, secureBySlot = addon:BuildSecureUse(Context(202, { bag = 3, slot = 5 }), 
 assert(macro == "/use item:202" and not secureBySlot,
     "containers must continue resolving by item ID")
 
+-- The combat flag must match the macro itself on every action path, so the
+-- button dims exactly the actions that /stopmacro [combat] prevents.
+for _, fixture in ipairs({
+    { id = 82800, category = "pet", blocked = true },
+    { id = 201, category = "transmog", fields = { equipLocation = "INVTYPE_WEAPON" }, blocked = true },
+    { id = 203, category = "transmog", blocked = false },
+    { id = 204, category = "pet", blocked = false },
+    { id = 205, category = "container", blocked = false },
+    { id = 206, category = "mount", blocked = false },
+    { id = 207, category = "recipe", blocked = false },
+    { id = 208, category = "quest", blocked = false },
+}) do
+    local fields = fixture.fields or {}
+    fields.bag, fields.slot = 2, 7
+    local fixtureMacro, _, blockedInCombat = addon:BuildSecureUse(Context(fixture.id, fields), fixture.category)
+    local macroStops = string.find(fixtureMacro, "/stopmacro [combat]", 1, true) ~= nil
+    assert(blockedInCombat == fixture.blocked and blockedInCombat == macroStops,
+        ("%s item %d: the combat flag must match its macro"):format(fixture.category, fixture.id))
+end
+
 tooltipText = "Use: Combine 2 Fractured Sparks of Starlight with 0 Valorstones "
     .. "to create a Spark of Starlight."
 category = addon:ClassifyItem(Context(231757, { stackCount = 1 }))

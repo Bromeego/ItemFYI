@@ -16,6 +16,7 @@ local function NewRegion()
         SetWidth = Noop,
         SetJustifyH = Noop,
         SetWordWrap = Noop,
+        SetDesaturated = function(self, value) self.desaturated = value and true or false end,
     }
 end
 
@@ -59,6 +60,8 @@ local function NewFrame(name)
     function frame:CreateTexture() return NewRegion() end
     function frame:CreateFontString() return NewRegion() end
     function frame:SetAttribute(key, value) self.attributes[key] = value end
+    function frame:SetCooldown(start, duration) self.cooldownStart, self.cooldownDuration = start, duration end
+    function frame:Clear() self.cooldownStart, self.cooldownDuration = nil, nil end
     function frame:SetText(value) self.text = value end
     function frame:SetChecked(value) self.checked = value end
     function frame:GetChecked() return self.checked end
@@ -863,5 +866,178 @@ assert(addon.db.ignored["998"], "the ignore list must survive until the player c
 StaticPopupDialogs.ITEMFYI_CLEAR_IGNORED.OnAccept()
 assert(next(addon.db.ignored) == nil, "confirming must clear the ignore list")
 StaticPopupDialogs, StaticPopup_Show = nil, nil
+
+-- Button cooldown sweep, combat dimming, and quiet right-click skips use
+-- hand-built candidates on an otherwise empty, unblocked button.
+inCombat = false
+bagItem = nil
+addon:ScanBags("login")
+wipe(addon.itemUseBlocks)
+addon.scanPending = false
+local button = addon.button
+local cooldown = button.cooldown
+assert(cooldown and button.Cooldown == cooldown, "the button should have a standard cooldown frame")
+
+local itemCooldowns, slotCooldowns = {}, {}
+local cooldownReads = 0
+local function CooldownResult(entry)
+    if entry == "nothing" then
+        return
+    end
+    if entry then
+        return entry[1], entry[2], entry[3]
+    end
+    return 0, 0, 1
+end
+C_Container.GetItemCooldown = function(itemID)
+    cooldownReads = cooldownReads + 1
+    return CooldownResult(itemCooldowns[itemID])
+end
+C_Container.GetContainerItemCooldown = function(bag, slot)
+    cooldownReads = cooldownReads + 1
+    return CooldownResult(slotCooldowns[bag .. ":" .. slot])
+end
+
+local combatAttributeWrites = 0
+local originalSetAttribute = button.SetAttribute
+button.SetAttribute = function(self, key, value)
+    if inCombat then
+        combatAttributeWrites = combatAttributeWrites + 1
+    end
+    return originalSetAttribute(self, key, value)
+end
+
+local function ItemCandidate()
+    return {
+        key = "900", itemID = 900, name = "Reputation Token", icon = 1, count = 1,
+        bag = 0, slot = 1, category = "progress", reason = "Reputation token — click to use",
+        secureMacro = "/use item:900", secureBySlot = false, blockedInCombat = false,
+    }
+end
+local function CageCandidate()
+    return {
+        key = "pet:5", itemID = 82800, name = "Pet Cage", icon = 1, count = 1,
+        bag = 2, slot = 7, category = "pet", reason = "Uncollected battle pet — click to learn",
+        secureMacro = "/stopmacro [combat]\n/use 2 7", secureBySlot = true, blockedInCombat = true,
+    }
+end
+
+itemCooldowns[900] = { 100, 2, 1 }
+addon:SetCandidate(ItemCandidate(), 1)
+assert(cooldown.cooldownStart == 100 and cooldown.cooldownDuration == 2,
+    "an item-ID action should show its item cooldown")
+
+slotCooldowns["2:7"] = { 200, 5, 1 }
+itemCooldowns[82800] = { 300, 9, 1 }
+addon:SetCandidate(CageCandidate(), 1)
+assert(cooldown.cooldownStart == 200 and cooldown.cooldownDuration == 5,
+    "a slot-targeted action should show the targeted slot's cooldown")
+
+for _, fixture in ipairs({
+    { value = nil, message = "no cooldown" },
+    { value = { 100, 2, 0 }, message = "a cooldown that has not started" },
+    { value = "nothing", message = "a cooldown query that returns nothing" },
+    { value = { 100, 0, 1 }, message = "a zero-length cooldown" },
+}) do
+    itemCooldowns[900] = fixture.value
+    addon:SetCandidate(ItemCandidate(), 1)
+    assert(cooldown.cooldownStart == nil, fixture.message .. " must not show an overlay")
+end
+
+itemCooldowns[900] = { 100, 2, 1 }
+issecretvalue = function() return true end
+addon:SetCandidate(ItemCandidate(), 1)
+assert(cooldown.cooldownStart == nil, "secret cooldown values must not show an overlay")
+issecretvalue = nil
+
+itemCooldowns[900] = nil
+addon:SetCandidate(ItemCandidate(), 1)
+itemCooldowns[900] = { 150, 2, 1 }
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_COOLDOWN")
+assert(cooldown.cooldownStart == 150, "BAG_UPDATE_COOLDOWN should refresh the sweep")
+
+addon:SetCandidate(nil, 0)
+assert(cooldown.cooldownStart == nil, "an empty button must clear the sweep")
+local readsBefore = cooldownReads
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_COOLDOWN")
+assert(cooldownReads == readsBefore, "an empty button must not read cooldowns")
+
+EditModeManagerFrame.editModeActive = true
+addon:SetCandidate(ItemCandidate(), 1)
+addon:SetCandidate(nil, 0)
+assert(button.shown and cooldown.cooldownStart == nil,
+    "the Edit Mode placeholder must not show a sweep")
+EditModeManagerFrame.editModeActive = false
+
+-- In combat a running sweep is left alone and refreshed once combat ends.
+addon:SetCandidate(ItemCandidate(), 1)
+assert(cooldown.cooldownStart == 150, "the sweep should be set before combat")
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_DISABLED")
+itemCooldowns[900] = { 400, 2, 1 }
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_COOLDOWN")
+assert(cooldown.cooldownStart == 150 and addon.cooldownRefreshPending,
+    "cooldown changes in combat must wait until combat ends")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(cooldown.cooldownStart == 400 and not addon.cooldownRefreshPending,
+    "leaving combat should refresh a deferred sweep")
+
+-- Dimming follows the action's combat block, not the item type.
+local icon = button.icon
+addon:SetCandidate(CageCandidate(), 1)
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_DISABLED")
+assert(icon.desaturated == true, "a slot action that stops in combat should dim in combat")
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE_COOLDOWN")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+assert(icon.desaturated == false, "leaving combat should restore the icon")
+
+local unblockedCage = CageCandidate()
+unblockedCage.blockedInCombat = false
+addon:SetCandidate(unblockedCage, 1)
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_DISABLED")
+assert(icon.desaturated == false, "dimming must follow the combat block, not the item")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+
+addon:SetCandidate(ItemCandidate(), 1)
+inCombat = true
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_DISABLED")
+assert(icon.desaturated == false, "an item-ID action must not dim in combat")
+inCombat = false
+eventFrame.scripts.OnEvent(eventFrame, "PLAYER_REGEN_ENABLED")
+
+icon.desaturated = true
+addon:SetCandidate(ItemCandidate(), 1)
+assert(icon.desaturated == false, "a new action out of combat must reset the icon")
+assert(combatAttributeWrites == 0, "cooldown and dimming updates must not touch secure attributes in combat")
+button.SetAttribute = originalSetAttribute
+
+-- Right-click skips are quiet; permanent ignores and /ifyi skip still print.
+local skipPrints = {}
+local savedPrint = addon.Print
+addon.Print = function(_, message) skipPrints[#skipPrints + 1] = message end
+addon:SetCandidate(ItemCandidate(), 1)
+button.scripts.PostClick(button, "RightButton", false)
+assert(addon.sessionSkipped["900"] and #skipPrints == 0, "right-click skips must not print")
+addon.sessionSkipped["900"] = nil
+addon:SetCandidate(ItemCandidate(), 1)
+SlashCmdList.ITEMFYI("skip")
+assert(#skipPrints == 1 and skipPrints[1]:find("Skipped Reputation Token", 1, true),
+    "/ifyi skip should still confirm the skip")
+addon.sessionSkipped["900"] = nil
+local savedControl = IsControlKeyDown
+IsControlKeyDown = function() return true end
+addon:SetCandidate(ItemCandidate(), 1)
+button.scripts.PostClick(button, "RightButton", false)
+IsControlKeyDown = savedControl
+assert(#skipPrints == 2 and skipPrints[2]:find("/ifyi unignore 900", 1, true),
+    "a permanent ignore must still print its restore key")
+addon.db.ignored["900"] = nil
+addon.Print = savedPrint
+C_Container.GetItemCooldown, C_Container.GetContainerItemCooldown = nil, nil
 
 print("load and secure-button smoke test passed")

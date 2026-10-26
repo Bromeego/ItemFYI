@@ -1289,22 +1289,24 @@ function addon:BuildContext(bag, slot, info)
     }
 end
 
+-- Returns the macro, whether it targets a bag slot, and whether the macro
+-- itself stops in combat (the button dims that action during combat).
 function addon:BuildSecureUse(context, category)
     if category == "pet" and context.itemID == PET_CAGE_ITEM_ID then
         -- Cages share one item ID across species. Use the displayed cage,
         -- with the same combat and interaction guards as appearance tokens.
-        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true
+        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true, true
     end
     if category == "transmog" and context.equipLocation and context.equipLocation ~= "" then
         -- Item-ID macros prefer equipping equippable gear. Target the current
         -- bag slot so WoW follows the same use path as right-clicking the item.
         -- Appearance collection is not useful in combat, and blocking it there
         -- removes the only period where this slot cannot be refreshed safely.
-        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true
+        return ("/stopmacro [combat]\n/use %d %d"):format(context.bag, context.slot), true, true
     end
 
     -- IDs remain safest for containers and other non-equippable actions because
     -- vendor purchases and bag sorting can move their original slots.
-    return ("/use item:%d"):format(context.itemID), false
+    return ("/use item:%d"):format(context.itemID), false, false
 end
 
