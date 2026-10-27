@@ -7,7 +7,6 @@ ignore:
   - tests
   - tools
   - README.md
-  - CURSEFORGE.md
   - CONTRIBUTING.md
 
 manual-changelog: CHANGELOG.md
