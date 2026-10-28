@@ -1038,6 +1038,27 @@ assert(#skipPrints == 2 and skipPrints[2]:find("/ifyi unignore 900", 1, true),
     "a permanent ignore must still print its restore key")
 addon.db.ignored["900"] = nil
 addon.Print = savedPrint
+
+-- A use disarms the button until the rescan re-arms it, so spamming the
+-- binding cannot use an item that is already gone or still being used.
+local savedScheduleScan = addon.ScheduleScan
+local scheduledReason
+addon.ScheduleScan = function(_, reason) scheduledReason = reason end
+addon:SetCandidate(ItemCandidate(), 1)
+addon.rebuildNeeded = false
+button.scripts.PostClick(button, "LeftButton", true)
+assert(ButtonArmed(), "the press phase must not disarm the button")
+button.scripts.PostClick(button, "LeftButton", false)
+assert(not ButtonArmed(), "a use must disarm the button until the rescan")
+assert(addon.rebuildNeeded and scheduledReason == "item used",
+    "a use must schedule a rescan that re-arms the button")
+addon.ScheduleScan = savedScheduleScan
+addon:SetCandidate(ItemCandidate(), 1)
+inCombat = true
+button.scripts.PostClick(button, "LeftButton", false)
+assert(ButtonArmed(), "a use in combat must not touch the secure button")
+inCombat = false
+addon:SetCandidate(nil, 0)
 C_Container.GetItemCooldown, C_Container.GetContainerItemCooldown = nil, nil
 
 print("load and secure-button smoke test passed")

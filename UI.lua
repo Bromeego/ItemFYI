@@ -221,6 +221,10 @@ end
 -- Grey the icon in combat only when the action's macro stops in combat
 -- (slot-targeted pet cages and appearance tokens). This changes a texture,
 -- never the secure button.
+-- Known gap: an item-ID action without /stopmacro [combat] is not proof that
+-- WoW allows the item in combat. Such items stay undimmed and the game may
+-- still refuse them. Housing decor is unconfirmed; check in-game before
+-- marking any category blockedInCombat in BuildSecureUse.
 function addon:ApplyCombatDimming(inCombat)
     local icon = self.button and self.button.icon
     if not (icon and icon.SetDesaturated) then
@@ -446,6 +450,14 @@ function addon:CreateUI()
             addon:SkipCurrent(IsControlKeyDown(), true)
         elseif addon.current then
             -- A key press on the hidden, empty button uses nothing to rescan for.
+            -- Disarm until the rescan re-arms the button. A repeat press before
+            -- then would use an item whose last copy is gone ("The item was not
+            -- found") or interrupt the use still in progress.
+            if not addon:IsInCombat() then
+                frame:SetAttribute("type1", nil)
+                frame:SetAttribute("macrotext1", nil)
+                addon.rebuildNeeded = true
+            end
             addon:NoteItemRefresh(addon.current.itemID)
             addon:ScheduleScan("item used", 0.3)
         end

@@ -149,6 +149,12 @@ local function IsCustomizationUnlock(text)
         or string.find(text, "use:[^\n]*rostrum of transformation") ~= nil
 end
 
+local function IsDelverCosmeticUnlock(text)
+    -- Sin'dorei Gravestone, Well Urned Rest, and other Delver's Headquarters
+    -- options: "Use: Unlocks this Gravestone Cosmetic option at the ..."
+    return string.find(text, "use:%s+unlocks this [^\n]-cosmetic option") ~= nil
+end
+
 local function IsDelveBotUpgrade(text)
     -- Miscellaneous Airship Schematic whose left-side type line is
     -- "Airship Schematic", but whose action is a toy update rather than a
@@ -1171,6 +1177,11 @@ function addon:ClassifyItem(context)
     if (IsCustomizationUnlock(tooltipText) or IsCustomizationItem(context, tooltipText))
         and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
         return "transmog", "Mount customization — click to learn"
+    end
+
+    if IsDelverCosmeticUnlock(tooltipText) and IsItemUsable(context.itemID)
+        and not self:HasUnmetRequirement(context) then
+        return "transmog", "Delver cosmetic — click to unlock"
     end
 
     -- The explicit costume-learning action is sufficient even when the

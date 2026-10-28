@@ -1198,6 +1198,33 @@ tooltipText = "The weapon enchantment appearance of Mongoose still shimmers on t
 category = addon:ClassifyItem(Context(138799))
 assert(category == nil, "flavour text mentioning a weapon enchantment appearance must not become a learn action")
 
+tooltipText = "Sin'dorei Gravestone\nGravestone Cosmetic\nSoulbound\n"
+    .. "Use: Unlocks this Gravestone Cosmetic option at the Delver's Headquarters in Silvermoon City.\n"
+    .. "You may sell this item to a vendor within 1 hour 59 min (including time offline) for a full refund."
+category, reason = addon:ClassifyItem(Context(290101))
+assert(category == "transmog", "Delver gravestone cosmetics should be unlockable")
+assert(reason == "Delver cosmetic — click to unlock",
+    "gravestone cosmetics should use the Delver-cosmetic reason")
+
+tooltipText = "Well Urned Rest\nGravestone Cosmetic\nSoulbound\n"
+    .. "Use: Unlocks this Gravestone Cosmetic option at the Delver's Headquarters in Silvermoon City."
+category = addon:ClassifyItem(Context(290102))
+assert(category == "transmog", "other gravestones should use the same detector")
+
+tooltipText = "Already known\nUse: Unlocks this Gravestone Cosmetic option at the Delver's Headquarters in Silvermoon City."
+category = addon:ClassifyItem(Context(290103))
+assert(category == nil, "an already-known gravestone should remain hidden")
+
+itemUsable = false
+tooltipText = "Use: Unlocks this Gravestone Cosmetic option at the Delver's Headquarters in Silvermoon City."
+category = addon:ClassifyItem(Context(290101))
+assert(category == nil, "an unusable gravestone should remain hidden")
+itemUsable = true
+
+tooltipText = "Gravestone Cosmetic\nA weathered stone that unlocks this cosmetic option for nobody."
+category = addon:ClassifyItem(Context(290104))
+assert(category == nil, "flavour text without a Use: unlock must not become an unlock action")
+
 tooltipText = "Use: Create a class set item appropriate for your loot specialization (Balance).\n"
     .. "Classes: Rogue, Death Knight, Mage, Druid\nRequires Level 30"
 category = addon:ClassifyItem(Context(45661))

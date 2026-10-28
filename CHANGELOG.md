@@ -6,6 +6,11 @@
   AddOns". Forever uses the same addon API as Retail; categories whose game
   systems don't exist there (such as housing decor or Delve Curios) simply
   stay empty.
+- Delver's Headquarters gravestone cosmetics, such as Sin'dorei Gravestone
+  and Well Urned Rest, now appear so you can unlock them.
+- Pressing the button or its key binding repeatedly no longer shows "The item
+  was not found" or "Interrupted". After each use, the button waits until the
+  next item is ready.
 
 ## 0.2.50
 
