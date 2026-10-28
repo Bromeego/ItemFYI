@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.51
 
 - ItemFYI now loads in WoW: Forever without needing "Load out of date
   AddOns". Forever uses the same addon API as Retail; categories whose game
