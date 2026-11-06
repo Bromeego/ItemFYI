@@ -582,6 +582,40 @@ category = addon:ClassifyItem(Context(245755))
 assert(category == nil, "a treatise already used this week should not appear")
 completedQuests[95127] = nil
 
+-- WoW: Forever skill books state their cap as "Cannot raise X skill over N"
+-- and also teach the profession when a primary slot is free.
+local foreverSkinningBook = "Pelt Collecting for Beginners\nSoulbound\nUnique\n"
+    .. "Use: Increases your Skinning skill by 2. Cannot raise Skinning skill over 15. "
+    .. "You will learn Skinning if it is not already trained and you do not already "
+    .. "know two other professions.\n\"A picture book documenting how to collect animal skins.\""
+tooltipText = foreverSkinningBook
+category = addon:ClassifyItem(Context(117))
+assert(category == "profession", "Forever skill book with a free profession slot should appear")
+
+local defaultGetProfessions = GetProfessions
+local defaultGetProfessionInfo = GetProfessionInfo
+local skinningSkill = 10
+GetProfessions = function() return 1, 2, nil, 4 end
+GetProfessionInfo = function(professionIndex)
+    if professionIndex == 1 then return "Skinning", nil, skinningSkill, 15 end
+    if professionIndex == 2 then return "Mining", nil, 10, 15 end
+    if professionIndex == 4 then return "Fishing", nil, fishingSkill, 300 end
+end
+category = addon:ClassifyItem(Context(117))
+assert(category == "profession", "Forever skill book below its cap should appear")
+skinningSkill = 15
+category = addon:ClassifyItem(Context(117))
+assert(category == nil, "Forever skill book at its cap should not appear")
+
+GetProfessionInfo = function(professionIndex)
+    if professionIndex == 1 then return "Herbalism", nil, 10, 15 end
+    if professionIndex == 2 then return "Mining", nil, 10, 15 end
+end
+category = addon:ClassifyItem(Context(117))
+assert(category == nil, "Forever skill book should not appear with two other professions known")
+GetProfessions = defaultGetProfessions
+GetProfessionInfo = defaultGetProfessionInfo
+
 tooltipText = "Use: Increases Fishing skill by 25 for 10 min."
 category = addon:ClassifyItem(Context(116))
 assert(category == nil, "temporary profession buffs should not be actionable")

@@ -260,7 +260,23 @@ end
 local function GetPermanentSkillIncrease(text)
     local skillName, maximum = string.match(text,
         "use:%s+increases?%s+([^\n]-)%s+skill%s+by%s+%d+.-up to a max of%s+(%d+)")
+    if not skillName then
+        -- WoW: Forever books: "Use: Increases your Skinning skill by 2. Cannot
+        -- raise Skinning skill over 15." A timed buff never has the cap line.
+        skillName, maximum = string.match(text,
+            "use:%s+increases?%s+[^\n]-skill%s+by%s+%d+[^\n]-cannot raise%s+([^\n]-)%s+skill%s+over%s+(%d+)")
+    end
+    if skillName then
+        skillName = string.gsub(skillName, "^your%s+", "")
+    end
     return skillName, tonumber(maximum)
+end
+
+-- Forever books also teach the profession, but only while a primary
+-- profession slot is free: "You will learn Skinning if it is not already
+-- trained and you do not already know two other professions."
+local function NeedsFreeProfessionSlot(text)
+    return string.find(text, "you do not already know two other professions", 1, true) ~= nil
 end
 
 local function GetGarrisonActionReason(text, context)
@@ -395,6 +411,31 @@ local function HasReachedProfessionCap(skillName, maximum)
     end
 
     return false
+end
+
+local function KnowsProfession(skillName)
+    if not (skillName and GetProfessions and GetProfessionInfo) then
+        return true
+    end
+    local professionIndices = { GetProfessions() }
+    for position = 1, 6 do
+        local professionIndex = professionIndices[position]
+        if professionIndex then
+            local professionName = string.lower(GetProfessionInfo(professionIndex) or "")
+            if professionName ~= "" and string.find(skillName, professionName, 1, true) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function HasFreePrimaryProfessionSlot()
+    if not GetProfessions then
+        return true
+    end
+    local primary, secondary = GetProfessions()
+    return not (primary and secondary)
 end
 
 local function IsRightClickOpen(text)
@@ -1106,7 +1147,9 @@ function addon:ClassifyItem(context)
 
     local skillName, maximumSkill = GetPermanentSkillIncrease(tooltipText)
     if skillName and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context)
-        and not HasReachedProfessionCap(skillName, maximumSkill) then
+        and not HasReachedProfessionCap(skillName, maximumSkill)
+        and not (NeedsFreeProfessionSlot(tooltipText) and not KnowsProfession(skillName)
+            and not HasFreePrimaryProfessionSlot()) then
         return "profession", "Permanent profession skill increase — click to use"
     end
 

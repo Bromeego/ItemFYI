@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.53
+
+- WoW: Forever profession books such as Pelt Collecting for Beginners now
+  appear until you reach the skill they can raise you to. They stay hidden if
+  they would teach a new profession while you already know two.
+
 ## 0.2.52
 
 - Delver's Headquarters gravestone cosmetics, such as Sin'dorei Gravestone
