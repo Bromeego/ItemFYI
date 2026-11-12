@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.54
+
+- Quest items that combine several different items, such as Sinew Thread
+  for Prepared Incense, now appear once every listed part is in your bags.
+  The button updates as parts arrive or leave, and shows once per combine.
+
 ## 0.2.53
 
 - WoW: Forever profession books such as Pelt Collecting for Beginners now

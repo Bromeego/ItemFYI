@@ -246,6 +246,91 @@ local function GetStackCombineMinimum(text)
     end
 end
 
+-- "Use: Combine a Bundle of Herbs, Sinew Thread, and Ceremonial Flint and
+-- Tinder to create Prepared Incense." Returns the raw ingredient list for a
+-- combine of distinct named items; quantity-based stacks are handled above.
+local function GetNamedCombineList(text)
+    return string.match(text, "use:%s+combine%s+([^\n]-)%s+to%s+create%s")
+        or string.match(text, "use:%s+combine%s+([^\n]-)%s+to%s+obtain%s")
+        or string.match(text, "use:%s+combine%s+([^\n]-)%s+to%s+make%s")
+end
+
+local function TrimIngredient(part)
+    part = string.match(part, "^%s*(.-)%s*$")
+    part = string.gsub(part, "^and%s+", "")
+    for _, article in ipairs({ "a ", "an ", "the " }) do
+        if string.sub(part, 1, #article) == article then
+            part = string.sub(part, #article + 1)
+            break
+        end
+    end
+    return part
+end
+
+-- Item names can contain "and" ("Ceremonial Flint and Tinder"), so a part
+-- that is not a carried item name is tried at each " and " split instead.
+local function MatchIngredientPart(part, carried, found)
+    part = TrimIngredient(part)
+    if part == "" then
+        return false
+    end
+    if carried[part] then
+        found[#found + 1] = part
+        return true
+    end
+    local start = 1
+    while true do
+        local first, last = string.find(part, "%s+and%s+", start)
+        if not first then
+            return false
+        end
+        local mark = #found
+        if MatchIngredientPart(string.sub(part, 1, first - 1), carried, found)
+            and MatchIngredientPart(string.sub(part, last + 1), carried, found) then
+            return true
+        end
+        for index = #found, mark + 1, -1 do
+            found[index] = nil
+        end
+        start = last + 1
+    end
+end
+
+-- True when every distinct item named by the combine action is carried,
+-- including this item itself.
+local function HasAllNamedCombineParts(list, ownName, carried)
+    if string.find(list, "%f[%a]or%f[%A]") or string.find(list, "%d") then
+        return false
+    end
+    local found = {}
+    for part in string.gmatch(list, "[^,]+") do
+        if not MatchIngredientPart(part, carried, found) then
+            return false
+        end
+    end
+    if #found < 2 then
+        return false
+    end
+    ownName = string.lower(ownName or "")
+    for _, name in ipairs(found) do
+        if name == ownName then
+            return true
+        end
+    end
+    return false
+end
+
+function addon:GetCarriedItemNames()
+    local names = {}
+    for itemID in pairs(self.itemTotals or {}) do
+        local name = GetItemInfo(itemID)
+        if type(name) == "string" then
+            names[string.lower(name)] = true
+        end
+    end
+    return names
+end
+
 local function IsSingleItemProfessionProcessingAction(text)
     -- Keep this deliberately narrower than a generic "Use:" detector. The
     -- "gut and clean N" family has a separate count-aware path below.
@@ -1268,6 +1353,18 @@ function addon:ClassifyItem(context)
     if combineMinimum and availableCount >= combineMinimum and IsItemUsable(context.itemID)
         and not self:HasUnmetRequirement(context) then
         return "container", ("Stack of %d ready — click to combine"):format(combineMinimum)
+    end
+
+    local namedCombine = not combineMinimum and GetNamedCombineList(tooltipText)
+    if namedCombine then
+        -- Depends on other bag items, so Inventory rechecks it on any change.
+        context.dependsOnBagContents = true
+        if HasAllNamedCombineParts(namedCombine, context.name, self:GetCarriedItemNames())
+            and IsItemUsable(context.itemID) and not self:HasUnmetRequirement(context) then
+            -- Every part carries the same action; offer it once.
+            context.uniqueKey = "combine:" .. namedCombine
+            return "container", "All parts ready — click to combine"
+        end
     end
 
     if IsBlingtronMessageAction(tooltipText) and IsItemUsable(context.itemID)

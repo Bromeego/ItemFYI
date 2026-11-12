@@ -474,6 +474,42 @@ tooltipText = "Use: Combine one rune with one catalyst to create a sigil."
 category = addon:ClassifyItem(Context(121, { stackCount = 1, totalCount = 1 }))
 assert(category == nil, "single-item dependency recipes must not become stack conversions")
 
+-- Multi-part named combines, e.g. Sinew Thread for Prepared Incense.
+itemData[5001] = { name = "Sinew Thread" }
+itemData[5002] = { name = "Bundle of Herbs" }
+itemData[5003] = { name = "Bundle of Dried Cedar Twigs" }
+itemData[5004] = { name = "Ceremonial Flint and Tinder" }
+tooltipText = "Sinew Thread\nQuest Item\nUnique\nUse: Combine a Bundle of Herbs, a Bundle of "
+    .. "Dried Cedar Twigs, Sinew Thread, and Ceremonial Flint and Tinder to create Prepared Incense."
+addon.itemTotals = { [5001] = 1, [5002] = 1, [5003] = 1 }
+local incenseContext = Context(5001, { name = "Sinew Thread", stackCount = 1 })
+category = addon:ClassifyItem(incenseContext)
+assert(category == nil, "named combines must stay hidden while a part is missing")
+assert(incenseContext.dependsOnBagContents == true,
+    "named combines must be rechecked when other bag items change")
+
+addon.itemTotals[5004] = 1
+incenseContext = Context(5001, { name = "Sinew Thread", stackCount = 1 })
+category, reason = addon:ClassifyItem(incenseContext)
+assert(category == "container" and reason == "All parts ready — click to combine",
+    "named combines must appear once every part, including names with 'and', is carried")
+assert(incenseContext.uniqueKey and incenseContext.uniqueKey:find("^combine:"),
+    "each part of one combine should share a single action")
+
+itemUsable = false
+category = addon:ClassifyItem(Context(5001, { name = "Sinew Thread", stackCount = 1 }))
+assert(category == nil, "unusable named combines must stay hidden")
+itemUsable = true
+
+tooltipText = "Use: Combine Bundle of Herbs and Sinew Thread to create Incense."
+category = addon:ClassifyItem(Context(5001, { name = "Sinew Thread", stackCount = 1 }))
+assert(category == "container", "two-part 'X and Y' combines should be recognised")
+
+tooltipText = "Use: Combine a Bundle of Herbs and Bundle of Dried Cedar Twigs to create Incense."
+category = addon:ClassifyItem(Context(5001, { name = "Sinew Thread", stackCount = 1 }))
+assert(category == nil, "a named combine must list the item itself")
+addon.itemTotals = nil
+
 category = addon:ClassifyItem(Context(268650, { stackCount = 4 }))
 assert(category == nil, "four Ascendant Voidshards should not be actionable")
 

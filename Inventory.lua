@@ -256,13 +256,16 @@ end
 -- Takes a set of item IDs. A login scan changes the total of nearly every
 -- item, and walking the whole index once per item ID took several
 -- milliseconds in one unsliced tick; a single pass covers them all.
-local function QueueItemSlots(self, itemIDs)
+-- With includeDependents, also requeues slots whose action depends on other
+-- carried items (a combine of several named parts).
+local function QueueItemSlots(self, itemIDs, includeDependents)
     if not next(itemIDs) or not self.slotIndex then
         return
     end
     for bag, bagSlots in pairs(self.slotIndex) do
         for slot, entry in pairs(bagSlots) do
-            if entry.itemID ~= nil and itemIDs[entry.itemID] then
+            if (entry.itemID ~= nil and itemIDs[entry.itemID])
+                or (includeDependents and entry.dependsOnBagContents) then
                 QueueClassify(self, bag, slot)
             end
         end
@@ -623,6 +626,7 @@ local function ReconcileSlot(self, bag, slot)
         existing.awaitingItemInfo = nil
         existing.context = nil
         existing.petSpeciesID = nil
+        existing.dependsOnBagContents = nil
         existing.collectionDataPending = nil
         -- A new item can already be on the cursor. Index it hidden, so the
         -- ITEM_LOCK_CHANGED from putting it back in place restores it.
@@ -832,6 +836,7 @@ local function ClassifySlot(self, bag, slot)
     entry.sawRestrictionText = snapshot and snapshot.sawRestrictionText
     entry.uniqueKey = context.uniqueKey
     entry.petSpeciesID = context.petSpeciesID
+    entry.dependsOnBagContents = context.dependsOnBagContents or nil
     entry.collectionDataPending = context.collectionDataPending or nil
     entry.classified = true
     entry.category = category
@@ -936,7 +941,7 @@ function addon:ProcessInventoryTick(maxExpensive)
     end
 
     if next(self.changedTotals) then
-        QueueItemSlots(self, self.changedTotals)
+        QueueItemSlots(self, self.changedTotals, true)
         wipe(self.changedTotals)
     end
 

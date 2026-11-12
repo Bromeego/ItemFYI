@@ -1498,6 +1498,32 @@ bagSlotCounts[2] = 0
 eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
 while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
 
+-- A named multi-part combine appears once its last part arrives in another
+-- slot, even though its own slot did not change.
+itemData[220] = { name = "Sinew Thread" }
+itemData[221] = { name = "Bundle of Herbs" }
+tooltipByItem[220] = "Use: Combine a Bundle of Herbs and Sinew Thread to create Prepared Incense."
+-- Only the thread carries the action, so its own unchanged slot must update.
+tooltipByItem[221] = "Quest Item"
+bagSlotCounts[2] = 2
+SetSlot(2, 1, 220, 1)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(not HasCandidateAt(2, 1), "a named combine must stay hidden while a part is missing")
+SetSlot(2, 2, 221, 1)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(HasCandidateAt(2, 1) and not HasCandidateAt(2, 2),
+    "a named combine must appear when its missing part arrives")
+SetSlot(2, 2, nil)
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+assert(not HasCandidateAt(2, 1), "a named combine must hide again when a part leaves")
+SetSlot(2, 1, nil)
+bagSlotCounts[2] = 0
+eventFrame.scripts.OnEvent(eventFrame, "BAG_UPDATE", 2)
+while #timers > 0 or addon:HasInventoryWork() do FireTimers() end
+
 local failNextClassify = true
 addon.ClassifyItem = function(self, context)
     if failNextClassify then
